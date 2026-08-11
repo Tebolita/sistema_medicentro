@@ -43,11 +43,10 @@
 /* =====================================================
    TARJETA
 ===================================================== */
-
 .login-card {
   width: 100%;
   max-width: 100%;
-  height: calc(100vh - 70px);
+  height: 100vh;  /* ← Cambia de calc(100vh - 70px) a 100vh */
   display: flex;
   overflow: hidden;
   border-radius: 0;
