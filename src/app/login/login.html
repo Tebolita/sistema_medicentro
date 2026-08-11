@@ -1,91 +1,245 @@
-<div class="login-wrapper">
+<div class="login-page">
+
+  <!-- TÍTULO -->
+  <h1 class="page-title">Iniciar Sesión</h1>
+
   <div class="login-card">
 
-    <!-- Foto circular del consultorio (reemplaza src por tu imagen real) -->
-    <div class="login-avatar">
-    <img src="sanatorio.png" alt="Sanatorio Medicentro">
-</div>
+    <!-- =====================================================
+         PANEL IZQUIERDO
+    ====================================================== -->
+    <section class="left-panel">
 
-    <form class="login-form" (ngSubmit)="onLogin()">
-
-      <!-- Usuario -->
-      <div class="input-group">
-        <span class="icon">&#128100;</span>
-        <input
-          type="text"
-          name="username"
-          placeholder="Usuario"
-          [(ngModel)]="username"
-          autocomplete="username"
-        />
+      <!-- LOGO -->
+      <div class="logo-circle">
+        <img src="sanatorio_medicentro.jpg" alt="Sanatorio Medicentro">
       </div>
 
-      <!-- Contraseña -->
-      <div class="input-group">
-        <span class="icon">&#128274;</span>
-        <input
-          [type]="mostrarPassword ? 'text' : 'password'"
-          name="password"
-          placeholder="Contraseña"
-          [(ngModel)]="password"
+      <!-- TEXTO -->
+      <p class="welcome-text">
+        En Sanatorio Medicentro estamos siempre
+        enfocados en cuidar tu salud y la de
+        tu familia.
+      </p>
+
+      <!-- =================================================
+           ESTETOSCOPIO SVG - PROFESIONAL
+      ================================================== -->
+      <div class="medical-area">
         
-        />
-         <button
-    type="button"
-    class="eye-button"
-    (click)="mostrarPassword = !mostrarPassword"
-    [attr.aria-label]="mostrarPassword ? 'Ocultar password' : 'Mostrar password'"
-  >
-    <span [class.eye-off]="!mostrarPassword"></span>
-  </button>
-
-
-   
-      </div>
-
-      <!-- Código -->
-<div class="input-group">
-
-  <span class="icon">&#128274;</span>
-
-  <input
-    [type]="mostrarCodigo ? 'text' : 'password'"
-    name="codigo"
-    placeholder="Código"
-    [(ngModel)]="codigo"
-  />
-
-  <button
-    type="button"
-    class="eye-button"
-    (click)="mostrarCodigo = !mostrarCodigo"
-    [attr.aria-label]="mostrarCodigo ? 'Ocultar código' : 'Mostrar código'"
-  >
-    <span [class.eye-off]="!mostrarCodigo"></span>
-  </button>
-
-</div>
-
-   
-
-      <!-- Botón de ingreso -->
-      <button type="submit" class="login-button">INGRESAR</button>
-
-      <!-- Recordarme / Olvidó contraseña -->
-      <div class="login-options">
-        <div class="remember-me">
-          <input
-            type="checkbox"
-            id="rememberMe"
-            name="rememberMe"
-            [(ngModel)]="rememberMe"
-          />
-          <label for="rememberMe">Recuérdame</label>
+        <!-- Plataforma 3D -->
+        <div class="platform">
+          <div class="platform-top"></div>
+          <div class="platform-bottom"></div>
         </div>
-        <a href="#" class="forgot-link">¿Olvidó su contraseña?</a>
-      </div>
-    </form>
 
-    <p class="login-footer">Copyright &copy; 2026 Sanatorio Medicentro</p>
+        <!-- SVG del Estetoscopio -->
+        <svg class="stethoscope-svg" viewBox="0 0 500 420" xmlns="http://www.w3.org/2000/svg">
+          
+          <defs>
+            <!-- Gradiente para la cabeza -->
+            <radialGradient id="chestGrad" cx="40%" cy="35%">
+              <stop offset="0%" stop-color="#9a9eae"/>
+              <stop offset="50%" stop-color="#4a4e5e"/>
+              <stop offset="100%" stop-color="#1a1c28"/>
+            </radialGradient>
+            
+            <!-- Gradiente para el anillo azul -->
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#8ac5ff"/>
+              <stop offset="40%" stop-color="#3a7fef"/>
+              <stop offset="100%" stop-color="#1a5fbf"/>
+            </linearGradient>
+            
+            <!-- Gradiente para el centro metálico -->
+            <radialGradient id="centerGrad" cx="40%" cy="35%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="40%" stop-color="#e8e9ee"/>
+              <stop offset="80%" stop-color="#c0c3ce"/>
+              <stop offset="100%" stop-color="#a0a3ae"/>
+            </radialGradient>
+            
+            <!-- Sombra -->
+            <filter id="shadow">
+              <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.3"/>
+            </filter>
+            
+            <filter id="glow">
+              <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#7ab5ff" flood-opacity="0.3"/>
+            </filter>
+          </defs>
+          
+          <!-- ============ AURICULARES ============ -->
+          <!-- Auricular izquierdo -->
+          <ellipse cx="100" cy="35" rx="30" ry="14" fill="#2a2c38" stroke="#5a5e6e" stroke-width="1.5"/>
+          <ellipse cx="100" cy="35" rx="14" ry="7" fill="#6a6e7e" opacity="0.4"/>
+          <ellipse cx="100" cy="33" rx="8" ry="4" fill="#8a8e9e" opacity="0.2"/>
+          
+          <!-- Auricular derecho -->
+          <ellipse cx="400" cy="35" rx="30" ry="14" fill="#2a2c38" stroke="#5a5e6e" stroke-width="1.5"/>
+          <ellipse cx="400" cy="35" rx="14" ry="7" fill="#6a6e7e" opacity="0.4"/>
+          <ellipse cx="400" cy="33" rx="8" ry="4" fill="#8a8e9e" opacity="0.2"/>
+          
+          <!-- ============ TUBOS METÁLICOS ============ -->
+          <!-- Tubo izquierdo -->
+          <path d="M95 45 C90 90, 85 130, 95 170" 
+                stroke="#c8cbd6" stroke-width="10" fill="none" stroke-linecap="round"/>
+          <path d="M95 45 C90 90, 85 130, 95 170" 
+                stroke="#e8ebf6" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.4"/>
+          
+          <!-- Tubo derecho -->
+          <path d="M405 45 C410 90, 415 130, 405 170" 
+                stroke="#c8cbd6" stroke-width="10" fill="none" stroke-linecap="round"/>
+          <path d="M405 45 C410 90, 415 130, 405 170" 
+                stroke="#e8ebf6" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.4"/>
+          
+          <!-- Uniones metálicas de los tubos -->
+          <ellipse cx="95" cy="170" rx="15" ry="6" fill="#8a8d96" stroke="#6a6d76" stroke-width="1"/>
+          <ellipse cx="405" cy="170" rx="15" ry="6" fill="#8a8d96" stroke="#6a6d76" stroke-width="1"/>
+          
+          <!-- ============ MANGUERA PRINCIPAL ============ -->
+          <path d="M95 170 C110 200, 140 230, 190 245 C240 260, 290 255, 340 240 C370 230, 390 210, 405 170" 
+                stroke="#151720" stroke-width="18" fill="none" stroke-linecap="round" filter="url(#shadow)"/>
+          <path d="M95 170 C110 200, 140 230, 190 245 C240 260, 290 255, 340 240 C370 230, 390 210, 405 170" 
+                stroke="#252730" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.3"/>
+          
+          <!-- Detalles de textura en la manguera -->
+          <path d="M140 210 L145 215 M160 225 L165 230 M180 237 L185 242 
+                   M220 252 L225 257 M260 253 L265 258 M300 247 L305 252 
+                   M340 235 L345 240 M370 220 L375 225" 
+                stroke="rgba(60,60,80,0.15)" stroke-width="2" fill="none"/>
+          
+          <!-- ============ MANGUERA HACIA LA CABEZA ============ -->
+          <path d="M370 230 C385 245, 395 265, 398 295 C400 315, 400 325, 398 335" 
+                stroke="#151720" stroke-width="16" fill="none" stroke-linecap="round" filter="url(#shadow)"/>
+          <path d="M370 230 C385 245, 395 265, 398 295 C400 315, 400 325, 398 335" 
+                stroke="#252730" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.3"/>
+          
+          <!-- Conector metálico -->
+          <rect x="383" y="325" width="28" height="14" rx="5" fill="#2a2c38" stroke="#5a5e6e" stroke-width="1.5"/>
+          <rect x="388" y="328" width="18" height="8" rx="3" fill="#4a4e5e" opacity="0.5"/>
+          
+          <!-- ============ CABEZA DEL ESTETOSCOPIO ============ -->
+          <!-- Base de la cabeza -->
+          <circle cx="397" cy="370" r="55" fill="url(#chestGrad)" stroke="#3a3e4e" stroke-width="2" filter="url(#shadow)"/>
+          
+          <!-- Brillo en la cabeza -->
+          <ellipse cx="385" cy="355" rx="20" ry="12" fill="rgba(255,255,255,0.08)" transform="rotate(-20 385 355)"/>
+          
+          <!-- Anillo azul -->
+          <circle cx="397" cy="370" r="42" fill="none" stroke="url(#ringGrad)" stroke-width="10" filter="url(#glow)"/>
+          <circle cx="397" cy="370" r="42" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/>
+          
+          <!-- Brillo en el anillo -->
+          <path d="M370 345 Q390 335 410 345" stroke="rgba(255,255,255,0.3)" stroke-width="3" fill="none" stroke-linecap="round"/>
+          
+          <!-- Centro metálico -->
+          <circle cx="397" cy="370" r="26" fill="url(#centerGrad)" stroke="#8a8d96" stroke-width="1.5"/>
+          
+          <!-- Detalle del centro -->
+          <circle cx="397" cy="370" r="16" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="1"/>
+          <circle cx="397" cy="370" r="8" fill="none" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
+          
+          <!-- Brillo en el centro -->
+          <ellipse cx="392" cy="365" rx="10" ry="6" fill="rgba(255,255,255,0.3)" transform="rotate(-20 392 365)"/>
+          
+        </svg>
+        
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         PANEL DERECHO
+    ====================================================== -->
+    <section class="right-panel">
+
+      <span class="language">ES⌄</span>
+
+      <div class="form-content">
+
+        <h2>Bienvenido</h2>
+
+        <p class="subtitle">
+          Inicia sesión para continuar
+        </p>
+
+
+        <form class="login-form" (ngSubmit)="onLogin()">
+
+          <!-- ================= USUARIO ================= -->
+          <div class="input-box">
+            <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"></path>
+            </svg>
+            <input type="text" name="username" placeholder="Usuario:" [(ngModel)]="username" autocomplete="username"/>
+          </div>
+
+          <!-- ================= CÓDIGO ================= -->
+          <div class="input-box">
+            <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="8" cy="15" r="4"></circle>
+              <path d="M11 12l8-8"></path>
+              <path d="M16 5l3 3"></path>
+              <path d="M14 7l3 3"></path>
+            </svg>
+            <input [type]="mostrarCodigo ? 'text' : 'password'" name="codigo" placeholder="Código:" [(ngModel)]="codigo"/>
+            <button type="button" class="eye-button" (click)="mostrarCodigo = !mostrarCodigo">
+              <svg *ngIf="mostrarCodigo" class="eye-icon" viewBox="0 0 24 24">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg *ngIf="!mostrarCodigo" class="eye-icon" viewBox="0 0 24 24">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path class="eye-slash" d="M4 4l16 16"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- ================= CONTRASEÑA ================= -->
+          <div class="input-box">
+            <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+              <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+              <circle cx="12" cy="15" r="1"></circle>
+            </svg>
+            <input [type]="mostrarPassword ? 'text' : 'password'" name="password" placeholder="Contraseña:" [(ngModel)]="password" autocomplete="current-password"/>
+            <button type="button" class="eye-button" (click)="mostrarPassword = !mostrarPassword">
+              <svg *ngIf="mostrarPassword" class="eye-icon" viewBox="0 0 24 24">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg *ngIf="!mostrarPassword" class="eye-icon" viewBox="0 0 24 24">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path class="eye-slash" d="M4 4l16 16"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- ================= OPCIONES ================= -->
+          <div class="login-options">
+            <label class="remember">
+              <input type="checkbox" name="rememberMe" [(ngModel)]="rememberMe"/>
+              <span>Recuérdame</span>
+            </label>
+            <a href="#" class="forgot-password">¿Olvidó su contraseña?</a>
+          </div>
+
+          <!-- ================= BOTÓN ================= -->
+          <button type="submit" class="login-button">Ingresar</button>
+
+        </form>
+
+      </div>
+
+      <p class="copyright">Copyright © 2026 Sanatorio Medicentro</p>
+
+    </section>
+
   </div>
+
 </div>

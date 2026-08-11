@@ -1,323 +1,554 @@
-.login-wrapper {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
 
-  background: linear-gradient(
-    135deg,
-    #46c9c1 0%,
-    #2f7bd1 45%,
-    #1b4f9c 100%
-  );
+/* =====================================================
+   RESET
+===================================================== */
 
-  font-family: 'Segoe UI', Arial, sans-serif;
-}
-
-
-/* Tarjeta del login */
-.login-card {
-  position: relative;
+:host {
+  display: block;
   width: 100%;
-  max-width: 380px;
-
-  padding: 100px 32px 32px;
-
-  border-radius: 8px;
-
-  background: rgba(255, 255, 255, 0.14);
-
-  border: 1px solid rgba(255, 255, 255, 0.35);
-
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-
-  text-align: center;
-}
-
-
-/* Foto circular arriba de la tarjeta */
-.login-avatar {
-  position: absolute;
-
-  top: -85px;
-  left: 50%;
-
-  transform: translateX(-50%);
-
-  width: 160px;
-  height: 160px;
-
-  border-radius: 50%;
-
+  height: 100vh;
   overflow: hidden;
+}
 
-  border: 5px solid rgba(255, 255, 255, 0.6);
-
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-
-  background: #1b4f9c;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 
-/* Imagen */
-.login-avatar img {
+/* =====================================================
+   PÁGINA PRINCIPAL
+===================================================== */
+
+.login-page {
+  height: 100vh;
   width: 100%;
-  height: 100%;
-
-  object-fit: cover;
-}
-
-
-/* Formulario */
-.login-form {
-  margin-top: 16px;
-
   display: flex;
   flex-direction: column;
-
-  gap: 16px;
-}
-
-
-/* Grupo de cada input */
-.input-group {
-  position: relative;
-
-  display: flex;
   align-items: center;
-
-  background: #ffffff;
-
-  border-radius: 4px;
-
+  justify-content: center;
+  padding: 0;
+  background: linear-gradient(135deg, #c9cadf 0%, #b9bbd4 50%, #c8c9df 100%);
+  font-family: 'Inter', Arial, sans-serif;
   overflow: hidden;
 }
 
 
-/* Icono izquierdo */
-.input-group .icon {
-  position: absolute;
+/* =====================================================
+   TÍTULO PRINCIPAL
+===================================================== */
 
-  left: 14px;
-
-  font-size: 1rem;
-
-  opacity: 0.55;
-
-  z-index: 1;
+.page-title {
+  margin: 0 0 15px;
+  color: #ffffff;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 38px;
+  font-weight: 600;
+  font-style: italic;
+  text-shadow: 0 3px 8px rgba(40, 40, 70, 0.25);
 }
 
 
-/* Inputs */
-.input-group input {
+/* =====================================================
+   TARJETA
+===================================================== */
+
+.login-card {
   width: 100%;
-
-  border: none;
-
-  padding: 12px 45px 12px 42px;
-
-  font-size: 0.95rem;
-
-  color: #333;
-
-  outline: none;
-
-  background: transparent;
+  max-width: 100%;
+  height: calc(100vh - 70px);
+  display: flex;
+  overflow: hidden;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
 }
 
 
-/* Placeholder */
-.input-group input::placeholder {
-  color: #9aa5b1;
+/* =====================================================
+   PANEL IZQUIERDO (MORADO) - MÁS GRANDE
+===================================================== */
+
+.left-panel {
+  width: 48%;
+  position: relative;
+  overflow: hidden;
+  padding: 45px 50px;
+  background: linear-gradient(145deg, #b9bdf2 0%, #a9aff1 50%, #9da3eb 100%);
+  display: flex;
+  flex-direction: column;
 }
 
 
-/* =========================================
-   ICONO MOSTRAR / OCULTAR
-   ========================================= */
+/* =====================================================
+   LOGO - MÁS GRANDE
+===================================================== */
 
-.eye-button {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-
-  transform: translateY(-50%);
-
-  width: 28px;
-  height: 28px;
-
-  border: none;
-  background: transparent;
-
-  padding: 0;
-  margin: 0;
-
-  cursor: pointer;
-
+.logo-circle {
+  width: 180px;
+  height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  z-index: 5;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 8px 25px rgba(50, 55, 120, 0.25);
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
 }
 
-/* Forma del ojo */
-.eye-button span {
-  position: relative;
-
-  width: 19px;
-  height: 13px;
-
-  border: 2px solid #6f7d8c;
-
-  border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
-
+.logo-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 
-/* Pupila */
-.eye-button span::after {
-  content: "";
 
-  position: absolute;
+/* =====================================================
+   TEXTO - MÁS GRANDE
+===================================================== */
 
-  width: 6px;
-  height: 6px;
-
-  background: #6f7d8c;
-
-  border-radius: 50%;
-
-  top: 50%;
-  left: 50%;
-
-  transform: translate(-50%, -50%);
-}
-
-/* Línea roja diagonal */
-.eye-button .eye-off::before {
-  content: "";
-
-  position: absolute;
-
-  width: 27px;
-  height: 3px;
-
-  background: #d62828;
-
-  border-radius: 3px;
-
-  top: 50%;
-  left: 50%;
-
-  transform: translate(-50%, -50%) rotate(-45deg);
-
-  z-index: 10;
-}
-
-
-
-/* Botón ingresar */
-.login-button {
-  width: 100%;
-
-  padding: 12px;
-
-  border: none;
-
-  border-radius: 4px;
-
-  background: linear-gradient(
-    90deg,
-    #1e88b5,
-    #1b5fa8
-  );
-
+.welcome-text {
+  width: 380px;
+  margin: 25px 0 0;
   color: #ffffff;
+  font-size: 20px;
+  line-height: 1.7;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(50, 50, 100, 0.12);
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
+}
 
-  font-weight: 600;
 
-  letter-spacing: 1px;
+/* =====================================================
+   ÁREA MÉDICA
+===================================================== */
 
+.medical-area {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+
+/* =====================================================
+   PLATAFORMA 3D - MÁS GRANDE
+===================================================== */
+
+.platform {
+  position: absolute;
+  left: 50%;
+  bottom: 75px;
+  width: 75%;
+  height: 155px;
+  transform: translateX(-50%) rotate(-4deg);
+  z-index: 1;
+}
+
+.platform-top {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 108px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 45% 30%, #ffffff 0%, #e3e4ff 42%, #b1b2f0 100%);
+  box-shadow: inset 0 -8px 15px rgba(70, 65, 170, 0.12), 0 8px 18px rgba(60, 55, 130, 0.20);
+  z-index: 3;
+}
+
+.platform-bottom {
+  position: absolute;
+  left: 0;
+  top: 62px;
+  width: 100%;
+  height: 93px;
+  border-radius: 0 0 50% 50%;
+  background: linear-gradient(180deg, #8e8bea 0%, #7672dc 45%, #5c58c9 100%);
+  box-shadow: inset 0 -10px 15px rgba(50, 45, 130, 0.20), 0 12px 20px rgba(50, 45, 130, 0.22);
+  z-index: 2;
+}
+
+
+/* =====================================================
+   ESTETOSCOPIO SVG - MÁS GRANDE
+===================================================== */
+
+.stethoscope-svg {
+  position: absolute;
+  left: 50%;
+  bottom: 75px;
+  width: 60%;
+  max-height: 68%;
+  transform: translateX(-50%) rotate(-8deg);
+  z-index: 10;
+  filter: drop-shadow(0 5px 15px rgba(0,0,0,0.08));
+}
+
+
+/* =====================================================
+   PANEL DERECHO (BLANCO)
+===================================================== */
+
+.right-panel {
+  width: 52%;
+  position: relative;
+  background: #ffffff;
+  padding: 50px 70px 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+
+/* =====================================================
+   IDIOMA
+===================================================== */
+
+.language {
+  position: absolute;
+  top: 30px;
+  right: 45px;
+  color: #858aa3;
+  font-size: 14px;
   cursor: pointer;
-
-  font-size: 0.95rem;
 }
 
 
-.login-button:hover {
-  background: linear-gradient(
-    90deg,
-    #1a7aa3,
-    #164e8e
-  );
+/* =====================================================
+   CONTENIDO FORMULARIO
+===================================================== */
+
+.form-content {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.form-content h2 {
+  margin: 18px 0 5px;
+  color: #222535;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0 0 30px;
+  color: #858ba4;
+  font-size: 17px;
 }
 
 
-/* Opciones inferiores */
+/* =====================================================
+   FORMULARIO
+===================================================== */
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+
+/* =====================================================
+   CAJAS DE INPUT
+===================================================== */
+
+.input-box {
+  position: relative;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #dedfec;
+  border-radius: 14px;
+  background: #ffffff;
+  transition: 0.2s;
+}
+
+.input-box:focus-within {
+  border-color: #7068dc;
+  box-shadow: 0 0 0 4px rgba(112, 104, 220, 0.08);
+}
+
+
+/* =====================================================
+   ICONOS
+===================================================== */
+
+.field-icon {
+  width: 24px;
+  height: 24px;
+  margin-left: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: #7d84a2;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* =====================================================
+   INPUTS
+===================================================== */
+
+.input-box input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0 52px 0 15px;
+  color: #292c3d;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.input-box input::placeholder {
+  color: #a0a5b8;
+  font-weight: 400;
+}
+
+
+/* =====================================================
+   BOTÓN DEL OJO
+===================================================== */
+
+.eye-button {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eye-icon {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: #7b82a0;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.eye-slash {
+  stroke: #7b82a0;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.eye-button:hover .eye-icon {
+  stroke: #5d57d4;
+}
+
+
+/* =====================================================
+   OPCIONES
+===================================================== */
+
 .login-options {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
-
   margin-top: 4px;
 }
 
-
-/* Recordarme */
-.remember-me {
+.remember {
   display: flex;
-
   align-items: center;
-
-  gap: 8px;
-}
-
-
-.remember-me input[type='checkbox'] {
-  accent-color: #ffffff;
-
-  width: 16px;
-  height: 16px;
-
+  gap: 10px;
+  color: #777d95;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
 }
 
-
-.remember-me label {
-  color: #ffffff;
-
-  font-size: 0.85rem;
-
+.remember input {
+  width: 18px;
+  height: 18px;
   cursor: pointer;
+  accent-color: #655ed8;
 }
 
-
-/* Olvidó contraseña */
-.forgot-link {
-  color: #ffffff;
-
-  font-size: 0.85rem;
-
-  font-style: italic;
-
+.forgot-password {
+  color: #564ed5;
   text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-
-.forgot-link:hover {
+.forgot-password:hover {
   text-decoration: underline;
 }
 
 
-/* Footer */
-.login-footer {
-  margin-top: 24px;
+/* =====================================================
+   BOTÓN INGRESAR
+===================================================== */
 
-  color: rgba(255, 255, 255, 0.85);
+.login-button {
+  width: 100%;
+  height: 58px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #7067df, #554bd1);
+  color: #ffffff;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(91, 81, 210, 0.30);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
 
-  font-size: 0.8rem;
+.login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(91, 81, 210, 0.40);
+}
+
+.login-button:active {
+  transform: translateY(0);
+}
+
+
+/* =====================================================
+   COPYRIGHT
+===================================================== */
+
+.copyright {
+  margin-top: auto;
+  margin-bottom: 5px;
+  text-align: center;
+  color: #9095aa;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1100px) {
+  .login-page { padding: 0; }
+  .login-card { max-width: 100%; height: calc(100vh - 60px); }
+  .left-panel { width: 46%; padding: 35px 35px; }
+  .right-panel { width: 54%; padding: 40px 50px 25px; }
+  .stethoscope-svg { width: 55%; bottom: 65px; }
+  .platform { width: 68%; height: 135px; bottom: 65px; }
+  .platform-top { height: 95px; }
+  .platform-bottom { top: 55px; height: 80px; }
+  .logo-circle { width: 120px; height: 120px; }
+  .page-title { font-size: 34px; margin-bottom: 12px; }
+  .form-content h2 { font-size: 34px; }
+  .form-content { max-width: 450px; }
+  .welcome-text { width: 330px; font-size: 18px; }
+}
+
+@media (max-width: 750px) {
+  .login-page { padding: 0; }
+  .page-title { font-size: 30px; margin-bottom: 10px; }
+  .login-card { 
+    flex-direction: column; 
+    max-width: 100%;
+    height: calc(100vh - 50px);
+  }
+  .left-panel { 
+    width: 100%; 
+    height: 42vh; 
+    min-height: 300px; 
+    padding: 25px 28px;
+  }
+  .right-panel { 
+    width: 100%; 
+    padding: 40px 45px 30px;  /* ← Aumenta esto */
+    min-height: 58vh;
+  }
+
+  .form-content h2 { font-size: 32px; }
+  .form-content { max-width: 100%; }
+  .stethoscope-svg { width: 48%; bottom: 50px; }
+  .platform { width: 60%; height: 110px; bottom: 50px; }
+  .platform-top { height: 78px; }
+  .platform-bottom { top: 45px; height: 65px; }
+  .welcome-text { width: 280px; font-size: 16px; margin-top: 18px; }
+  .logo-circle { width: 100px; height: 100px; }
+  .input-box { height: 54px; }
+  .login-button { height: 52px; font-size: 16px; }
+  .subtitle { font-size: 15px; margin-bottom: 25px; }
+  .login-options { flex-wrap: wrap; gap: 10px; }
+  .language { font-size: 13px; top: 22px; right: 28px; }
+}
+
+@media (max-width: 480px) {
+  .login-page { padding: 0; }
+  .page-title { font-size: 24px; margin-bottom: 8px; }
+  .login-card { 
+    flex-direction: column; 
+    max-width: 100%;
+    height: calc(100vh - 45px);
+  }
+  .left-panel { 
+    height: 38vh; 
+    min-height: 240px; 
+    padding: 18px 20px; 
+  }
+  .logo-circle { width: 75px; height: 75px; }
+  .welcome-text { width: 200px; font-size: 13px; margin-top: 12px; line-height: 1.5; }
+  .right-panel { 
+    padding: 20px 16px 16px;
+    min-height: 62vh;
+  }
+  .form-content h2 { font-size: 26px; margin-top: 8px; }
+  .subtitle { font-size: 13px; margin-bottom: 18px; }
+  .login-options { 
+    flex-direction: column; 
+    align-items: flex-start; 
+    gap: 10px; 
+  }
+  .stethoscope-svg { 
+    width: 42%;
+    bottom: 38px;
+    transform: translateX(-50%) rotate(-5deg);
+    max-height: 48%;
+  }
+  .platform { width: 50%; height: 80px; bottom: 38px; }
+  .platform-top { height: 57px; }
+  .platform-bottom { top: 34px; height: 46px; }
+  .input-box { height: 46px; border-radius: 12px; }
+  .input-box input { font-size: 14px; padding: 0 42px 0 12px; }
+  .login-button { height: 46px; font-size: 14px; margin-top: 6px; border-radius: 12px; }
+  .remember { font-size: 13px; }
+  .remember input { width: 17px; height: 17px; }
+  .forgot-password { font-size: 13px; }
+  .copyright { font-size: 11px; }
+  .language { font-size: 12px; top: 16px; right: 20px; }
+  .field-icon { width: 18px; height: 18px; margin-left: 14px; }
+  .eye-icon { width: 18px; height: 18px; }
+  .eye-button { right: 12px; }
 }
