@@ -1,0 +1,323 @@
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+
+  background: linear-gradient(
+    135deg,
+    #46c9c1 0%,
+    #2f7bd1 45%,
+    #1b4f9c 100%
+  );
+
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+
+/* Tarjeta del login */
+.login-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+
+  padding: 100px 32px 32px;
+
+  border-radius: 8px;
+
+  background: rgba(255, 255, 255, 0.14);
+
+  border: 1px solid rgba(255, 255, 255, 0.35);
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+
+  text-align: center;
+}
+
+
+/* Foto circular arriba de la tarjeta */
+.login-avatar {
+  position: absolute;
+
+  top: -85px;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: 160px;
+  height: 160px;
+
+  border-radius: 50%;
+
+  overflow: hidden;
+
+  border: 5px solid rgba(255, 255, 255, 0.6);
+
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+
+  background: #1b4f9c;
+}
+
+
+/* Imagen */
+.login-avatar img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+
+/* Formulario */
+.login-form {
+  margin-top: 16px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 16px;
+}
+
+
+/* Grupo de cada input */
+.input-group {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  background: #ffffff;
+
+  border-radius: 4px;
+
+  overflow: hidden;
+}
+
+
+/* Icono izquierdo */
+.input-group .icon {
+  position: absolute;
+
+  left: 14px;
+
+  font-size: 1rem;
+
+  opacity: 0.55;
+
+  z-index: 1;
+}
+
+
+/* Inputs */
+.input-group input {
+  width: 100%;
+
+  border: none;
+
+  padding: 12px 45px 12px 42px;
+
+  font-size: 0.95rem;
+
+  color: #333;
+
+  outline: none;
+
+  background: transparent;
+}
+
+
+/* Placeholder */
+.input-group input::placeholder {
+  color: #9aa5b1;
+}
+
+
+/* =========================================
+   ICONO MOSTRAR / OCULTAR
+   ========================================= */
+
+.eye-button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  width: 28px;
+  height: 28px;
+
+  border: none;
+  background: transparent;
+
+  padding: 0;
+  margin: 0;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 5;
+}
+
+/* Forma del ojo */
+.eye-button span {
+  position: relative;
+
+  width: 19px;
+  height: 13px;
+
+  border: 2px solid #6f7d8c;
+
+  border-radius: 50% 50% 50% 50% / 65% 65% 35% 35%;
+
+  display: block;
+}
+
+/* Pupila */
+.eye-button span::after {
+  content: "";
+
+  position: absolute;
+
+  width: 6px;
+  height: 6px;
+
+  background: #6f7d8c;
+
+  border-radius: 50%;
+
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+}
+
+/* Línea roja diagonal */
+.eye-button .eye-off::before {
+  content: "";
+
+  position: absolute;
+
+  width: 27px;
+  height: 3px;
+
+  background: #d62828;
+
+  border-radius: 3px;
+
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%) rotate(-45deg);
+
+  z-index: 10;
+}
+
+
+
+/* Botón ingresar */
+.login-button {
+  width: 100%;
+
+  padding: 12px;
+
+  border: none;
+
+  border-radius: 4px;
+
+  background: linear-gradient(
+    90deg,
+    #1e88b5,
+    #1b5fa8
+  );
+
+  color: #ffffff;
+
+  font-weight: 600;
+
+  letter-spacing: 1px;
+
+  cursor: pointer;
+
+  font-size: 0.95rem;
+}
+
+
+.login-button:hover {
+  background: linear-gradient(
+    90deg,
+    #1a7aa3,
+    #164e8e
+  );
+}
+
+
+/* Opciones inferiores */
+.login-options {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-top: 4px;
+}
+
+
+/* Recordarme */
+.remember-me {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+
+.remember-me input[type='checkbox'] {
+  accent-color: #ffffff;
+
+  width: 16px;
+  height: 16px;
+
+  cursor: pointer;
+}
+
+
+.remember-me label {
+  color: #ffffff;
+
+  font-size: 0.85rem;
+
+  cursor: pointer;
+}
+
+
+/* Olvidó contraseña */
+.forgot-link {
+  color: #ffffff;
+
+  font-size: 0.85rem;
+
+  font-style: italic;
+
+  text-decoration: none;
+}
+
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+
+/* Footer */
+.login-footer {
+  margin-top: 24px;
+
+  color: rgba(255, 255, 255, 0.85);
+
+  font-size: 0.8rem;
+}

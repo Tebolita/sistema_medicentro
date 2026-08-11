@@ -1,0 +1,91 @@
+<div class="login-wrapper">
+  <div class="login-card">
+
+    <!-- Foto circular del consultorio (reemplaza src por tu imagen real) -->
+    <div class="login-avatar">
+    <img src="sanatorio.png" alt="Sanatorio Medicentro">
+</div>
+
+    <form class="login-form" (ngSubmit)="onLogin()">
+
+      <!-- Usuario -->
+      <div class="input-group">
+        <span class="icon">&#128100;</span>
+        <input
+          type="text"
+          name="username"
+          placeholder="Usuario"
+          [(ngModel)]="username"
+          autocomplete="username"
+        />
+      </div>
+
+      <!-- Contraseña -->
+      <div class="input-group">
+        <span class="icon">&#128274;</span>
+        <input
+          [type]="mostrarPassword ? 'text' : 'password'"
+          name="password"
+          placeholder="Contraseña"
+          [(ngModel)]="password"
+        
+        />
+         <button
+    type="button"
+    class="eye-button"
+    (click)="mostrarPassword = !mostrarPassword"
+    [attr.aria-label]="mostrarPassword ? 'Ocultar password' : 'Mostrar password'"
+  >
+    <span [class.eye-off]="!mostrarPassword"></span>
+  </button>
+
+
+   
+      </div>
+
+      <!-- Código -->
+<div class="input-group">
+
+  <span class="icon">&#128274;</span>
+
+  <input
+    [type]="mostrarCodigo ? 'text' : 'password'"
+    name="codigo"
+    placeholder="Código"
+    [(ngModel)]="codigo"
+  />
+
+  <button
+    type="button"
+    class="eye-button"
+    (click)="mostrarCodigo = !mostrarCodigo"
+    [attr.aria-label]="mostrarCodigo ? 'Ocultar código' : 'Mostrar código'"
+  >
+    <span [class.eye-off]="!mostrarCodigo"></span>
+  </button>
+
+</div>
+
+   
+
+      <!-- Botón de ingreso -->
+      <button type="submit" class="login-button">INGRESAR</button>
+
+      <!-- Recordarme / Olvidó contraseña -->
+      <div class="login-options">
+        <div class="remember-me">
+          <input
+            type="checkbox"
+            id="rememberMe"
+            name="rememberMe"
+            [(ngModel)]="rememberMe"
+          />
+          <label for="rememberMe">Recuérdame</label>
+        </div>
+        <a href="#" class="forgot-link">¿Olvidó su contraseña?</a>
+      </div>
+    </form>
+
+    <p class="login-footer">Copyright &copy; 2026 Sanatorio Medicentro</p>
+  </div>
+</div>
