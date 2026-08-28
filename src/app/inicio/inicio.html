@@ -1,0 +1,18 @@
+<div class="welcome-card">
+  <h1>Bienvenido a MediCentro</h1>
+  <p>Selecciona un módulo para comenzar.</p>
+</div>
+
+<div class="category-grid">
+  @for (section of sections; track section.slug) {
+    <a class="category-card" [routerLink]="['/home/modulo', section.slug]" [style.--accent]="section.color">
+      <div class="category-card-icon">
+        <mat-icon>{{ section.icon }}</mat-icon>
+      </div>
+      <div class="category-card-text">
+        <h2>{{ section.title }}</h2>
+        <p>{{ section.description }}</p>
+      </div>
+    </a>
+  }
+</div>

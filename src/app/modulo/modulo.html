@@ -1,0 +1,29 @@
+@if (section(); as s) {
+  <div class="module-page" [style.--accent]="s.color">
+    <div class="module-hero">
+      <div class="module-hero-icon">
+        <mat-icon>{{ s.icon }}</mat-icon>
+      </div>
+      <div class="module-hero-text">
+        <h1>{{ s.title }}</h1>
+        <p>{{ s.description }}</p>
+      </div>
+    </div>
+
+    <div class="module-grid">
+      @for (item of s.items; track item.label) {
+        <div class="module-card">
+          <div class="module-card-icon">
+            <mat-icon>{{ item.icon }}</mat-icon>
+          </div>
+          <span class="module-card-label">{{ item.label }}</span>
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="module-not-found">
+    <mat-icon>help_outline</mat-icon>
+    <p>Módulo no encontrado.</p>
+  </div>
+}

@@ -1,0 +1,72 @@
+.header-bar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-sizing: border-box;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+}
+
+.icon-btn {
+  color: #fff;
+}
+
+.icon-btn.small {
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+}
+
+.icon-btn.small mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.avatar-btn {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.datetime-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 14px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.pill-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.datetime-text {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-transform: capitalize;
+  letter-spacing: 0.2px;
+}
+
+.hidden-datepicker-field {
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}

@@ -1,0 +1,107 @@
+<nav class="menu" [class.collapsed]="collapsed()">
+  <div class="menu-header">
+    <div class="logo-block">
+      <img class="logo-img" src="logo-full.svg" alt="MediCentro" />
+      <span class="brand-text">MediCentro</span>
+    </div>
+    <span class="spacer"></span>
+    <button
+      matIconButton
+      class="toggle-btn"
+      (click)="toggle()"
+      [attr.aria-label]="collapsed() ? 'Expandir menú' : 'Colapsar menú'"
+    >
+      <mat-icon>{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+    </button>
+  </div>
+
+  <div class="search-box">
+    <mat-icon class="search-icon">search</mat-icon>
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Buscar en el menú..."
+      [ngModel]="searchTerm()"
+      (ngModelChange)="searchTerm.set($event)"
+    />
+    @if (isSearching()) {
+      <button
+        type="button"
+        class="search-clear"
+        (click)="searchTerm.set('')"
+        aria-label="Limpiar búsqueda"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  <div class="menu-scroll">
+    @if (!isSearching()) {
+      <mat-nav-list class="nav-list">
+        <a
+          mat-list-item
+          class="nav-item"
+          [routerLink]="inicio.route"
+          routerLinkActive="active"
+          [matTooltip]="inicio.label"
+          [matTooltipDisabled]="!collapsed()"
+          matTooltipPosition="right"
+        >
+          <mat-icon matListItemIcon>{{ inicio.icon }}</mat-icon>
+          <span matListItemTitle class="label">{{ inicio.label }}</span>
+        </a>
+      </mat-nav-list>
+    }
+
+    @for (section of filteredSections(); track section.title) {
+      <div class="section" [class.expanded]="section.expanded || isSearching()">
+        <div class="section-label" [style.--section-color]="section.color">
+          <a
+            class="section-link"
+            [routerLink]="['/home/modulo', section.slug]"
+            routerLinkActive="active"
+            [matTooltip]="'Ver módulo: ' + section.title"
+            [matTooltipDisabled]="!collapsed()"
+            matTooltipPosition="right"
+          >
+            <mat-icon class="section-icon">{{ section.icon }}</mat-icon>
+            <span class="section-text">{{ section.title }}</span>
+          </a>
+          <span class="section-spacer"></span>
+          <button
+            type="button"
+            class="section-toggle"
+            (click)="toggleSection(section)"
+            [attr.aria-expanded]="section.expanded || isSearching()"
+            [attr.aria-label]="'Mostrar opciones de ' + section.title"
+          >
+            <mat-icon class="section-chevron">expand_more</mat-icon>
+          </button>
+        </div>
+        <div class="section-body">
+          <mat-nav-list class="nav-list">
+            @for (item of section.items; track item.label) {
+              <a
+                mat-list-item
+                class="nav-item"
+                [routerLink]="item.route || null"
+                routerLinkActive="active"
+                [matTooltip]="item.label"
+                [matTooltipDisabled]="!collapsed()"
+                matTooltipPosition="right"
+              >
+                <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+                <span matListItemTitle class="label">{{ item.label }}</span>
+              </a>
+            }
+          </mat-nav-list>
+        </div>
+      </div>
+    }
+
+    @if (isSearching() && filteredSections().length === 0) {
+      <p class="no-results">Sin resultados para "{{ searchTerm() }}"</p>
+    }
+  </div>
+</nav>

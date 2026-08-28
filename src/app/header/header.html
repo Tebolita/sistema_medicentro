@@ -1,0 +1,52 @@
+<div class="header-bar">
+  <div class="header-left">
+    <button
+      matIconButton
+      class="icon-btn"
+      [matBadge]="alertCount"
+      matBadgeColor="warn"
+      matBadgeSize="small"
+      [matBadgeHidden]="alertCount === 0"
+      aria-label="Alertas"
+    >
+      <mat-icon>notifications</mat-icon>
+    </button>
+  </div>
+
+  <div class="header-center">
+    <div class="datetime-pill">
+      <mat-icon class="pill-icon">event</mat-icon>
+      <span class="datetime-text">
+        {{ now() | date: 'EEEE d MMMM y' }} · {{ now() | date: 'HH:mm:ss' }}
+      </span>
+      <button matIconButton class="icon-btn small" (click)="picker.open()" aria-label="Abrir calendario">
+        <mat-icon>calendar_month</mat-icon>
+      </button>
+    </div>
+    <mat-form-field class="hidden-datepicker-field" subscriptSizing="dynamic">
+      <input matInput [matDatepicker]="picker" [(ngModel)]="selectedDate" />
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+  </div>
+
+  <div class="header-right">
+    <button matIconButton class="icon-btn avatar-btn" [matMenuTriggerFor]="userMenu" aria-label="Menú de usuario">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item>
+        <mat-icon>person</mat-icon>
+        <span>Perfil</span>
+      </button>
+      <button mat-menu-item>
+        <mat-icon>settings</mat-icon>
+        <span>Configuración</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="cerrarSesion()">
+        <mat-icon>logout</mat-icon>
+        <span>Cerrar sesión</span>
+      </button>
+    </mat-menu>
+  </div>
+</div>
