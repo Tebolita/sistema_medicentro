@@ -1,0 +1,98 @@
+<div class="form-page">
+  <div class="page-header">
+    <div>
+      <a routerLink="/home/consultas" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Consulta externa
+      </a>
+      <h1>{{ esNueva() ? 'Nueva consulta' : 'Editar consulta' }}</h1>
+    </div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Paciente</mat-label>
+        <mat-select formControlName="idPaciente">
+          @for (p of pacientes(); track p.idPaciente) {
+            <mat-option [value]="p.idPaciente">
+              {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+          <mat-error>Selecciona un paciente</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Médico</mat-label>
+        <mat-select formControlName="idMedico">
+          @for (m of medicos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedico.invalid && form.controls.idMedico.touched) {
+          <mat-error>Selecciona un médico</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fecha" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (form.controls.fecha.invalid && form.controls.fecha.touched) {
+          <mat-error>Selecciona la fecha</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hora</mat-label>
+        <input matInput type="time" formControlName="hora" />
+        @if (form.controls.hora.invalid && form.controls.hora.touched) {
+          <mat-error>Indica una hora válida</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de consulta</mat-label>
+        <mat-select formControlName="idTipoConsulta">
+          @for (t of tiposConsulta; track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idTipoConsulta.invalid && form.controls.idTipoConsulta.touched) {
+          <mat-error>Selecciona el tipo de consulta</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoCita">
+          @for (e of estadosCita; track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Motivo de consulta</mat-label>
+        <textarea matInput formControlName="motivoConsulta" rows="2"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Notas</mat-label>
+        <textarea matInput formControlName="notas" rows="2"></textarea>
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/consultas">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar consulta
+      </button>
+    </div>
+  </form>
+</div>

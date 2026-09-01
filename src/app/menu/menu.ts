@@ -1,6 +1,8 @@
-import { Component, computed, output, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
@@ -28,8 +30,28 @@ interface MenuSectionState extends MenuSection {
   styleUrl: './menu.css',
 })
 export class Menu {
+  private router = inject(Router);
+
   collapsed = signal(false);
   collapsedChange = output<boolean>();
+
+  // Ruta exacta actual (sin query params), usada para resaltar solo el ítem
+  // que realmente coincide y no cualquier otro cuya ruta sea un prefijo
+  // (p.ej. "/home/pacientes" es prefijo de "/home/pacientes/nuevo").
+  currentUrl = signal(this.router.url.split('?')[0]);
+
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe((event) => this.currentUrl.set(event.urlAfterRedirects.split('?')[0]));
+  }
+
+  isItemActive(route: string | null | undefined): boolean {
+    return !!route && this.currentUrl() === route;
+  }
 
   toggle(): void {
     this.collapsed.update((value) => !value);

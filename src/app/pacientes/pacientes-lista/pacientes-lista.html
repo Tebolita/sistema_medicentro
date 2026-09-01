@@ -1,0 +1,102 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Pacientes</h1>
+      <p>Registro, búsqueda y expediente de pacientes de consulta externa.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/pacientes/nuevo" class="new-btn">
+      <mat-icon>person_add</mat-icon>
+      Nuevo paciente
+    </a>
+  </div>
+
+  <div class="top-row">
+    <div class="search-bar" [class.pulse]="resaltarBusqueda()">
+      <mat-icon>search</mat-icon>
+      <input
+        #searchInput
+        type="text"
+        placeholder="Buscar por nombre, expediente o documento..."
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+      />
+      @if (buscando()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (!buscando()) {
+      <div class="opciones-row">
+        @for (item of opcionesRecepcion; track item.label) {
+          <a
+            class="opcion-chip"
+            [class.disabled]="!item.route"
+            [routerLink]="item.route || null"
+            [matTooltip]="item.route ? item.label : 'Próximamente'"
+            matTooltipPosition="above"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+
+  @if (mostrarRecientes() && !buscando()) {
+    <div class="section-block">
+      <h2 class="section-title">Últimos expedientes</h2>
+      <div class="recientes-row">
+        @for (p of recientes(); track p.idPaciente) {
+          <a class="reciente-card" [routerLink]="['/home/pacientes', p.idPaciente]">
+            <div class="patient-avatar small">{{ iniciales(p) }}</div>
+            <div class="reciente-info">
+              <span class="reciente-nombre">{{ nombreCompleto(p) }}</span>
+              <span class="patient-meta">{{ p.codigoExpediente }} · {{ p.edad }} años</span>
+            </div>
+          </a>
+        }
+      </div>
+    </div>
+  }
+
+  <h2 class="section-title">
+    {{ buscando() ? 'Resultados de búsqueda (' + pacientes().length + ')' : 'Todos los pacientes' }}
+  </h2>
+
+  <div class="patient-grid">
+    @for (p of pacientes(); track p.idPaciente) {
+      <a class="patient-card" [routerLink]="['/home/pacientes', p.idPaciente]">
+        <div class="patient-avatar">{{ iniciales(p) }}</div>
+        <div class="patient-info">
+          <h2>{{ nombreCompleto(p) }}</h2>
+          <span class="patient-meta">{{ p.codigoExpediente }} · {{ p.edad }} años</span>
+          <span class="patient-meta">{{ documentoLabel(p.idTipoDocumento) }}: {{ p.numeroDocumento || '—' }}</span>
+          @if (p.telefonoPrincipal) {
+            <span class="patient-meta"><mat-icon>call</mat-icon>{{ p.telefonoPrincipal }}</span>
+          }
+        </div>
+        <div class="patient-actions">
+          <span class="status-badge">{{ estadoLabel(p.idEstadoPaciente) }}</span>
+          <button
+            matIconButton
+            type="button"
+            [matTooltip]="'Eliminar paciente'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(p.idPaciente, nombreCompleto(p))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </a>
+    }
+
+    @if (pacientes().length === 0) {
+      <div class="empty-state">
+        <mat-icon>groups</mat-icon>
+        <p>No se encontraron pacientes{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

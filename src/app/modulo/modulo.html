@@ -12,12 +12,19 @@
 
     <div class="module-grid">
       @for (item of s.items; track item.label) {
-        <div class="module-card">
+        <a
+          class="module-card"
+          [class.disabled]="!item.route"
+          [routerLink]="item.route || null"
+          [queryParams]="item.queryParams || null"
+          [matTooltip]="item.route ? '' : 'Próximamente'"
+          matTooltipPosition="above"
+        >
           <div class="module-card-icon">
             <mat-icon>{{ item.icon }}</mat-icon>
           </div>
           <span class="module-card-label">{{ item.label }}</span>
-        </div>
+        </a>
       }
     </div>
   </div>

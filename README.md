@@ -57,3 +57,12 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+
+## prefixes use for github commits
+
+feat:FeatureCuando agregas código nuevo (equivalente a [ADD]).
+fix:FixCuando corriges un error o actualizas algo roto.
+docs:DocumentationSolo cambios en la documentación (como el README).
+style:StyleCambios de formato, puntos y comas, espacios (no cambia lógica).chore:
+ChoreTareas rutinarias, actualizar librerías o modificar el .gitignore.

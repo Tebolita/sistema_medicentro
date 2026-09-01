@@ -1,0 +1,54 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Consulta externa</h1>
+      <p>Registro y seguimiento de citas de primera vez y reconsulta.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/consultas/nueva" class="new-btn">
+      <mat-icon>event_available</mat-icon>
+      Nueva consulta
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por paciente, médico o motivo..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+  </div>
+
+  <div class="consulta-grid">
+    @for (c of consultas(); track c.idCita) {
+      <a class="consulta-card" [routerLink]="['/home/consultas', c.idCita]">
+        <div class="patient-avatar">{{ iniciales(c.idPaciente) }}</div>
+        <div class="consulta-info">
+          <h2>{{ nombrePaciente(c.idPaciente) }}</h2>
+          <span class="consulta-meta"><mat-icon>event</mat-icon>{{ formatFechaHora(c.fechaHoraInicio) }}</span>
+          <span class="consulta-meta"><mat-icon>medical_services</mat-icon>{{ medicoLabel(c.idMedico) }}</span>
+          <span class="consulta-meta">{{ tipoConsultaLabel(c.idTipoConsulta) }} · {{ c.motivoConsulta || 'Sin motivo especificado' }}</span>
+        </div>
+        <div class="consulta-actions">
+          <span class="status-badge" [class]="estadoClase(c.idEstadoCita)">{{ estadoLabel(c.idEstadoCita) }}</span>
+          <button
+            matIconButton
+            type="button"
+            [matTooltip]="'Eliminar consulta'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.idCita, nombrePaciente(c.idPaciente))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </a>
+    }
+
+    @if (consultas().length === 0) {
+      <div class="empty-state">
+        <mat-icon>event_busy</mat-icon>
+        <p>No se encontraron consultas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -2,6 +2,7 @@ export interface MenuItem {
   icon: string;
   label: string;
   route?: string;
+  queryParams?: Record<string, string>;
 }
 
 export interface MenuSection {
@@ -10,6 +11,7 @@ export interface MenuSection {
   icon: string;
   description: string;
   color: string;
+  route?: string; // módulo real ya construido; si no está, cae al overview genérico /home/modulo/:slug
   items: MenuItem[];
 }
 
@@ -21,11 +23,17 @@ export const MENU_SECTIONS: MenuSection[] = [
     description:
       'Registro de pacientes, bitácora de atención (libro de actas) y búsqueda de expedientes físicos al ingreso a consulta.',
     color: '#0d6a8f',
+    route: '/home/pacientes',
     items: [
-      { icon: 'person_add', label: 'Registro de pacientes' },
-      { icon: 'menu_book', label: 'Libro de actas' },
-      { icon: 'manage_search', label: 'Búsqueda de expediente' },
-      { icon: 'assignment_ind', label: 'Consulta externa' }, // primera / re-consulta
+      { icon: 'person_add', label: 'Registro de pacientes', route: '/home/pacientes/nuevo' },
+      { icon: 'menu_book', label: 'Libro de actas', route: '/home/libro-actas' },
+      {
+        icon: 'manage_search',
+        label: 'Búsqueda de expediente',
+        route: '/home/pacientes',
+        queryParams: { foco: 'buscar' },
+      },
+      { icon: 'assignment_ind', label: 'Consulta externa', route: '/home/consultas' }, // primera / re-consulta
     ],
   },
   {

@@ -61,6 +61,8 @@
   border: 1px solid #eceff1;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease,
@@ -71,6 +73,17 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
   border-color: var(--accent);
+}
+
+.module-card.disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.module-card.disabled:hover {
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-color: #eceff1;
 }
 
 .module-card-icon {

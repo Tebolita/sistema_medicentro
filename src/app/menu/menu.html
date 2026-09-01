@@ -59,7 +59,7 @@
         <div class="section-label" [style.--section-color]="section.color">
           <a
             class="section-link"
-            [routerLink]="['/home/modulo', section.slug]"
+            [routerLink]="section.route || ['/home/modulo', section.slug]"
             routerLinkActive="active"
             [matTooltip]="'Ver módulo: ' + section.title"
             [matTooltipDisabled]="!collapsed()"
@@ -86,7 +86,8 @@
                 mat-list-item
                 class="nav-item"
                 [routerLink]="item.route || null"
-                routerLinkActive="active"
+                [queryParams]="item.queryParams || null"
+                [class.active]="isItemActive(item.route)"
                 [matTooltip]="item.label"
                 [matTooltipDisabled]="!collapsed()"
                 matTooltipPosition="right"

@@ -1,0 +1,323 @@
+<div class="page">
+  <div class="form-hero">
+    <div class="form-hero-icon">
+      <mat-icon>{{ esNuevo() ? 'person_add' : 'badge' }}</mat-icon>
+    </div>
+    <div class="form-hero-text">
+      <h1>
+        @if (esNuevo()) {
+          Nuevo paciente
+        } @else {
+          {{ datosGenerales.controls.primerNombre.value }} {{ datosGenerales.controls.primerApellido.value }}
+        }
+      </h1>
+      <p>
+        @if (esNuevo()) {
+          Completa los datos para crear el expediente.
+        } @else {
+          {{ datosGenerales.controls.codigoExpediente.value }}
+          @if (edad() !== null) {
+            · {{ edad() }} años
+          }
+        }
+      </p>
+    </div>
+    <a matButton routerLink="/home/pacientes" class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+      Volver a la lista
+    </a>
+  </div>
+
+  <div class="form-card">
+    <mat-tab-group animationDuration="200ms">
+      <mat-tab label="Datos generales">
+        <div class="tab-content" [formGroup]="datosGenerales">
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Expediente</mat-label>
+              <input matInput formControlName="codigoExpediente" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Primer nombre</mat-label>
+              <input matInput formControlName="primerNombre" />
+              @if (datosGenerales.controls.primerNombre.invalid && datosGenerales.controls.primerNombre.touched) {
+                <mat-error>Requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Segundo nombre</mat-label>
+              <input matInput formControlName="segundoNombre" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Primer apellido</mat-label>
+              <input matInput formControlName="primerApellido" />
+              @if (datosGenerales.controls.primerApellido.invalid && datosGenerales.controls.primerApellido.touched) {
+                <mat-error>Requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Segundo apellido</mat-label>
+              <input matInput formControlName="segundoApellido" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de nacimiento</mat-label>
+              <input matInput [matDatepicker]="pickerNac" formControlName="fechaNacimiento" />
+              <mat-datepicker-toggle matIconSuffix [for]="pickerNac"></mat-datepicker-toggle>
+              <mat-datepicker #pickerNac></mat-datepicker>
+              @if (datosGenerales.controls.fechaNacimiento.invalid && datosGenerales.controls.fechaNacimiento.touched) {
+                <mat-error>Requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Género</mat-label>
+              <mat-select formControlName="idGenero">
+                @for (g of generos; track g.id) {
+                  <mat-option [value]="g.id">{{ g.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de documento</mat-label>
+              <mat-select formControlName="idTipoDocumento">
+                @for (t of tiposDocumento; track t.id) {
+                  <mat-option [value]="t.id">{{ t.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Número de documento</mat-label>
+              <input matInput formControlName="numeroDocumento" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Estado civil</mat-label>
+              <mat-select formControlName="idEstadoCivil">
+                @for (e of estadosCiviles; track e.id) {
+                  <mat-option [value]="e.id">{{ e.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de sangre</mat-label>
+              <mat-select formControlName="idTipoSangre">
+                @for (t of tiposSangre; track t.id) {
+                  <mat-option [value]="t.id">{{ t.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nivel de confidencialidad</mat-label>
+              <mat-select formControlName="idNivelConfidencialidad">
+                @for (n of nivelesConfidencialidad; track n.id) {
+                  <mat-option [value]="n.id">{{ n.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Estado del paciente</mat-label>
+              <mat-select formControlName="idEstadoPaciente">
+                @for (e of estadosPaciente; track e.id) {
+                  <mat-option [value]="e.id">{{ e.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab label="Contacto">
+        <div class="tab-content" [formGroup]="contacto">
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Teléfono principal</mat-label>
+              <input matInput formControlName="telefonoPrincipal" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Teléfono secundario</mat-label>
+              <input matInput formControlName="telefonoSecundario" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Correo electrónico</mat-label>
+              <input matInput type="email" formControlName="correo" />
+              @if (contacto.controls.correo.invalid && contacto.controls.correo.touched) {
+                <mat-error>Correo inválido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Dirección</mat-label>
+              <input matInput formControlName="direccion" />
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="'Contacto de emergencia (' + contactosEmergencia.length + ')'">
+        <div class="tab-content">
+          @for (grupo of contactosEmergencia.controls; track grupo.controls.id.value) {
+            <div class="repeatable-card" [formGroup]="grupo">
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nombre completo</mat-label>
+                  <input matInput formControlName="nombreCompleto" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Parentesco</mat-label>
+                  <mat-select formControlName="idParentesco">
+                    @for (p of parentescos; track p.id) {
+                      <mat-option [value]="p.id">{{ p.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Teléfono</mat-label>
+                  <input matInput formControlName="telefono" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Dirección</mat-label>
+                  <input matInput formControlName="direccion" />
+                </mat-form-field>
+              </div>
+              <button matIconButton type="button" class="remove-btn" (click)="quitarContacto($index)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
+
+          @if (contactosEmergencia.length === 0) {
+            <p class="empty-hint">Sin contactos de emergencia registrados.</p>
+          }
+
+          <button matButton type="button" (click)="agregarContacto()" class="add-btn">
+            <mat-icon>add</mat-icon>
+            Agregar contacto
+          </button>
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="'Alergias (' + alergias.length + ')'">
+        <div class="tab-content">
+          @for (grupo of alergias.controls; track grupo.controls.id.value) {
+            <div class="repeatable-card" [formGroup]="grupo">
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo</mat-label>
+                  <mat-select formControlName="idTipoAlergia">
+                    @for (t of tiposAlergia; track t.id) {
+                      <mat-option [value]="t.id">{{ t.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Descripción</mat-label>
+                  <input matInput formControlName="descripcion" placeholder="ej. Penicilina" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Severidad</mat-label>
+                  <mat-select formControlName="idSeveridad">
+                    @for (s of severidades; track s.id) {
+                      <mat-option [value]="s.id">{{ s.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha de diagnóstico</mat-label>
+                  <input matInput [matDatepicker]="pickerAlergia" formControlName="fechaDiagnostico" />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerAlergia"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerAlergia></mat-datepicker>
+                </mat-form-field>
+              </div>
+              @if (grupo.controls.idSeveridad.value) {
+                <span class="severity-chip" [class]="severidadClase(grupo.controls.idSeveridad.value)">
+                  {{ severidadLabel(grupo.controls.idSeveridad.value) }}
+                </span>
+              }
+              <button matIconButton type="button" class="remove-btn" (click)="quitarAlergia($index)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
+
+          @if (alergias.length === 0) {
+            <p class="empty-hint">Sin alergias registradas.</p>
+          }
+
+          <button matButton type="button" (click)="agregarAlergia()" class="add-btn">
+            <mat-icon>add</mat-icon>
+            Agregar alergia
+          </button>
+        </div>
+      </mat-tab>
+
+      <mat-tab [label]="'Antecedentes (' + antecedentes.length + ')'">
+        <div class="tab-content">
+          @for (grupo of antecedentes.controls; track grupo.controls.id.value) {
+            <div class="repeatable-card" [formGroup]="grupo">
+              <div class="form-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>Tipo</mat-label>
+                  <mat-select formControlName="idTipoAntecedente">
+                    @for (t of tiposAntecedente; track t.id) {
+                      <mat-option [value]="t.id">{{ t.label }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Fecha de registro</mat-label>
+                  <input matInput [matDatepicker]="pickerAntecedente" formControlName="fechaRegistro" />
+                  <mat-datepicker-toggle matIconSuffix [for]="pickerAntecedente"></mat-datepicker-toggle>
+                  <mat-datepicker #pickerAntecedente></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="span-2">
+                  <mat-label>Descripción</mat-label>
+                  <textarea matInput formControlName="descripcion" rows="2"></textarea>
+                </mat-form-field>
+              </div>
+              <button matIconButton type="button" class="remove-btn" (click)="quitarAntecedente($index)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
+
+          @if (antecedentes.length === 0) {
+            <p class="empty-hint">Sin antecedentes registrados.</p>
+          }
+
+          <button matButton type="button" (click)="agregarAntecedente()" class="add-btn">
+            <mat-icon>add</mat-icon>
+            Agregar antecedente
+          </button>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+
+    <div class="form-footer">
+      <a matButton routerLink="/home/pacientes">Cancelar</a>
+      <button matButton="filled" type="button" (click)="guardar()">
+        <mat-icon>save</mat-icon>
+        Guardar paciente
+      </button>
+    </div>
+  </div>
+</div>

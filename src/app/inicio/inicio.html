@@ -5,7 +5,11 @@
 
 <div class="category-grid">
   @for (section of sections; track section.slug) {
-    <a class="category-card" [routerLink]="['/home/modulo', section.slug]" [style.--accent]="section.color">
+    <a
+      class="category-card"
+      [routerLink]="section.route || ['/home/modulo', section.slug]"
+      [style.--accent]="section.color"
+    >
       <div class="category-card-icon">
         <mat-icon>{{ section.icon }}</mat-icon>
       </div>

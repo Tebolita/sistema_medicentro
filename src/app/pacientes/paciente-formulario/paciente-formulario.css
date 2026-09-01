@@ -1,0 +1,146 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0d6a8f 0%, #0a4f6b 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.form-hero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.form-hero-icon mat-icon {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.form-hero-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.form-hero-text h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.form-hero-text p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.back-btn {
+  color: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.form-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.tab-content {
+  padding: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 16px;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.repeatable-card {
+  position: relative;
+  padding: 20px;
+  padding-right: 56px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: #f7f9fa;
+  border: 1px solid #eceff1;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #b71c1c;
+}
+
+.add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0d6a8f;
+}
+
+.empty-hint {
+  margin: 0 0 16px;
+  color: #78909c;
+  font-size: 13px;
+}
+
+.severity-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.severidad-baja {
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+}
+
+.severidad-media {
+  background: rgba(239, 108, 0, 0.12);
+  color: #ef6c00;
+}
+
+.severidad-alta {
+  background: rgba(198, 40, 40, 0.12);
+  color: #c62828;
+}
+
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid #eceff1;
+  background: #fafbfc;
+}
+
+.form-footer button,
+.form-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

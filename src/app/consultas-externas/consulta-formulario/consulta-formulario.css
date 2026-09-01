@@ -1,0 +1,57 @@
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 760px;
+}
+
+.page-header h1 {
+  margin: 6px 0 0;
+  font-size: 22px;
+  color: #0d6a8f;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #57727d;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: #0d6a8f;
+}
+
+.back-link mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.form-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 16px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

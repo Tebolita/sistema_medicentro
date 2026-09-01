@@ -1,0 +1,97 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Libro de actas</h1>
+      <p>Bitácora de ingreso de pacientes a recepción.</p>
+    </div>
+    <button matButton="filled" type="button" (click)="toggleFormulario()">
+      <mat-icon>{{ mostrarFormulario() ? 'close' : 'add' }}</mat-icon>
+      {{ mostrarFormulario() ? 'Cancelar' : 'Nueva acta' }}
+    </button>
+  </div>
+
+  @if (mostrarFormulario()) {
+    <form [formGroup]="form" (ngSubmit)="registrar()" class="form-panel">
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Paciente</mat-label>
+          <mat-select formControlName="idPaciente">
+            @for (p of pacientes(); track p.idPaciente) {
+              <mat-option [value]="p.idPaciente">
+                {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+              </mat-option>
+            }
+          </mat-select>
+          @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+            <mat-error>Selecciona un paciente</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Atendido por</mat-label>
+          <mat-select formControlName="idAtendidoPor">
+            @for (r of recepcionistas; track r.id) {
+              <mat-option [value]="r.id">{{ r.nombre }}</mat-option>
+            }
+          </mat-select>
+          @if (form.controls.idAtendidoPor.invalid && form.controls.idAtendidoPor.touched) {
+            <mat-error>Selecciona quién atendió</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Motivo de ingreso</mat-label>
+          <input matInput formControlName="motivoIngreso" placeholder="Ej. Consulta externa, entrega de resultados..." />
+          @if (form.controls.motivoIngreso.invalid && form.controls.motivoIngreso.touched) {
+            <mat-error>Requerido</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Observaciones</mat-label>
+          <textarea matInput formControlName="observaciones" rows="2"></textarea>
+        </mat-form-field>
+      </div>
+
+      <div class="form-actions">
+        <button matButton="filled" type="submit">
+          <mat-icon>save</mat-icon>
+          Registrar
+        </button>
+      </div>
+    </form>
+  }
+
+  <div class="actas-list">
+    @for (a of actas(); track a.idActa) {
+      <div class="acta-row">
+        <div class="patient-avatar">{{ iniciales(a.idPaciente) }}</div>
+        <div class="acta-info">
+          <h2>{{ nombrePaciente(a.idPaciente) }}</h2>
+          <span class="acta-meta">{{ a.motivoIngreso }}</span>
+          <span class="acta-meta secundario">
+            <mat-icon>schedule</mat-icon>{{ formatFechaHora(a.fechaHora) }} · {{ atendidoPorLabel(a.idAtendidoPor) }}
+          </span>
+          @if (a.observaciones) {
+            <span class="acta-obs">{{ a.observaciones }}</span>
+          }
+        </div>
+        <button
+          matIconButton
+          type="button"
+          [matTooltip]="'Eliminar acta'"
+          (click)="eliminar(a.idActa, nombrePaciente(a.idPaciente))"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    }
+
+    @if (actas().length === 0) {
+      <div class="empty-state">
+        <mat-icon>menu_book</mat-icon>
+        <p>Aún no hay actas registradas.</p>
+      </div>
+    }
+  </div>
+</div>
