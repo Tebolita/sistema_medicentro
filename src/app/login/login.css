@@ -1,0 +1,593 @@
+/* =========================================================
+   CONFIGURACIÓN GENERAL
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+
+/* =========================================================
+   PANTALLA COMPLETA
+   ========================================================= */
+
+.login-page {
+  width: 100%;
+  height: 100vh;
+  min-height: 650px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+
+  overflow: hidden;
+
+  background: linear-gradient(
+    135deg,
+    #062b68 0%,
+    #0d47a1 25%,
+    #1976d2 48%,
+    #dbeafe 75%,
+    #ffffff 100%
+  );
+}
+
+
+/* =========================================================
+   EFECTOS DECORATIVOS
+   ========================================================= */
+
+.login-page::before {
+  content: '';
+
+  position: absolute;
+
+  width: 500px;
+  height: 500px;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  top: -250px;
+  left: -150px;
+
+  pointer-events: none;
+}
+
+.login-page::after {
+  content: '';
+
+  position: absolute;
+
+  width: 550px;
+  height: 550px;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.12);
+
+  right: -250px;
+  bottom: -300px;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   CONTENIDO CENTRAL
+   ========================================================= */
+
+.login-content {
+  width: 100%;
+  max-width: 560px;
+
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+
+  z-index: 2;
+
+  padding: 10px 20px;
+
+  /* SUBE TODO UN POQUITO */
+transform: translateY(-70px);
+}
+
+
+/* =========================================================
+   MARCA
+   ========================================================= */
+
+.brand {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  margin-bottom: 12px;
+
+  transform: translateY(-50px);
+}
+
+/* =========================================================
+   LOGO PNG TRANSPARENTE
+   ========================================================= */
+.brand-logo {
+  width: auto;
+  max-width: 270px; /* antes 240px */
+  height: auto;
+  max-height: 165px; /* antes 145px */
+
+  object-fit: contain;
+  object-position: center;
+
+  display: block;
+
+  filter:
+    drop-shadow(
+      0 10px 18px rgba(0, 0, 0, 0.18)
+    );
+}
+
+.brand-title {
+  margin: 2px 0 0; /* antes 8px */
+
+  font-size: 30px;
+
+  font-weight: 800;
+
+  color: #ffffff;
+
+  letter-spacing: 1.5px;
+
+  line-height: 1.1;
+
+  text-align: center;
+
+  text-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+
+/* =========================================================
+   CONTENEDOR LOGIN
+   ========================================================= */
+
+.login-container {
+  width: 100%;
+
+  max-width: 480px;
+}
+
+
+/* =========================================================
+   TÍTULO LOGIN
+   ========================================================= */
+
+.login-title {
+  margin: 0 0 15px;
+
+  font-size: 28px;
+
+  font-weight: 800;
+
+  color: #ffffff;
+
+  text-align: center;
+
+  letter-spacing: 1px;
+
+  text-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.20);
+}
+
+
+/* =========================================================
+   TARJETA DEL LOGIN
+   ========================================================= */
+
+.login-card {
+  width: 100%;
+
+  padding: 30px;
+
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.97);
+
+  border: 1px solid rgba(255, 255, 255, 0.75);
+
+  box-shadow:
+    0 22px 50px rgba(0, 32, 80, 0.28);
+}
+
+
+/* =========================================================
+   FORMULARIO
+   ========================================================= */
+
+.login-form {
+  width: 100%;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 5px;
+}
+
+
+/* =========================================================
+   CAMPOS
+   ========================================================= */
+
+.full-width {
+  width: 100%;
+}
+
+
+/* =========================================================
+   ICONOS
+   ========================================================= */
+
+.field-icon {
+  color: #1565c0;
+}
+
+.eye-icon {
+  color: #607d8b;
+}
+
+
+/* =========================================================
+   ANGULAR MATERIAL
+   ========================================================= */
+
+::ng-deep .mat-mdc-form-field {
+  width: 100%;
+}
+
+::ng-deep .mat-mdc-text-field-wrapper {
+  min-height: 58px;
+
+  background-color: #ffffff !important;
+}
+
+::ng-deep .mat-mdc-form-field-infix {
+  min-height: 58px;
+
+  padding-top: 16px !important;
+  padding-bottom: 10px !important;
+}
+
+::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+
+/* =========================================================
+   OPCIONES
+   ========================================================= */
+
+.login-options {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin: 7px 0 15px;
+}
+
+
+/* =========================================================
+   CHECKBOX
+   ========================================================= */
+
+::ng-deep .mat-mdc-checkbox {
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   RECUPERAR CONTRASEÑA
+   ========================================================= */
+
+.forgot-password {
+  color: #1565c0;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  text-decoration: none;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+}
+
+.forgot-password:hover {
+  color: #0d47a1;
+
+  text-decoration: underline;
+}
+
+
+/* =========================================================
+   BOTÓN INGRESAR
+   ========================================================= */
+
+.login-button {
+  width: 100%;
+
+  min-height: 54px;
+
+  border-radius: 11px;
+
+  font-size: 17px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.5px;
+
+  color: #ffffff !important;
+
+  background: linear-gradient(
+    135deg,
+    #0d47a1 0%,
+    #1976d2 50%,
+    #2196f3 100%
+  ) !important;
+
+  box-shadow:
+    0 8px 18px rgba(13, 71, 161, 0.30);
+}
+
+.login-button:hover {
+  background: linear-gradient(
+    135deg,
+    #08306b 0%,
+    #1565c0 50%,
+    #1976d2 100%
+  ) !important;
+
+  box-shadow:
+    0 10px 22px rgba(13, 71, 161, 0.38);
+}
+
+
+/* =========================================================
+   COPYRIGHT
+   ========================================================= */
+
+.copyright {
+  margin: 12px 0 0;
+
+  font-size: 12px;
+
+  color: #000000;
+
+  text-align: center;
+
+  text-shadow: none;
+}
+
+
+/* =========================================================
+   PANTALLAS CON POCA ALTURA
+   ========================================================= */
+
+@media (max-height: 750px) {
+
+  .login-content {
+    padding: 8px 20px;
+
+    transform: translateY(-15px);
+  }
+
+  .brand {
+    margin-bottom: 7px;
+  }
+
+  .brand-logo {
+    max-width: 210px;
+
+    max-height: 105px;
+  }
+
+  .brand-title {
+    font-size: 25px;
+
+    margin-top: 5px;
+  }
+
+  .login-title {
+    font-size: 24px;
+
+    margin-bottom: 8px;
+  }
+
+  .login-card {
+    padding: 23px;
+  }
+
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    min-height: 52px;
+  }
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    min-height: 52px;
+
+    padding-top: 13px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .login-options {
+    margin: 5px 0 10px;
+  }
+
+  .login-button {
+    min-height: 50px;
+  }
+
+  .copyright {
+    margin-top: 8px;
+  }
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .login-page {
+    height: auto;
+
+    min-height: 100vh;
+
+    overflow-y: auto;
+  }
+
+  .login-content {
+    height: auto;
+
+    min-height: 100vh;
+
+    padding: 25px 18px;
+
+    transform: none;
+  }
+
+  .brand-logo {
+    max-width: 210px;
+
+    max-height: 125px;
+  }
+
+  .brand-title {
+    font-size: 26px;
+  }
+
+  .login-container {
+    max-width: 460px;
+  }
+
+  .login-title {
+    font-size: 26px;
+  }
+
+  .login-card {
+    padding: 27px;
+  }
+}
+
+
+/* =========================================================
+   MÓVIL
+   ========================================================= */
+
+@media (max-width: 500px) {
+
+  .login-content {
+    padding: 20px 15px;
+  }
+
+  .brand-logo {
+    max-width: 180px;
+
+    max-height: 110px;
+  }
+
+  .brand-title {
+    font-size: 22px;
+
+    letter-spacing: 1px;
+  }
+
+  .login-title {
+    font-size: 24px;
+  }
+
+  .login-card {
+    padding: 22px 18px;
+  }
+
+  .login-options {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    margin-top: 5px;
+  }
+
+  .forgot-password {
+    margin-left: 4px;
+  }
+}
+
+
+/* =========================================================
+   MÓVILES PEQUEÑOS
+   ========================================================= */
+
+@media (max-width: 400px) {
+
+  .login-content {
+    padding: 15px 12px;
+  }
+
+  .brand-logo {
+    max-width: 155px;
+
+    max-height: 90px;
+  }
+
+  .brand-title {
+    font-size: 20px;
+  }
+
+  .login-title {
+    font-size: 21px;
+  }
+
+  .login-card {
+    padding: 18px 14px;
+  }
+
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    min-height: 52px;
+  }
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    min-height: 52px;
+  }
+}

@@ -1,0 +1,202 @@
+<div class="login-page">
+
+  <!-- ========================================= -->
+  <!-- CONTENIDO PRINCIPAL -->
+  <!-- ========================================= -->
+
+  <main class="login-content">
+
+    <!-- ========================================= -->
+    <!-- LOGO -->
+    <!-- ========================================= -->
+
+    <div class="brand">
+
+      <img
+        src="/sanatorio_medicentro5.jpeg"
+        alt="Sanatorio Medicentro"
+        class="brand-logo"
+      />
+
+      <h1 class="brand-title">
+        SANATORIO MEDICENTRO
+      </h1>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- LOGIN -->
+    <!-- ========================================= -->
+
+    <div class="login-container">
+
+      <h2 class="login-title">
+        INICIAR SESIÓN
+      </h2>
+
+
+      <mat-card class="login-card">
+
+        <form
+          class="login-form"
+          (ngSubmit)="onLogin()"
+        >
+
+          <!-- USUARIO -->
+          <mat-form-field
+            appearance="outline"
+            class="full-width"
+          >
+
+            <mat-label>
+              Usuario
+            </mat-label>
+
+            <mat-icon
+              matPrefix
+              class="field-icon"
+            >
+              person
+            </mat-icon>
+
+            <input
+              matInput
+              type="text"
+              name="username"
+              [(ngModel)]="username"
+              autocomplete="username"
+              required
+            />
+
+          </mat-form-field>
+
+
+          <!-- CÓDIGO -->
+          <mat-form-field
+            appearance="outline"
+            class="full-width"
+          >
+
+            <mat-label>
+              Código
+            </mat-label>
+
+            <mat-icon
+              matPrefix
+              class="field-icon"
+            >
+              vpn_key
+            </mat-icon>
+
+            <input
+              matInput
+              [type]="mostrarCodigo ? 'text' : 'password'"
+              name="codigo"
+              [(ngModel)]="codigo"
+              required
+            />
+
+            <button
+              type="button"
+              mat-icon-button
+              matSuffix
+              (click)="mostrarCodigo = !mostrarCodigo"
+            >
+
+              <mat-icon class="eye-icon">
+                {{ mostrarCodigo ? 'visibility_off' : 'visibility' }}
+              </mat-icon>
+
+            </button>
+
+          </mat-form-field>
+
+
+          <!-- CONTRASEÑA -->
+          <mat-form-field
+            appearance="outline"
+            class="full-width"
+          >
+
+            <mat-label>
+              Contraseña
+            </mat-label>
+
+            <mat-icon
+              matPrefix
+              class="field-icon"
+            >
+              lock
+            </mat-icon>
+
+            <input
+              matInput
+              [type]="mostrarPassword ? 'text' : 'password'"
+              name="password"
+              [(ngModel)]="password"
+              autocomplete="current-password"
+              required
+            />
+
+            <button
+              type="button"
+              mat-icon-button
+              matSuffix
+              (click)="mostrarPassword = !mostrarPassword"
+            >
+
+              <mat-icon class="eye-icon">
+                {{ mostrarPassword ? 'visibility_off' : 'visibility' }}
+              </mat-icon>
+
+            </button>
+
+          </mat-form-field>
+
+
+          <!-- OPCIONES -->
+          <div class="login-options">
+
+            <mat-checkbox
+              [(ngModel)]="rememberMe"
+              name="rememberMe"
+              color="primary"
+            >
+              Recuérdame
+            </mat-checkbox>
+
+            <a
+              href="javascript:void(0)"
+              class="forgot-password"
+            >
+              ¿Olvidó su contraseña?
+            </a>
+
+          </div>
+
+
+          <!-- BOTÓN -->
+          <button
+            mat-raised-button
+            type="submit"
+            class="login-button"
+          >
+            Ingresar
+          </button>
+
+        </form>
+
+      </mat-card>
+
+
+      <!-- COPYRIGHT -->
+      <p class="copyright">
+        Copyright © 2026 Sanatorio Medicentro
+      </p>
+
+    </div>
+
+  </main>
+
+</div>
