@@ -136,9 +136,9 @@ transform: translateY(-70px);
    ========================================================= */
 .brand-logo {
   width: auto;
-  max-width: 270px; /* antes 240px */
+  max-width: 450px; /* antes 240px */
   height: auto;
-  max-height: 165px; /* antes 145px */
+  max-height: 400px; /* antes 145px */
 
   object-fit: contain;
   object-position: center;
@@ -152,7 +152,7 @@ transform: translateY(-70px);
 }
 
 .brand-title {
-  margin: 2px 0 0; /* antes 8px */
+  margin: -70px 0 0;   /* antes era 2px 0 0 — ahora "sube" el título */
 
   font-size: 30px;
 
@@ -169,7 +169,6 @@ transform: translateY(-70px);
   text-shadow:
     0 3px 10px rgba(0, 0, 0, 0.25);
 }
-
 
 /* =========================================================
    CONTENEDOR LOGIN
