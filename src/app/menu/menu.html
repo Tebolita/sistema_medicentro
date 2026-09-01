@@ -68,7 +68,7 @@
             <mat-icon class="section-icon">{{ section.icon }}</mat-icon>
             <span class="section-text">{{ section.title }}</span>
           </a>
-          <span class="section-spacer"></span>
+          <span class="section-spacer" (click)="toggleSection(section)"></span>
           <button
             type="button"
             class="section-toggle"
