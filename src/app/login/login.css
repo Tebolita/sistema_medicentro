@@ -98,16 +98,13 @@ body {
   flex-direction: column;
 
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 
   position: relative;
 
   z-index: 2;
 
-  padding: 10px 20px;
-
-  /* SUBE TODO UN POQUITO */
-transform: translateY(-70px);
+  padding: 5px 20px 10px;   /* antes 40px, ahora más arriba */
 }
 
 
@@ -126,9 +123,7 @@ transform: translateY(-70px);
 
   text-align: center;
 
-  margin-bottom: 12px;
-
-  transform: translateY(-50px);
+  margin-bottom: 4px;
 }
 
 /* =========================================================
@@ -136,9 +131,9 @@ transform: translateY(-70px);
    ========================================================= */
 .brand-logo {
   width: auto;
-  max-width: 450px; /* antes 240px */
+  max-width: 550px;
   height: auto;
-  max-height: 400px; /* antes 145px */
+  max-height: 500px;
 
   object-fit: contain;
   object-position: center;
@@ -152,7 +147,7 @@ transform: translateY(-70px);
 }
 
 .brand-title {
-  margin: -70px 0 0;   /* antes era 2px 0 0 — ahora "sube" el título */
+  margin: -70px 0 0;
 
   font-size: 30px;
 
@@ -170,6 +165,7 @@ transform: translateY(-70px);
     0 3px 10px rgba(0, 0, 0, 0.25);
 }
 
+
 /* =========================================================
    CONTENEDOR LOGIN
    ========================================================= */
@@ -178,6 +174,8 @@ transform: translateY(-70px);
   width: 100%;
 
   max-width: 480px;
+
+  margin-top: -90px;
 }
 
 
@@ -389,7 +387,7 @@ transform: translateY(-70px);
 .copyright {
   margin: 12px 0 0;
 
-  font-size: 12px;
+  font-size: 18px;
 
   color: #000000;
 
@@ -407,12 +405,10 @@ transform: translateY(-70px);
 
   .login-content {
     padding: 8px 20px;
-
-    transform: translateY(-15px);
   }
 
   .brand {
-    margin-bottom: 7px;
+    margin-bottom: 2px;
   }
 
   .brand-logo {
@@ -424,7 +420,11 @@ transform: translateY(-70px);
   .brand-title {
     font-size: 25px;
 
-    margin-top: 5px;
+    margin-top: -40px;
+  }
+
+  .login-container {
+    margin-top: -40px;
   }
 
   .login-title {
@@ -482,8 +482,6 @@ transform: translateY(-70px);
     min-height: 100vh;
 
     padding: 25px 18px;
-
-    transform: none;
   }
 
   .brand-logo {
@@ -494,10 +492,14 @@ transform: translateY(-70px);
 
   .brand-title {
     font-size: 26px;
+
+    margin-top: -35px;
   }
 
   .login-container {
     max-width: 460px;
+
+    margin-top: -40px;
   }
 
   .login-title {
@@ -530,6 +532,12 @@ transform: translateY(-70px);
     font-size: 22px;
 
     letter-spacing: 1px;
+
+    margin-top: -25px;
+  }
+
+  .login-container {
+    margin-top: -30px;
   }
 
   .login-title {
@@ -572,6 +580,12 @@ transform: translateY(-70px);
 
   .brand-title {
     font-size: 20px;
+
+    margin-top: -20px;
+  }
+
+  .login-container {
+    margin-top: -25px;
   }
 
   .login-title {
