@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { Login } from './login/login';
 import { Home } from './home/home';
 import { Inicio } from './inicio/inicio';
 import { Modulo } from './modulo/modulo';
@@ -31,11 +32,21 @@ import { PagosLista } from './facturacion/pagos-lista/pagos-lista';
 import { PagoFormulario } from './facturacion/pago-formulario/pago-formulario';
 
 export const routes: Routes = [
-    {path: '', redirectTo: 'home/inicio', pathMatch: 'full'},
+
+    // LOGIN
+    {
+        path: '',
+        component: Login
+    },
+
+    // SISTEMA
     {
         path: 'home',
+
         component: Home,
+
         canActivate: [],
+
         children: [
             {path: 'inicio',component: Inicio,},
             {path: 'modulo/:slug',component: Modulo,},
