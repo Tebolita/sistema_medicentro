@@ -1,0 +1,73 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Expedientes Clínicos</h1>
+      <p>Fichas de consulta, evolución y notas que conforman el expediente del paciente.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/expedientes/nuevo" class="new-btn">
+      <mat-icon>note_add</mat-icon>
+      Nuevo registro
+    </a>
+  </div>
+
+  <div class="top-row">
+    <div class="search-bar" [class.pulse]="resaltarBusqueda()">
+      <mat-icon>search</mat-icon>
+      <input
+        #searchInput
+        type="text"
+        placeholder="Buscar por paciente, motivo o diagnóstico..."
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+      />
+      @if (buscando()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (tipoFiltro() !== null) {
+    <div class="filtro-chip">
+      <mat-icon>filter_alt</mat-icon>
+      <span>{{ tipoFiltroLabel() }}</span>
+      <button type="button" (click)="limpiarFiltroTipo()" aria-label="Quitar filtro">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <h2 class="section-title">
+    {{ buscando() ? 'Resultados de búsqueda (' + expedientes().length + ')' : 'Registros clínicos' }}
+  </h2>
+
+  <div class="expediente-grid">
+    @for (h of expedientes(); track h.idHistorial) {
+      <a class="expediente-card" [routerLink]="['/home/expedientes', h.idHistorial]">
+        <div class="patient-avatar">{{ iniciales(h.idPaciente) }}</div>
+        <div class="expediente-info">
+          <h2>{{ nombrePaciente(h.idPaciente) }}</h2>
+          <span class="tipo-badge">{{ tipoLabel(h.idTipoRegistro) }}</span>
+          <span class="expediente-meta"><mat-icon>event</mat-icon>{{ formatFecha(h.fecha) }} · {{ medicoLabel(h.idMedico) }}</span>
+          <span class="expediente-meta resumen">{{ resumen(h) }}</span>
+        </div>
+        <button
+          matIconButton
+          type="button"
+          [matTooltip]="'Eliminar registro'"
+          (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(h.idHistorial, nombrePaciente(h.idPaciente))"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      </a>
+    }
+
+    @if (expedientes().length === 0) {
+      <div class="empty-state">
+        <mat-icon>folder_off</mat-icon>
+        <p>No se encontraron registros{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

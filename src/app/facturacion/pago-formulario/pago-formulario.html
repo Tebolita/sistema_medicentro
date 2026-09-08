@@ -1,0 +1,63 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/facturacion/pagos" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Recibos de cobro
+    </a>
+    <h1>Registrar pago</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Factura</mat-label>
+        <mat-select formControlName="idFactura" (selectionChange)="onFacturaSeleccionada($event.value)">
+          @for (r of facturasPendientes(); track r.factura.idFactura) {
+            <mat-option [value]="r.factura.idFactura">
+              {{ nombrePaciente(r.factura.idPaciente) }} · {{ r.factura.numeroDocumento }} · Q{{ r.factura.total.toFixed(2) }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idFactura.invalid && form.controls.idFactura.touched) {
+          <mat-error>Selecciona una factura</mat-error>
+        }
+        @if (facturasPendientes().length === 0) {
+          <mat-hint>No hay facturas pendientes de pago.</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto (Q)</mat-label>
+        <input matInput type="number" min="0.01" formControlName="monto" />
+        @if (form.controls.monto.invalid && form.controls.monto.touched) {
+          <mat-error>Indica un monto válido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Forma de pago</mat-label>
+        <mat-select formControlName="idFormaPago">
+          @for (f of formasPago; track f.id) {
+            <mat-option [value]="f.id">{{ f.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idFormaPago.invalid && form.controls.idFormaPago.touched) {
+          <mat-error>Selecciona una forma de pago</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Referencia (opcional)</mat-label>
+        <input matInput formControlName="referenciaPago" placeholder="No. de boleta, últimos 4 dígitos..." />
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/facturacion/pagos">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>payments</mat-icon>
+        Registrar pago
+      </button>
+    </div>
+  </form>
+</div>

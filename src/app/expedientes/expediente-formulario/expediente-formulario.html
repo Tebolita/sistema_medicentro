@@ -1,0 +1,132 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/expedientes" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Expedientes Clínicos
+    </a>
+    <h1>
+      @if (esNuevo() && tituloFicha()) {
+        Nueva ficha de consulta {{ tituloFicha() }}
+      } @else if (esNuevo()) {
+        Nuevo registro clínico
+      } @else {
+        Editar registro clínico
+      }
+    </h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Paciente</mat-label>
+        <mat-select formControlName="idPaciente">
+          @for (p of pacientes(); track p.idPaciente) {
+            <mat-option [value]="p.idPaciente">
+              {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+          <mat-error>Selecciona un paciente</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Médico</mat-label>
+        <mat-select formControlName="idMedico">
+          @for (m of medicos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedico.invalid && form.controls.idMedico.touched) {
+          <mat-error>Selecciona un médico</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de registro</mat-label>
+        <mat-select formControlName="idTipoRegistro">
+          @for (t of tiposRegistro; track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idTipoRegistro.invalid && form.controls.idTipoRegistro.touched) {
+          <mat-error>Selecciona el tipo de registro</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fecha" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (form.controls.fecha.invalid && form.controls.fecha.touched) {
+          <mat-error>Selecciona la fecha</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nivel de confidencialidad</mat-label>
+        <mat-select formControlName="idNivelConfidencialidad">
+          @for (n of nivelesConfidencialidad; track n.id) {
+            <mat-option [value]="n.id">{{ n.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (esPediatrica()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Acompañante / responsable</mat-label>
+          <input matInput formControlName="acompanante" placeholder="Nombre de quien lleva al paciente" />
+        </mat-form-field>
+      }
+
+      @if (esExterna()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de consulta</mat-label>
+          <mat-select formControlName="idTipoConsultaExterna">
+            @for (t of tiposConsulta; track t.id) {
+              <mat-option [value]="t.id">{{ t.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Motivo de consulta</mat-label>
+        <textarea
+          matInput
+          formControlName="motivoConsulta"
+          rows="2"
+          [placeholder]="esPediatrica() ? 'Ej. Control de niño sano, vacunación, fiebre...' : esExterna() ? 'Ej. Consulta general, seguimiento de tratamiento...' : ''"
+        ></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Diagnóstico</mat-label>
+        <textarea matInput formControlName="diagnostico" rows="2"></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Notas{{ mostrarHintSignosVitales() ? ' / signos vitales' : '' }}</mat-label>
+        <textarea
+          matInput
+          formControlName="notas"
+          rows="3"
+          [placeholder]="mostrarHintSignosVitales() ? 'Ej. PA 120/80 mmHg · FC 76 lpm · Temp 36.7°C · Peso 68 kg' : ''"
+        ></textarea>
+        @if (mostrarHintSignosVitales()) {
+          <mat-hint>Anota aquí los signos vitales, no existe todavía un campo dedicado en el sistema.</mat-hint>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/expedientes">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar registro
+      </button>
+    </div>
+  </form>
+</div>

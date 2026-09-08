@@ -1,0 +1,70 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/hospitalizacion" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Hospitalización
+    </a>
+    <h1>Agregar orden médica</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Hospitalización</mat-label>
+        <mat-select formControlName="idHospitalizacion" [disabled]="hospitalizacionFija() !== null">
+          @for (r of hospitalizacionesActivas(); track r.hospitalizacion.idHospitalizacion) {
+            <mat-option [value]="r.hospitalizacion.idHospitalizacion">
+              {{ nombrePaciente(r.hospitalizacion.idPaciente) }} — ingresó {{ r.hospitalizacion.fechaIngreso | slice: 0 : 10 }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idHospitalizacion.invalid && form.controls.idHospitalizacion.touched) {
+          <mat-error>Selecciona la hospitalización</mat-error>
+        }
+        @if (hospitalizacionesActivas().length === 0) {
+          <mat-hint>No hay hospitalizaciones activas en este momento.</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de orden</mat-label>
+        <mat-select formControlName="idTipoOrden">
+          @for (t of tiposOrden; track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idTipoOrden.invalid && form.controls.idTipoOrden.touched) {
+          <mat-error>Selecciona el tipo de orden</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Médico</mat-label>
+        <mat-select formControlName="idMedico">
+          @for (m of medicos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedico.invalid && form.controls.idMedico.touched) {
+          <mat-error>Selecciona un médico</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Descripción</mat-label>
+        <textarea matInput formControlName="descripcion" rows="3" placeholder="Ej. Ampicilina 1g IV cada 8 horas"></textarea>
+        @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/hospitalizacion">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar orden
+      </button>
+    </div>
+  </form>
+</div>

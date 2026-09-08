@@ -1,0 +1,84 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/emergencias" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Emergencias
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo caso de emergencia' : 'Editar caso de emergencia' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Paciente</mat-label>
+        <mat-select formControlName="idPaciente">
+          @for (p of pacientes(); track p.idPaciente) {
+            <mat-option [value]="p.idPaciente">
+              {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+            </mat-option>
+          }
+          <mat-option [value]="pacienteNoRegistrado">Paciente no registrado (walk-in)</mat-option>
+        </mat-select>
+        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+          <mat-error>Selecciona un paciente</mat-error>
+        }
+      </mat-form-field>
+
+      @if (esWalkIn()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre del paciente</mat-label>
+          <input matInput formControlName="nombrePaciente" placeholder="Nombre completo" />
+          @if (form.controls.nombrePaciente.invalid && form.controls.nombrePaciente.touched) {
+            <mat-error>Requerido</mat-error>
+          }
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Médico asignado</mat-label>
+        <mat-select formControlName="idMedico">
+          @for (m of medicos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nivel de triaje</mat-label>
+        <mat-select formControlName="idNivelTriage">
+          @for (n of nivelesTriage; track n.id) {
+            <mat-option [value]="n.id">{{ n.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idNivelTriage.invalid && form.controls.idNivelTriage.touched) {
+          <mat-error>Selecciona el nivel de triaje</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoCaso">
+          @for (e of estadosCaso; track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Motivo de consulta</mat-label>
+        <textarea matInput formControlName="motivo" rows="2"></textarea>
+        @if (form.controls.motivo.invalid && form.controls.motivo.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/emergencias">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar caso
+      </button>
+    </div>
+  </form>
+</div>

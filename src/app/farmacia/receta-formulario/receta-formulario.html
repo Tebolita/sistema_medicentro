@@ -1,0 +1,123 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/farmacia/recetas" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Recetario
+    </a>
+    <h1>{{ esNueva() ? 'Nueva receta' : 'Editar receta' }}</h1>
+  </div>
+
+  <div class="receta-form">
+    <div class="form-panel" [formGroup]="cabecera">
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Paciente</mat-label>
+          <mat-select formControlName="idPaciente">
+            @for (p of pacientes(); track p.idPaciente) {
+              <mat-option [value]="p.idPaciente">
+                {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+              </mat-option>
+            }
+          </mat-select>
+          @if (cabecera.controls.idPaciente.invalid && cabecera.controls.idPaciente.touched) {
+            <mat-error>Selecciona un paciente</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Médico</mat-label>
+          <mat-select formControlName="idMedico">
+            @for (m of medicos; track m.id) {
+              <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+            }
+          </mat-select>
+          @if (cabecera.controls.idMedico.invalid && cabecera.controls.idMedico.touched) {
+            <mat-error>Selecciona un médico</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="idEstadoReceta">
+            @for (e of estadosReceta; track e.id) {
+              <mat-option [value]="e.id">{{ e.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="detalles-panel">
+      <div class="detalles-header">
+        <h2>Medicamentos</h2>
+        <button matButton type="button" (click)="agregarDetalle()">
+          <mat-icon>add</mat-icon>
+          Agregar medicamento
+        </button>
+      </div>
+
+      @for (grupo of detalles.controls; track grupo; let i = $index) {
+        <div class="detalle-card" [formGroup]="grupo">
+          <button
+            matIconButton
+            type="button"
+            class="detalle-remove"
+            [disabled]="detalles.length === 1"
+            [matTooltip]="'Quitar medicamento'"
+            (click)="quitarDetalle(i)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Medicamento</mat-label>
+              <mat-select formControlName="idMedicamento">
+                @for (m of medicamentos; track m.id) {
+                  <mat-option [value]="m.id">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
+                }
+              </mat-select>
+              @if (grupo.controls.idMedicamento.invalid && grupo.controls.idMedicamento.touched) {
+                <mat-error>Requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Dosis</mat-label>
+              <input matInput formControlName="dosis" placeholder="Ej. 500mg" />
+              @if (grupo.controls.dosis.invalid && grupo.controls.dosis.touched) {
+                <mat-error>Requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Frecuencia</mat-label>
+              <input matInput formControlName="frecuencia" placeholder="Ej. Cada 8 horas" />
+              @if (grupo.controls.frecuencia.invalid && grupo.controls.frecuencia.touched) {
+                <mat-error>Requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Duración</mat-label>
+              <input matInput formControlName="duracion" placeholder="Ej. 7 días" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Indicaciones</mat-label>
+              <input matInput formControlName="indicaciones" placeholder="Ej. Tomar con alimentos" />
+            </mat-form-field>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/farmacia/recetas">Cancelar</a>
+      <button matButton="filled" type="button" (click)="guardar()">
+        <mat-icon>save</mat-icon>
+        Guardar receta
+      </button>
+    </div>
+  </div>
+</div>

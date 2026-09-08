@@ -1,0 +1,129 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/polizas" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Seguros Médicos
+    </a>
+    <h1>{{ esNueva() ? 'Registrar póliza' : 'Editar póliza' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Paciente</mat-label>
+        <mat-select formControlName="idPaciente">
+          @for (p of pacientes(); track p.idPaciente) {
+            <mat-option [value]="p.idPaciente">
+              {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+          <mat-error>Selecciona un paciente</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Aseguradora</mat-label>
+        <mat-select formControlName="idAseguradora">
+          @for (a of aseguradoras; track a.id) {
+            <mat-option [value]="a.id">{{ a.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idAseguradora.invalid && form.controls.idAseguradora.touched) {
+          <mat-error>Selecciona la aseguradora</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ramo</mat-label>
+        <mat-select formControlName="idRamo">
+          @for (r of ramos; track r.id) {
+            <mat-option [value]="r.id">{{ r.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idRamo.invalid && form.controls.idRamo.touched) {
+          <mat-error>Selecciona el ramo</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Titularidad</mat-label>
+        <mat-select formControlName="idTitularidad">
+          @for (t of titularidades; track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Número de póliza</mat-label>
+        <input matInput formControlName="numeroPoliza" />
+        @if (form.controls.numeroPoliza.invalid && form.controls.numeroPoliza.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Número de certificado</mat-label>
+        <input matInput formControlName="numeroCertificado" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre del titular (si aplica)</mat-label>
+        <input matInput formControlName="nombreTitular" placeholder="Ej. jefe de familia" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Código de autorización (Mi Cope)</mat-label>
+        <input matInput formControlName="codigoAutorizacion" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>% Copago</mat-label>
+        <input matInput type="number" min="0" max="100" formControlName="porcentajeCopago" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Monto de copago (Q)</mat-label>
+        <input matInput type="number" min="0" formControlName="montoCopago" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Vigencia desde</mat-label>
+        <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicioVigencia" />
+        <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+        <mat-datepicker #pickerInicio></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Vigencia hasta</mat-label>
+        <input matInput [matDatepicker]="pickerFin" formControlName="fechaFinVigencia" />
+        <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
+        <mat-datepicker #pickerFin></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoPoliza">
+          @for (e of estadosPoliza; track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Observaciones</mat-label>
+        <textarea matInput formControlName="observaciones" rows="2"></textarea>
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/polizas">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar póliza
+      </button>
+    </div>
+  </form>
+</div>

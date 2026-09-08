@@ -1,0 +1,86 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Laboratorio y Diagnóstico</h1>
+      <p>Órdenes de exámenes de laboratorio, electrocardiogramas, rayos X y ultrasonidos.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/laboratorio/nueva" class="new-btn">
+      <mat-icon>science</mat-icon>
+      Nueva orden
+    </a>
+  </div>
+
+  <div class="top-row">
+    <div class="search-bar" [class.pulse]="resaltarBusqueda()">
+      <mat-icon>search</mat-icon>
+      <input
+        #searchInput
+        type="text"
+        placeholder="Buscar por paciente, médico o examen..."
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+      />
+      @if (buscando()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (!buscando()) {
+      <div class="opciones-row">
+        @for (item of opcionesLaboratorio; track item.label) {
+          <a
+            class="opcion-chip"
+            [class.disabled]="!item.route"
+            [routerLink]="item.route || null"
+            [queryParams]="item.queryParams || null"
+            [matTooltip]="item.route ? item.label : 'Próximamente'"
+            matTooltipPosition="above"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+
+  <h2 class="section-title">
+    {{ buscando() ? 'Resultados de búsqueda (' + ordenes().length + ')' : 'Órdenes registradas' }}
+  </h2>
+
+  <div class="orden-grid">
+    @for (r of ordenes(); track r.orden.idOrden) {
+      <a class="orden-card" [routerLink]="['/home/laboratorio', r.orden.idOrden]">
+        <div class="patient-avatar">{{ iniciales(r.orden.idPaciente) }}</div>
+        <div class="orden-info">
+          <h2>{{ nombrePaciente(r.orden.idPaciente) }}</h2>
+          <span class="orden-meta"><mat-icon>event</mat-icon>{{ formatFecha(r.orden.fechaOrden) }} · {{ medicoLabel(r.orden.idMedico) }}</span>
+          <span class="orden-meta examenes">{{ examenesTexto(r) }}</span>
+          @if (esUrgente(r.orden.idPrioridad)) {
+            <span class="prioridad-badge">Urgente</span>
+          }
+        </div>
+        <div class="orden-actions">
+          <span class="status-badge" [class]="estadoClase(r.orden.idEstadoOrden)">{{ estadoLabel(r.orden.idEstadoOrden) }}</span>
+          <button
+            matIconButton
+            type="button"
+            [matTooltip]="'Eliminar orden'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.orden.idOrden, nombrePaciente(r.orden.idPaciente))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </a>
+    }
+
+    @if (ordenes().length === 0) {
+      <div class="empty-state">
+        <mat-icon>biotech</mat-icon>
+        <p>No se encontraron órdenes{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

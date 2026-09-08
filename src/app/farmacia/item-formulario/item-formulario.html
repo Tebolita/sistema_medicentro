@@ -1,0 +1,75 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/farmacia" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Farmacia
+    </a>
+    <h1>Nuevo medicamento en inventario</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Medicamento</mat-label>
+        <mat-select formControlName="idMedicamento" (selectionChange)="onMedicamentoSeleccionado($event.value)">
+          @for (m of medicamentos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedicamento.invalid && form.controls.idMedicamento.touched) {
+          <mat-error>Selecciona un medicamento</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre en inventario</mat-label>
+        <input matInput formControlName="nombre" />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Unidad de medida</mat-label>
+        <mat-select formControlName="idUnidadMedida">
+          @for (u of unidadesMedida; track u.id) {
+            <mat-option [value]="u.id">{{ u.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoItem">
+          @for (e of estadosItem; track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Stock actual</mat-label>
+        <input matInput type="number" min="0" formControlName="stockActual" />
+        @if (form.controls.stockActual.invalid && form.controls.stockActual.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Stock mínimo</mat-label>
+        <input matInput type="number" min="0" formControlName="stockMinimo" />
+        @if (form.controls.stockMinimo.invalid && form.controls.stockMinimo.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/farmacia">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

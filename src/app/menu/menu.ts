@@ -35,10 +35,13 @@ export class Menu {
   collapsed = signal(false);
   collapsedChange = output<boolean>();
 
-  // Ruta exacta actual (sin query params), usada para resaltar solo el ítem
+  // URL exacta actual (con query params), usada para resaltar solo el ítem
   // que realmente coincide y no cualquier otro cuya ruta sea un prefijo
-  // (p.ej. "/home/pacientes" es prefijo de "/home/pacientes/nuevo").
-  currentUrl = signal(this.router.url.split('?')[0]);
+  // (p.ej. "/home/pacientes" es prefijo de "/home/pacientes/nuevo") ni un
+  // "hermano" que apunta a la misma ruta con distintos queryParams (p.ej.
+  // "Validación Mediprocesos" vs "Copago consulta / hospital", ambos en
+  // /home/polizas).
+  currentUrl = signal(this.router.url);
 
   constructor() {
     this.router.events
@@ -46,11 +49,26 @@ export class Menu {
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe((event) => this.currentUrl.set(event.urlAfterRedirects.split('?')[0]));
+      .subscribe((event) => this.currentUrl.set(event.urlAfterRedirects));
   }
 
-  isItemActive(route: string | null | undefined): boolean {
-    return !!route && this.currentUrl() === route;
+  isItemActive(item: MenuItem): boolean {
+    if (!item.route) {
+      return false;
+    }
+    const [path, queryString] = this.currentUrl().split('?');
+    if (path !== item.route) {
+      return false;
+    }
+    const currentParams = new URLSearchParams(queryString ?? '');
+    const itemParams = Object.entries(item.queryParams ?? {});
+    if (itemParams.length === 0) {
+      // Sin queryParams propios: solo es "el" activo cuando no hay ningún
+      // query param puesto por un hermano (si lo hubiera, currentParams no
+      // estaría vacío).
+      return [...currentParams.keys()].length === 0;
+    }
+    return itemParams.every(([key, value]) => currentParams.get(key) === value);
   }
 
   toggle(): void {

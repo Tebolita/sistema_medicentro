@@ -1,0 +1,51 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Recibos de cobro</h1>
+      <p>Historial de pagos aplicados a las facturas de los pacientes.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/facturacion/pago-nuevo" class="new-btn">
+      <mat-icon>payments</mat-icon>
+      Registrar pago
+    </a>
+  </div>
+
+  <div class="search-bar" [class.pulse]="resaltarBusqueda()">
+    <mat-icon>search</mat-icon>
+    <input
+      #searchInput
+      type="text"
+      placeholder="Buscar por paciente o número de factura..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscando()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  <div class="pago-grid">
+    @for (p of pagos(); track p.idPago) {
+      <a class="pago-card" [routerLink]="['/home/facturacion', p.idFactura]">
+        <div class="pago-icon">
+          <mat-icon>receipt</mat-icon>
+        </div>
+        <div class="pago-info">
+          <h2>{{ pacienteDeFactura(p.idFactura) }}</h2>
+          <span class="pago-meta">{{ numeroDocumento(p.idFactura) }} · {{ formaPagoLabel(p.idFormaPago) }}</span>
+          <span class="pago-meta"><mat-icon>event</mat-icon>{{ formatFecha(p.fechaPago) }}</span>
+        </div>
+        <span class="pago-monto">{{ formatMonto(p.monto) }}</span>
+      </a>
+    }
+
+    @if (pagos().length === 0) {
+      <div class="empty-state">
+        <mat-icon>payments</mat-icon>
+        <p>No se encontraron pagos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

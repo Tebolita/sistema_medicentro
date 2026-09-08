@@ -1,0 +1,92 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/emergencias/compromisos" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Hoja de compromiso de pago
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo compromiso de pago' : 'Editar compromiso de pago' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Paciente</mat-label>
+        <mat-select formControlName="idPaciente">
+          @for (p of pacientes(); track p.idPaciente) {
+            <mat-option [value]="p.idPaciente">
+              {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+          <mat-error>Selecciona un paciente</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Médico responsable</mat-label>
+        <mat-select formControlName="idMedicoResponsable">
+          @for (m of medicos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedicoResponsable.invalid && form.controls.idMedicoResponsable.touched) {
+          <mat-error>Selecciona un médico</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre del responsable</mat-label>
+        <input matInput formControlName="nombreResponsable" placeholder="Familiar que firma" />
+        @if (form.controls.nombreResponsable.invalid && form.controls.nombreResponsable.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Parentesco</mat-label>
+        <mat-select formControlName="idParentescoResponsable">
+          @for (p of parentescos; track p.id) {
+            <mat-option [value]="p.id">{{ p.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idParentescoResponsable.invalid && form.controls.idParentescoResponsable.touched) {
+          <mat-error>Selecciona el parentesco</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Teléfono del responsable</mat-label>
+        <input matInput formControlName="telefonoResponsable" />
+        @if (form.controls.telefonoResponsable.invalid && form.controls.telefonoResponsable.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de firma</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fechaFirma" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        <mat-hint>Déjalo vacío si aún no se ha firmado.</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoConsentimiento">
+          @for (e of estadosConsentimiento; track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/emergencias/compromisos">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar compromiso
+      </button>
+    </div>
+  </form>
+</div>

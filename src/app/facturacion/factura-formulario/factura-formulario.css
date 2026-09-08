@@ -1,0 +1,195 @@
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+}
+
+.page-header h1 {
+  margin: 6px 0 0;
+  font-size: 22px;
+  color: #5d4037;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #57727d;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: #5d4037;
+}
+
+.back-link mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.factura-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 4px 16px;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.detalles-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detalles-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detalles-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.detalle-card {
+  position: relative;
+  padding: 20px 48px 16px 20px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #eceff1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.detalle-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.totales-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: flex-end;
+  min-width: 260px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #eceff1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.totales-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #57727d;
+}
+
+.totales-row.total {
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid #eceff1;
+  font-size: 16px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.totales-row.pagado {
+  color: #2e7d32;
+}
+
+.totales-row.saldo {
+  font-weight: 700;
+  color: #c62828;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pagos-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+}
+
+.pagos-panel h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #263238;
+}
+
+.pago-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #eceff1;
+  font-size: 13px;
+}
+
+.pago-monto {
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+.pago-forma {
+  color: #57727d;
+}
+
+.pago-fecha {
+  margin-left: auto;
+  color: #90a4ae;
+  font-size: 11.5px;
+}
+
+.pagos-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #90a4ae;
+}
+
+.pago-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 4px 16px;
+  align-items: start;
+  padding-top: 12px;
+  border-top: 1px solid #eceff1;
+}
+
+.pago-form button {
+  margin-top: 4px;
+}

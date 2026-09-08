@@ -87,7 +87,7 @@
                 class="nav-item"
                 [routerLink]="item.route || null"
                 [queryParams]="item.queryParams || null"
-                [class.active]="isItemActive(item.route)"
+                [class.active]="isItemActive(item)"
                 [matTooltip]="item.label"
                 [matTooltipDisabled]="!collapsed()"
                 matTooltipPosition="right"

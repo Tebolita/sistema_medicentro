@@ -1,0 +1,59 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Recetario</h1>
+      <p>Recetas internas y recetas Mediprocesos emitidas a pacientes.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/farmacia/recetas/nueva" class="new-btn">
+      <mat-icon>receipt_long</mat-icon>
+      Nueva receta
+    </a>
+  </div>
+
+  <div class="search-bar" [class.pulse]="resaltarBusqueda()">
+    <mat-icon>search</mat-icon>
+    <input
+      #searchInput
+      type="text"
+      placeholder="Buscar por paciente o medicamento..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscando()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  <div class="receta-grid">
+    @for (r of recetas(); track r.receta.idReceta) {
+      <a class="receta-card" [routerLink]="['/home/farmacia/recetas', r.receta.idReceta]">
+        <div class="patient-avatar">{{ iniciales(r.receta.idPaciente) }}</div>
+        <div class="receta-info">
+          <h2>{{ nombrePaciente(r.receta.idPaciente) }}</h2>
+          <span class="receta-meta"><mat-icon>event</mat-icon>{{ formatFecha(r.receta.fechaEmision) }} · {{ medicoLabel(r.receta.idMedico) }}</span>
+          <span class="receta-meta medicamentos">{{ medicamentosTexto(r) }}</span>
+        </div>
+        <div class="receta-actions">
+          <span class="status-badge" [class]="estadoClase(r.receta.idEstadoReceta)">{{ estadoLabel(r.receta.idEstadoReceta) }}</span>
+          <button
+            matIconButton
+            type="button"
+            [matTooltip]="'Eliminar receta'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.receta.idReceta, nombrePaciente(r.receta.idPaciente))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </a>
+    }
+
+    @if (recetas().length === 0) {
+      <div class="empty-state">
+        <mat-icon>receipt_long</mat-icon>
+        <p>No se encontraron recetas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

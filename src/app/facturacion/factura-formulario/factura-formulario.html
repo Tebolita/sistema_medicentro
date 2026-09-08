@@ -1,0 +1,201 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/facturacion" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Facturación y Cobros
+    </a>
+    <h1>
+      @if (esNueva()) {
+        Nueva factura {{ esDigefact() ? 'Digefact (copago seguro)' : 'SAT' }}
+      } @else {
+        Factura {{ registro()?.factura?.numeroDocumento }}
+      }
+    </h1>
+  </div>
+
+  <div class="factura-form">
+    <div class="form-panel" [formGroup]="cabecera">
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Paciente</mat-label>
+          <mat-select formControlName="idPaciente">
+            @for (p of pacientes(); track p.idPaciente) {
+              <mat-option [value]="p.idPaciente">
+                {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+              </mat-option>
+            }
+          </mat-select>
+          @if (cabecera.controls.idPaciente.invalid && cabecera.controls.idPaciente.touched) {
+            <mat-error>Selecciona un paciente</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Póliza {{ esDigefact() ? '(copago de seguro)' : '(opcional)' }}</mat-label>
+          <mat-select formControlName="idPoliza">
+            <mat-option [value]="null">Sin póliza</mat-option>
+            @for (p of polizas(); track p.idPoliza) {
+              <mat-option [value]="p.idPoliza">{{ nombrePaciente(p.idPaciente) }} · Póliza {{ p.numeroPoliza }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Descuento general (Q)</mat-label>
+          <input matInput type="number" min="0" formControlName="descuento" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado</mat-label>
+          <mat-select formControlName="idEstadoFactura">
+            @for (e of estadosFactura; track e.id) {
+              <mat-option [value]="e.id">{{ e.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="detalles-panel">
+      <div class="detalles-header">
+        <h2>Detalle de factura</h2>
+        <button matButton type="button" (click)="agregarDetalle()">
+          <mat-icon>add</mat-icon>
+          Agregar línea
+        </button>
+      </div>
+
+      @for (grupo of detalles.controls; track grupo; let i = $index) {
+        <div class="detalle-card" [formGroup]="grupo">
+          <button
+            matIconButton
+            type="button"
+            class="detalle-remove"
+            [disabled]="detalles.length === 1"
+            [matTooltip]="'Quitar línea'"
+            (click)="quitarDetalle(i)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo</mat-label>
+              <mat-select formControlName="idTipoItem">
+                @for (t of tiposItem; track t.id) {
+                  <mat-option [value]="t.id">{{ t.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>Descripción</mat-label>
+              <input matInput formControlName="descripcion" />
+              @if (grupo.controls.descripcion.invalid && grupo.controls.descripcion.touched) {
+                <mat-error>Requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cantidad</mat-label>
+              <input matInput type="number" min="1" formControlName="cantidad" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Precio unitario (Q)</mat-label>
+              <input matInput type="number" min="0" formControlName="precioUnitario" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Descuento línea (Q)</mat-label>
+              <input matInput type="number" min="0" formControlName="descuento" />
+            </mat-form-field>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="totales-panel">
+      <div class="totales-row">
+        <span>Subtotal</span>
+        <span>{{ formatMonto(subtotal()) }}</span>
+      </div>
+      <div class="totales-row">
+        <span>Descuento</span>
+        <span>-{{ formatMonto(descuentoHeader()) }}</span>
+      </div>
+      <div class="totales-row">
+        <span>IVA (12%)</span>
+        <span>{{ formatMonto(impuesto()) }}</span>
+      </div>
+      <div class="totales-row total">
+        <span>Total</span>
+        <span>{{ formatMonto(total()) }}</span>
+      </div>
+      @if (!esNueva()) {
+        <div class="totales-row pagado">
+          <span>Pagado</span>
+          <span>{{ formatMonto(totalPagado()) }}</span>
+        </div>
+        <div class="totales-row saldo">
+          <span>Saldo pendiente</span>
+          <span>{{ formatMonto(saldoPendiente()) }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/facturacion">Cancelar</a>
+      <button matButton="filled" type="button" (click)="guardar()">
+        <mat-icon>save</mat-icon>
+        Guardar factura
+      </button>
+    </div>
+  </div>
+
+  @if (!esNueva() && registro(); as r) {
+    <div class="pagos-panel">
+      <h2>Pagos registrados</h2>
+
+      @for (p of facturasService.pagosDe(r.factura.idFactura); track p.idPago) {
+        <div class="pago-row">
+          <span class="pago-monto">{{ formatMonto(p.monto) }}</span>
+          <span class="pago-forma">{{ formaPagoLabel(p.idFormaPago) }}</span>
+          <span class="pago-fecha">{{ formatFecha(p.fechaPago) }}</span>
+        </div>
+      }
+
+      @if (facturasService.pagosDe(r.factura.idFactura).length === 0) {
+        <p class="pagos-empty">Aún no se ha registrado ningún pago.</p>
+      }
+
+      @if (saldoPendiente() > 0) {
+        <div class="pago-form" [formGroup]="pagoForm">
+          <mat-form-field appearance="outline">
+            <mat-label>Monto (Q)</mat-label>
+            <input matInput type="number" min="0.01" formControlName="monto" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Forma de pago</mat-label>
+            <mat-select formControlName="idFormaPago">
+              @for (f of formasPago; track f.id) {
+                <mat-option [value]="f.id">{{ f.label }}</mat-option>
+              }
+            </mat-select>
+            @if (pagoForm.controls.idFormaPago.invalid && pagoForm.controls.idFormaPago.touched) {
+              <mat-error>Selecciona una forma de pago</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Referencia (opcional)</mat-label>
+            <input matInput formControlName="referenciaPago" placeholder="No. de boleta, últimos 4 dígitos..." />
+          </mat-form-field>
+          <button matButton="filled" type="button" (click)="registrarPago()">
+            <mat-icon>payments</mat-icon>
+            Registrar pago
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

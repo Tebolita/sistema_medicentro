@@ -1,0 +1,61 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Hoja de compromiso de pago</h1>
+      <p>Compromisos de pago firmados por el familiar responsable en casos de emergencia.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/emergencias/compromisos/nuevo" class="new-btn">
+      <mat-icon>handshake</mat-icon>
+      Nuevo compromiso
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por paciente o responsable..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscando()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  <div class="compromiso-grid">
+    @for (c of compromisos(); track c.consentimiento.idConsentimiento) {
+      <a class="compromiso-card" [routerLink]="['/home/emergencias/compromisos', c.consentimiento.idConsentimiento]">
+        <div class="patient-avatar">{{ iniciales(c.consentimiento.idPaciente) }}</div>
+        <div class="compromiso-info">
+          <h2>{{ nombrePaciente(c.consentimiento.idPaciente) }}</h2>
+          <span class="compromiso-meta"><mat-icon>person</mat-icon>Responsable: {{ c.nombreResponsable }} ({{ parentescoLabel(c.idParentescoResponsable) }})</span>
+          <span class="compromiso-meta"><mat-icon>call</mat-icon>{{ c.telefonoResponsable }}</span>
+          <span class="compromiso-meta"><mat-icon>event</mat-icon>{{ formatFecha(c.consentimiento.fechaFirma) }} · {{ medicoLabel(c.consentimiento.idMedicoResponsable) }}</span>
+        </div>
+        <div class="compromiso-actions">
+          <span class="status-badge" [class]="estadoClase(c.consentimiento.idEstadoConsentimiento)">
+            {{ estadoLabel(c.consentimiento.idEstadoConsentimiento) }}
+          </span>
+          <button
+            matIconButton
+            type="button"
+            [matTooltip]="'Eliminar compromiso'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.consentimiento.idConsentimiento, nombrePaciente(c.consentimiento.idPaciente))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </a>
+    }
+
+    @if (compromisos().length === 0) {
+      <div class="empty-state">
+        <mat-icon>handshake</mat-icon>
+        <p>No se encontraron compromisos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,88 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Farmacia</h1>
+      <p>Inventario de medicamentos, ventas y recetario de la clínica.</p>
+    </div>
+    <div class="header-actions">
+      <a matButton routerLink="/home/farmacia/item-nuevo">
+        <mat-icon>add</mat-icon>
+        Nuevo medicamento
+      </a>
+      <a matButton="filled" routerLink="/home/farmacia/movimiento-nuevo" class="new-btn">
+        <mat-icon>sell</mat-icon>
+        Registrar venta
+      </a>
+    </div>
+  </div>
+
+  <div class="top-row">
+    <div class="search-bar" [class.pulse]="resaltarBusqueda()">
+      <mat-icon>search</mat-icon>
+      <input
+        #searchInput
+        type="text"
+        placeholder="Buscar medicamento..."
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+      />
+      @if (buscando()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (!buscando()) {
+      <div class="opciones-row">
+        @for (item of opcionesFarmacia; track item.label) {
+          <a
+            class="opcion-chip"
+            [routerLink]="item.route || null"
+            [queryParams]="item.queryParams || null"
+            [matTooltip]="item.label"
+            matTooltipPosition="above"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+
+  <h2 class="section-title">
+    {{ buscando() ? 'Resultados de búsqueda (' + items().length + ')' : 'Inventario de medicamentos' }}
+  </h2>
+
+  <div class="item-grid">
+    @for (i of items(); track i.idItemInventario) {
+      <a class="item-card" [class.bajo-stock]="i.bajoStock" [routerLink]="['/home/farmacia/movimiento-nuevo']" [queryParams]="{ item: i.idItemInventario }">
+        <div class="item-icon">
+          <mat-icon>medication</mat-icon>
+        </div>
+        <div class="item-info">
+          <h2>{{ i.nombre }}</h2>
+          <span class="item-meta">{{ unidadLabel(i.idUnidadMedida) }} · {{ estadoLabel(i.idEstadoItem) }}</span>
+          <div class="stock-bar">
+            <div class="stock-bar-fill" [style.width.%]="porcentajeStock(i.stockActual, i.stockMinimo)"></div>
+          </div>
+          <span class="item-meta">Stock: {{ i.stockActual }} (mínimo {{ i.stockMinimo }})</span>
+        </div>
+        @if (i.bajoStock) {
+          <span class="bajo-stock-badge">
+            <mat-icon>warning</mat-icon>
+            Bajo stock
+          </span>
+        }
+      </a>
+    }
+
+    @if (items().length === 0) {
+      <div class="empty-state">
+        <mat-icon>medication</mat-icon>
+        <p>No se encontraron medicamentos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

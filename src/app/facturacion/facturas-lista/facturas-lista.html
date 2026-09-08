@@ -1,0 +1,90 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Facturación y Cobros</h1>
+      <p>Facturas SAT y Digefact, formas de pago y recibos de cobro.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/facturacion/nueva" class="new-btn">
+      <mat-icon>receipt</mat-icon>
+      Nueva factura
+    </a>
+  </div>
+
+  <div class="top-row">
+    <div class="search-bar" [class.pulse]="resaltarBusqueda()">
+      <mat-icon>search</mat-icon>
+      <input
+        #searchInput
+        type="text"
+        placeholder="Buscar por paciente o número de documento..."
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+      />
+      @if (buscando()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (!buscando()) {
+      <div class="opciones-row">
+        @for (item of opcionesFacturacion; track item.label) {
+          <a
+            class="opcion-chip"
+            [routerLink]="item.route || null"
+            [queryParams]="item.queryParams || null"
+            [matTooltip]="item.label"
+            matTooltipPosition="above"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+
+  <h2 class="section-title">
+    {{ buscando() ? 'Resultados de búsqueda (' + facturas().length + ')' : 'Facturas emitidas' }}
+  </h2>
+
+  <div class="factura-grid">
+    @for (r of facturas(); track r.factura.idFactura) {
+      <a class="factura-card" [routerLink]="['/home/facturacion', r.factura.idFactura]">
+        <div class="patient-avatar">{{ iniciales(r.factura.idPaciente) }}</div>
+        <div class="factura-info">
+          <h2>{{ nombrePaciente(r.factura.idPaciente) }}</h2>
+          <span class="factura-meta">
+            {{ r.factura.numeroDocumento }}
+            @if (esDigefact(r.factura.idPoliza)) {
+              <span class="origen-badge">Digefact</span>
+            } @else {
+              <span class="origen-badge sat">SAT</span>
+            }
+          </span>
+          <span class="factura-meta"><mat-icon>event</mat-icon>{{ formatFecha(r.factura.fechaEmision) }}</span>
+        </div>
+        <div class="factura-actions">
+          <span class="factura-total">{{ formatMonto(r.factura.total) }}</span>
+          <span class="status-badge" [class]="estadoClase(r.factura.idEstadoFactura)">{{ estadoLabel(r.factura.idEstadoFactura) }}</span>
+          <button
+            matIconButton
+            type="button"
+            [matTooltip]="'Anular factura'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.factura.idFactura, nombrePaciente(r.factura.idPaciente))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </a>
+    }
+
+    @if (facturas().length === 0) {
+      <div class="empty-state">
+        <mat-icon>receipt_long</mat-icon>
+        <p>No se encontraron facturas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

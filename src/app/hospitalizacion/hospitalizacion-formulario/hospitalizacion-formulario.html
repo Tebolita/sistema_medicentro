@@ -1,0 +1,128 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/hospitalizacion" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Hospitalización
+    </a>
+    <h1>{{ esNueva() ? 'Nuevo ingreso hospitalario' : 'Hospitalización de ' + nombrePaciente(form.controls.idPaciente.value!) }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Paciente</mat-label>
+        <mat-select formControlName="idPaciente">
+          @for (p of pacientes(); track p.idPaciente) {
+            <mat-option [value]="p.idPaciente">
+              {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+          <mat-error>Selecciona un paciente</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cama</mat-label>
+        <mat-select formControlName="idCama">
+          @for (c of camas; track c.id) {
+            <mat-option [value]="c.id">{{ c.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idCama.invalid && form.controls.idCama.touched) {
+          <mat-error>Selecciona una cama</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Médico responsable</mat-label>
+        <mat-select formControlName="idMedicoResponsable">
+          @for (m of medicos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedicoResponsable.invalid && form.controls.idMedicoResponsable.touched) {
+          <mat-error>Selecciona un médico</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de ingreso</mat-label>
+        <input matInput [matDatepicker]="pickerIngreso" formControlName="fechaIngreso" />
+        <mat-datepicker-toggle matIconSuffix [for]="pickerIngreso"></mat-datepicker-toggle>
+        <mat-datepicker #pickerIngreso></mat-datepicker>
+        @if (form.controls.fechaIngreso.invalid && form.controls.fechaIngreso.touched) {
+          <mat-error>Selecciona la fecha</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoHospitalizacion">
+          @for (e of estadosHospitalizacion; track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Motivo de ingreso</mat-label>
+        <textarea matInput formControlName="motivoIngreso" rows="2"></textarea>
+        @if (form.controls.motivoIngreso.invalid && form.controls.motivoIngreso.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="egreso-section">
+      <h2>Egreso / alta</h2>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de egreso</mat-label>
+          <input matInput [matDatepicker]="pickerEgreso" formControlName="fechaEgreso" />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerEgreso"></mat-datepicker-toggle>
+          <mat-datepicker #pickerEgreso></mat-datepicker>
+          <mat-hint>Déjalo vacío mientras el paciente siga internado.</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Diagnóstico de egreso</mat-label>
+          <textarea matInput formControlName="diagnosticoEgreso" rows="2"></textarea>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/hospitalizacion">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+
+  @if (!esNueva() && registro(); as r) {
+    <div class="ordenes-panel">
+      <div class="ordenes-header">
+        <h2>Órdenes médicas registradas</h2>
+        <a matButton routerLink="/home/hospitalizacion/orden-nueva" [queryParams]="{ hospitalizacion: idHospitalizacion() }">
+          <mat-icon>add</mat-icon>
+          Agregar orden
+        </a>
+      </div>
+
+      @for (o of r.ordenes; track o.idOrdenMedica) {
+        <div class="orden-row">
+          <span class="orden-tipo">{{ tipoOrdenLabel(o.idTipoOrden) }}</span>
+          <span class="orden-desc">{{ o.descripcion }}</span>
+          <span class="orden-meta">{{ formatFecha(o.fechaOrden) }} · {{ medicoLabel(o.idMedico) }}</span>
+        </div>
+      }
+
+      @if (r.ordenes.length === 0) {
+        <p class="ordenes-empty">Aún no hay órdenes registradas para esta hospitalización.</p>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,60 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/farmacia" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Farmacia
+    </a>
+    <h1>{{ esVenta() ? 'Registrar venta de medicamento' : 'Registrar movimiento de inventario' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Medicamento</mat-label>
+        <mat-select formControlName="idItemInventario">
+          @for (i of items(); track i.idItemInventario) {
+            <mat-option [value]="i.idItemInventario">{{ i.nombre }} (stock: {{ i.stockActual }})</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idItemInventario.invalid && form.controls.idItemInventario.touched) {
+          <mat-error>Selecciona un medicamento</mat-error>
+        }
+      </mat-form-field>
+
+      @if (!esVenta()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo de movimiento</mat-label>
+          <mat-select formControlName="idTipoMovimiento">
+            @for (t of tiposMovimiento; track t.id) {
+              <mat-option [value]="t.id">{{ t.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cantidad</mat-label>
+        <input matInput type="number" min="1" formControlName="cantidad" />
+        @if (form.controls.cantidad.invalid && form.controls.cantidad.touched) {
+          <mat-error>Indica una cantidad válida</mat-error>
+        }
+        @if (itemSeleccionado(); as item) {
+          <mat-hint>Stock disponible: {{ item.stockActual }}</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Motivo / notas</mat-label>
+        <input matInput formControlName="motivo" />
+      </mat-form-field>
+    </div>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/farmacia">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        {{ esVenta() ? 'Registrar venta' : 'Guardar movimiento' }}
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,105 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/laboratorio" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Laboratorio y Diagnóstico
+    </a>
+    <h1>{{ esNueva() ? 'Nueva orden de exámenes' : 'Editar orden de exámenes' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Paciente</mat-label>
+        <mat-select formControlName="idPaciente">
+          @for (p of pacientes(); track p.idPaciente) {
+            <mat-option [value]="p.idPaciente">
+              {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+            </mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
+          <mat-error>Selecciona un paciente</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Médico</mat-label>
+        <mat-select formControlName="idMedico">
+          @for (m of medicos; track m.id) {
+            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedico.invalid && form.controls.idMedico.touched) {
+          <mat-error>Selecciona un médico</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="fecha" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        @if (form.controls.fecha.invalid && form.controls.fecha.touched) {
+          <mat-error>Selecciona la fecha</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Prioridad</mat-label>
+        <mat-select formControlName="idPrioridad">
+          @for (p of prioridades; track p.id) {
+            <mat-option [value]="p.id">{{ p.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoOrden">
+          @for (e of estadosOrden; track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="examenes-section">
+      <h2>Exámenes solicitados</h2>
+      @if (filtroCategoria() !== null) {
+        <p class="filtro-nota">
+          Mostrando solo exámenes de {{ categoriasExamen.find((c) => c.id === filtroCategoria())?.label }}.
+          <a routerLink="/home/laboratorio/nueva">Ver todos</a>
+        </p>
+      }
+      <div class="examenes-grid">
+        @for (t of examenesVisibles(); track t.id) {
+          <label class="examen-check">
+            <mat-checkbox
+              [checked]="examenesSeleccionados().has(t.id)"
+              (change)="toggleExamen(t.id)"
+            >
+              {{ t.nombre }}
+            </mat-checkbox>
+          </label>
+        }
+      </div>
+      @if (seleccionInvalida()) {
+        <p class="examenes-error">Selecciona al menos un examen.</p>
+      }
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Notas</mat-label>
+      <textarea matInput formControlName="notas" rows="2"></textarea>
+    </mat-form-field>
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/laboratorio">Cancelar</a>
+      <button matButton="filled" type="submit">
+        <mat-icon>save</mat-icon>
+        Guardar orden
+      </button>
+    </div>
+  </form>
+</div>

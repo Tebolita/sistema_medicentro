@@ -1,0 +1,73 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Emergencias · Atención prioritaria</h1>
+      <p>Casos en sala de emergencias, ordenados por nivel de triaje.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/emergencias/nuevo" class="new-btn">
+      <mat-icon>add_alert</mat-icon>
+      Nuevo caso
+    </a>
+  </div>
+
+  <div class="top-row">
+    <div class="search-bar">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="Buscar por paciente o motivo..."
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+      />
+      @if (buscando()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (!buscando()) {
+      <div class="opciones-row">
+        @for (item of opcionesEmergencias; track item.label) {
+          <a class="opcion-chip" [routerLink]="item.route || null">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="caso-grid">
+    @for (c of casos(); track c.idCaso) {
+      <a class="caso-card" [class]="triageClase(c.idNivelTriage)" [routerLink]="['/home/emergencias', c.idCaso]">
+        <div class="triage-stripe"></div>
+        <div class="patient-avatar">{{ iniciales(c) }}</div>
+        <div class="caso-info">
+          <h2>{{ nombrePaciente(c) }}</h2>
+          <span class="triage-badge">{{ triageLabel(c.idNivelTriage) }}</span>
+          <span class="caso-meta"><mat-icon>schedule</mat-icon>{{ formatHora(c.horaLlegada) }} · {{ medicoLabel(c.idMedico) }}</span>
+          <span class="caso-meta motivo">{{ c.motivo }}</span>
+        </div>
+        <div class="caso-actions">
+          <span class="status-badge" [class]="estadoClase(c.idEstadoCaso)">{{ estadoLabel(c.idEstadoCaso) }}</span>
+          <button
+            matIconButton
+            type="button"
+            [matTooltip]="'Eliminar caso'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.idCaso, nombrePaciente(c))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </a>
+    }
+
+    @if (casos().length === 0) {
+      <div class="empty-state">
+        <mat-icon>emergency</mat-icon>
+        <p>No hay casos{{ buscar() ? ' para "' + buscar() + '"' : '' }} en este momento.</p>
+      </div>
+    }
+  </div>
+</div>
