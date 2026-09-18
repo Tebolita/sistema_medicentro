@@ -8,8 +8,13 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- display=optional (no "swap"): evita que Roboto reemplace la fuente
+         de respaldo DESPUÉS de que Angular Material ya midió el ancho del
+         recorte ("notch") del borde de los campos con outline — si el texto
+         cambia de ancho tras esa medición, el borde queda cortando el texto
+         (visto en los labels "Usuario *" / "Código *" del login). -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=optional"
       rel="stylesheet"
     />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />

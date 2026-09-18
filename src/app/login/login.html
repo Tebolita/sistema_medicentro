@@ -1,5 +1,10 @@
 <div class="login-page">
 
+  <!-- Resplandores decorativos de fondo -->
+  <span class="glow glow-1" aria-hidden="true"></span>
+  <span class="glow glow-2" aria-hidden="true"></span>
+  <span class="glow glow-3" aria-hidden="true"></span>
+
   <!-- ========================================= -->
   <!-- CONTENIDO PRINCIPAL -->
   <!-- ========================================= -->
@@ -32,8 +37,15 @@
         INICIAR SESIÓN
       </h2>
 
+      <p class="login-subtitle">
+        Ingresa tus credenciales para continuar
+      </p>
 
       <mat-card class="login-card">
+
+        <div class="card-badge">
+          <mat-icon>health_and_safety</mat-icon>
+        </div>
 
         <form
           class="login-form"
@@ -61,7 +73,7 @@
               matInput
               type="text"
               name="username"
-              [(ngModel)]="username"
+              [(ngModel)]="userData.nombreUsuario"
               autocomplete="username"
               required
             />
@@ -90,7 +102,7 @@
               matInput
               [type]="mostrarCodigo ? 'text' : 'password'"
               name="codigo"
-              [(ngModel)]="codigo"
+              [(ngModel)]="userData.idUsuario"
               required
             />
 
@@ -131,7 +143,7 @@
               matInput
               [type]="mostrarPassword ? 'text' : 'password'"
               name="password"
-              [(ngModel)]="password"
+              [(ngModel)]="userData.contrasena"
               autocomplete="current-password"
               required
             />
@@ -154,6 +166,9 @@
 
           <!-- OPCIONES -->
           <div class="login-options">
+            @if(errorMsg()){
+              <p class="text-red-300 text-xs text-center">{{ errorMsg() }}</p>
+            }
 
             <mat-checkbox
               [(ngModel)]="rememberMe"

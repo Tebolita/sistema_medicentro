@@ -16,13 +16,26 @@ body {
 
 
 /* =========================================================
-   PANTALLA COMPLETA
+   PANTALLA COMPLETA — fondo con profundidad (degradado +
+   resplandores + textura de puntos + reflejo inferior)
    ========================================================= */
 
 .login-page {
+  --nv-deep: #041b34;
+  --nv-mid: #0a3d78;
+  --nv-blue: #0d6a8f;
+  --nv-cyan: #22b8c6;
+  --nv-glow: #7fe3d4;
+  --card-bg: rgba(255, 255, 255, 0.34);
+  --card-border: rgba(255, 255, 255, 0.55);
+  --ink: #10293a;
+  --muted: #5c7485;
+  --accent: #0d6a8f;
+  --accent-bright: #1596c2;
+
   width: 100%;
-  height: 100vh;
-  min-height: 650px;
+  min-height: 100vh;
+  height: auto;
 
   display: flex;
   align-items: center;
@@ -30,57 +43,87 @@ body {
 
   position: relative;
 
-  overflow: hidden;
+  overflow-x: hidden;
 
-  background: linear-gradient(
-    135deg,
-    #062b68 0%,
-    #0d47a1 25%,
-    #1976d2 48%,
-    #dbeafe 75%,
-    #ffffff 100%
-  );
+  background:
+    radial-gradient(1100px 700px at 12% -10%, rgba(127, 227, 212, 0.35), transparent 60%),
+    radial-gradient(900px 650px at 108% 8%, rgba(34, 184, 198, 0.4), transparent 55%),
+    linear-gradient(135deg, var(--nv-deep) 0%, var(--nv-mid) 42%, var(--nv-blue) 72%, var(--nv-cyan) 100%);
 }
 
-
-/* =========================================================
-   EFECTOS DECORATIVOS
-   ========================================================= */
-
+/* textura de puntos sutil, como un cielo estrellado tenue */
 .login-page::before {
   content: '';
-
   position: absolute;
-
-  width: 500px;
-  height: 500px;
-
-  border-radius: 50%;
-
-  background: rgba(255, 255, 255, 0.08);
-
-  top: -250px;
-  left: -150px;
-
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1.5px);
+  background-size: 46px 46px;
+  opacity: 0.35;
   pointer-events: none;
 }
 
+/* franja de "reflejo" en la parte inferior, aporta profundidad.
+   position: fixed a propósito: se sale del borde de la página para
+   difuminarse, y así queda anclada a la ventana en vez de sumar alto
+   "real" que obligue a hacer scroll. */
 .login-page::after {
   content: '';
-
-  position: absolute;
-
-  width: 550px;
-  height: 550px;
-
-  border-radius: 50%;
-
-  background: rgba(255, 255, 255, 0.12);
-
-  right: -250px;
-  bottom: -300px;
-
+  position: fixed;
+  left: -10%;
+  right: -10%;
+  bottom: -18%;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 70%);
+  filter: blur(30px);
+  transform: scaleY(-1);
   pointer-events: none;
+}
+
+/* resplandores flotantes decorativos — fixed por la misma razón que el
+   reflejo de arriba: se salen del borde de la página sin generar scroll. */
+.glow {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.glow-1 {
+  width: 460px;
+  height: 460px;
+  top: -180px;
+  left: -140px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 70%);
+  animation: float-slow 14s ease-in-out infinite;
+}
+
+.glow-2 {
+  width: 520px;
+  height: 520px;
+  right: -220px;
+  bottom: -260px;
+  background: radial-gradient(circle, rgba(127, 227, 212, 0.28), transparent 70%);
+  animation: float-slow 18s ease-in-out infinite reverse;
+}
+
+.glow-3 {
+  width: 260px;
+  height: 260px;
+  top: 12%;
+  right: 8%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14), transparent 70%);
+  animation: float-slow 11s ease-in-out infinite;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -18px, 0) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-1, .glow-2, .glow-3 {
+    animation: none;
+  }
 }
 
 
@@ -92,7 +135,8 @@ body {
   width: 100%;
   max-width: 560px;
 
-  height: 100vh;
+  min-height: 100vh;
+  height: auto;
 
   display: flex;
   flex-direction: column;
@@ -104,7 +148,7 @@ body {
 
   z-index: 2;
 
-  padding: 5px 20px 10px;   /* antes 40px, ahora más arriba */
+  padding: 48px 20px 24px;
 }
 
 
@@ -126,43 +170,20 @@ body {
   margin-bottom: 4px;
 }
 
-/* =========================================================
-   LOGO PNG TRANSPARENTE
-   ========================================================= */
 .brand-logo {
   width: auto;
-  max-width: 550px;
+  max-width: 320px;
   height: auto;
-  max-height: 500px;
+  max-height: 200px;
 
   object-fit: contain;
   object-position: center;
 
   display: block;
 
-  filter:
-    drop-shadow(
-      0 10px 18px rgba(0, 0, 0, 0.18)
-    );
-}
+  filter: drop-shadow(0 12px 24px rgba(2, 20, 41, 0.35));
 
-.brand-title {
-  margin: -70px 0 0;
-
-  font-size: 30px;
-
-  font-weight: 800;
-
-  color: #ffffff;
-
-  letter-spacing: 1.5px;
-
-  line-height: 1.1;
-
-  text-align: center;
-
-  text-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.25);
+  animation: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 
@@ -173,20 +194,20 @@ body {
 .login-container {
   width: 100%;
 
-  max-width: 480px;
+  max-width: 440px;
 
-  margin-top: -90px;
+  margin-top: 4px;
 }
 
 
 /* =========================================================
-   TÍTULO LOGIN
+   TÍTULO Y SUBTÍTULO
    ========================================================= */
 
 .login-title {
-  margin: 0 0 15px;
+  margin: 0 0 4px;
 
-  font-size: 28px;
+  font-size: 26px;
 
   font-weight: 800;
 
@@ -194,30 +215,117 @@ body {
 
   text-align: center;
 
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
 
-  text-shadow:
-    0 3px 8px rgba(0, 0, 0, 0.20);
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+
+  animation: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+}
+
+.login-subtitle {
+  margin: 0 0 56px;
+
+  font-size: 14px;
+
+  font-weight: 500;
+
+  color: rgba(255, 255, 255, 0.82);
+
+  text-align: center;
+
+  animation: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 
 /* =========================================================
-   TARJETA DEL LOGIN
+   TARJETA DEL LOGIN — vidrio esmerilado
    ========================================================= */
 
 .login-card {
+  position: relative;
+
   width: 100%;
 
-  padding: 30px;
+  padding: 34px 30px 28px;
 
-  border-radius: 20px;
+  border-radius: 22px;
 
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--card-bg);
 
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--card-border);
 
   box-shadow:
-    0 22px 50px rgba(0, 32, 80, 0.28);
+    0 30px 60px rgba(2, 20, 41, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.5) inset;
+
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+
+  animation: rise-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+/* brillo diagonal característico del vidrio esmerilado — hereda el radio
+   de la tarjeta (en vez de usar overflow:hidden en .login-card, que
+   recortaría la insignia circular que sobresale por el borde superior) */
+.login-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.08) 30%,
+    transparent 55%
+  );
+  pointer-events: none;
+}
+
+/* los hijos reales deben quedar por encima del brillo (::before) */
+.login-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* insignia circular con el ícono de salud, centrada en el borde superior */
+.card-badge {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 52px;
+  height: 52px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: linear-gradient(135deg, var(--accent) 0%, var(--nv-cyan) 100%);
+
+  box-shadow: 0 10px 22px rgba(13, 106, 143, 0.45);
+
+  border: 3px solid rgba(255, 255, 255, 0.9);
+}
+
+.card-badge mat-icon {
+  color: #ffffff;
+  font-size: 26px;
+  width: 26px;
+  height: 26px;
 }
 
 
@@ -232,7 +340,9 @@ body {
 
   flex-direction: column;
 
-  gap: 5px;
+  gap: 18px;
+
+  margin-top: 10px;
 }
 
 
@@ -250,36 +360,69 @@ body {
    ========================================================= */
 
 .field-icon {
-  color: #1565c0;
+  color: var(--accent);
 }
 
 .eye-icon {
-  color: #607d8b;
+  color: var(--muted);
 }
 
 
 /* =========================================================
-   ANGULAR MATERIAL
+   ANGULAR MATERIAL — campos estilo vidrio
    ========================================================= */
 
-::ng-deep .mat-mdc-form-field {
+::ng-deep .login-card .mat-mdc-form-field {
   width: 100%;
+
+  /* Estado inválido (campo requerido vacío tras intentar enviar el
+     formulario): el rojo puro por defecto de Material (#f44336) se ve
+     fuera de lugar sobre el vidrio esmerilado, así que se atenúa a un
+     rojo más suave y consistente con el mensaje de error de abajo. */
+  --mat-form-field-outlined-error-label-text-color: #c62828;
+  --mat-form-field-outlined-error-focus-label-text-color: #c62828;
+  --mat-form-field-outlined-error-hover-label-text-color: #c62828;
+  --mat-form-field-outlined-error-caret-color: #c62828;
+  --mat-form-field-outlined-error-outline-color: #c62828;
+  --mat-form-field-outlined-error-focus-outline-color: #c62828;
+  --mat-form-field-outlined-error-hover-outline-color: #c62828;
 }
 
-::ng-deep .mat-mdc-text-field-wrapper {
-  min-height: 58px;
+::ng-deep .login-card .mat-mdc-text-field-wrapper {
+  min-height: 56px;
 
-  background-color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.55) !important;
+
+  border-radius: 12px;
 }
 
-::ng-deep .mat-mdc-form-field-infix {
-  min-height: 58px;
-
-  padding-top: 16px !important;
-  padding-bottom: 10px !important;
+::ng-deep .login-card .mdc-notched-outline__leading,
+::ng-deep .login-card .mdc-notched-outline__notch,
+::ng-deep .login-card .mdc-notched-outline__trailing {
+  border-color: rgba(13, 106, 143, 0.22) !important;
 }
 
-::ng-deep .mat-mdc-form-field-subscript-wrapper {
+::ng-deep .login-card .mat-mdc-form-field:hover .mdc-notched-outline__leading,
+::ng-deep .login-card .mat-mdc-form-field:hover .mdc-notched-outline__notch,
+::ng-deep .login-card .mat-mdc-form-field:hover .mdc-notched-outline__trailing {
+  border-color: rgba(13, 106, 143, 0.4) !important;
+}
+
+::ng-deep .login-card .mat-focused .mdc-notched-outline__leading,
+::ng-deep .login-card .mat-focused .mdc-notched-outline__notch,
+::ng-deep .login-card .mat-focused .mdc-notched-outline__trailing {
+  border-color: var(--accent) !important;
+  border-width: 2px !important;
+}
+
+::ng-deep .login-card .mat-mdc-form-field-infix {
+  min-height: 56px;
+
+  padding-top: 15px !important;
+  padding-bottom: 9px !important;
+}
+
+::ng-deep .login-card .mat-mdc-form-field-subscript-wrapper {
   display: none;
 }
 
@@ -292,6 +435,7 @@ body {
   width: 100%;
 
   display: flex;
+  flex-wrap: wrap;
 
   align-items: center;
 
@@ -299,7 +443,7 @@ body {
 
   gap: 10px;
 
-  margin: 7px 0 15px;
+  margin: 9px 0 18px;
 }
 
 
@@ -307,8 +451,28 @@ body {
    CHECKBOX
    ========================================================= */
 
-::ng-deep .mat-mdc-checkbox {
-  font-size: 14px;
+::ng-deep .login-card .mat-mdc-checkbox {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+::ng-deep .login-card .mat-mdc-checkbox .mdc-checkbox__background {
+  border-color: rgba(13, 106, 143, 0.45) !important;
+}
+
+
+/* =========================================================
+   MENSAJE DE ERROR
+   ========================================================= */
+
+.login-options p {
+  flex: 1 1 100%;
+  margin: 0 0 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(198, 40, 40, 0.08);
+  color: #c62828 !important;
+  font-weight: 600;
 }
 
 
@@ -317,9 +481,9 @@ body {
    ========================================================= */
 
 .forgot-password {
-  color: #1565c0;
+  color: var(--accent);
 
-  font-size: 14px;
+  font-size: 13.5px;
 
   font-weight: 600;
 
@@ -328,10 +492,12 @@ body {
   white-space: nowrap;
 
   cursor: pointer;
+
+  transition: color 0.15s ease;
 }
 
 .forgot-password:hover {
-  color: #0d47a1;
+  color: var(--nv-mid);
 
   text-decoration: underline;
 }
@@ -344,11 +510,11 @@ body {
 .login-button {
   width: 100%;
 
-  min-height: 54px;
+  min-height: 52px;
 
-  border-radius: 11px;
+  border-radius: 12px;
 
-  font-size: 17px;
+  font-size: 16px;
 
   font-weight: 700;
 
@@ -356,27 +522,26 @@ body {
 
   color: #ffffff !important;
 
-  background: linear-gradient(
-    135deg,
-    #0d47a1 0%,
-    #1976d2 50%,
-    #2196f3 100%
-  ) !important;
+  background: linear-gradient(135deg, var(--nv-mid) 0%, var(--accent) 55%, var(--nv-cyan) 100%) !important;
 
-  box-shadow:
-    0 8px 18px rgba(13, 71, 161, 0.30);
+  box-shadow: 0 10px 24px rgba(13, 106, 143, 0.4);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
 }
 
 .login-button:hover {
-  background: linear-gradient(
-    135deg,
-    #08306b 0%,
-    #1565c0 50%,
-    #1976d2 100%
-  ) !important;
+  transform: translateY(-2px);
 
-  box-shadow:
-    0 10px 22px rgba(13, 71, 161, 0.38);
+  filter: brightness(1.06);
+
+  box-shadow: 0 14px 30px rgba(13, 106, 143, 0.5);
+}
+
+.login-button:active {
+  transform: translateY(0);
 }
 
 
@@ -385,11 +550,13 @@ body {
    ========================================================= */
 
 .copyright {
-  margin: 12px 0 0;
+  margin: 16px 0 0;
 
-  font-size: 18px;
+  font-size: 12.5px;
 
-  color: #000000;
+  font-weight: 500;
+
+  color: rgba(255, 255, 255, 0.75);
 
   text-align: center;
 
@@ -401,7 +568,7 @@ body {
    PANTALLAS CON POCA ALTURA
    ========================================================= */
 
-@media (max-height: 750px) {
+@media (max-height: 800px) {
 
   .login-content {
     padding: 8px 20px;
@@ -412,48 +579,40 @@ body {
   }
 
   .brand-logo {
-    max-width: 210px;
+    max-width: 170px;
 
-    max-height: 105px;
-  }
-
-  .brand-title {
-    font-size: 25px;
-
-    margin-top: -40px;
-  }
-
-  .login-container {
-    margin-top: -40px;
+    max-height: 100px;
   }
 
   .login-title {
-    font-size: 24px;
+    font-size: 22px;
+  }
 
-    margin-bottom: 8px;
+  .login-subtitle {
+    margin-bottom: 12px;
   }
 
   .login-card {
-    padding: 23px;
+    padding: 28px 24px 22px;
   }
 
-  ::ng-deep .mat-mdc-text-field-wrapper {
-    min-height: 52px;
+  ::ng-deep .login-card .mat-mdc-text-field-wrapper {
+    min-height: 50px;
   }
 
-  ::ng-deep .mat-mdc-form-field-infix {
-    min-height: 52px;
+  ::ng-deep .login-card .mat-mdc-form-field-infix {
+    min-height: 50px;
 
-    padding-top: 13px !important;
-    padding-bottom: 8px !important;
+    padding-top: 12px !important;
+    padding-bottom: 7px !important;
   }
 
   .login-options {
-    margin: 5px 0 10px;
+    margin: 6px 0 12px;
   }
 
   .login-button {
-    min-height: 50px;
+    min-height: 48px;
   }
 
   .copyright {
@@ -468,46 +627,22 @@ body {
 
 @media (max-width: 700px) {
 
-  .login-page {
-    height: auto;
-
-    min-height: 100vh;
-
-    overflow-y: auto;
-  }
-
   .login-content {
-    height: auto;
-
-    min-height: 100vh;
-
     padding: 25px 18px;
   }
 
   .brand-logo {
-    max-width: 210px;
+    max-width: 190px;
 
-    max-height: 125px;
-  }
-
-  .brand-title {
-    font-size: 26px;
-
-    margin-top: -35px;
+    max-height: 115px;
   }
 
   .login-container {
-    max-width: 460px;
-
-    margin-top: -40px;
-  }
-
-  .login-title {
-    font-size: 26px;
+    max-width: 420px;
   }
 
   .login-card {
-    padding: 27px;
+    padding: 30px 26px 24px;
   }
 }
 
@@ -523,29 +658,17 @@ body {
   }
 
   .brand-logo {
-    max-width: 180px;
+    max-width: 160px;
 
-    max-height: 110px;
-  }
-
-  .brand-title {
-    font-size: 22px;
-
-    letter-spacing: 1px;
-
-    margin-top: -25px;
-  }
-
-  .login-container {
-    margin-top: -30px;
+    max-height: 96px;
   }
 
   .login-title {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .login-card {
-    padding: 22px 18px;
+    padding: 26px 20px 20px;
   }
 
   .login-options {
@@ -553,7 +676,8 @@ body {
 
     align-items: flex-start;
 
-    margin-top: 5px;
+    margin-top: 6px;
+    gap: 8px;
   }
 
   .forgot-password {
@@ -573,34 +697,24 @@ body {
   }
 
   .brand-logo {
-    max-width: 255px;
+    max-width: 150px;
 
-    max-height: 90px;
-  }
-
-  .brand-title {
-    font-size: 20px;
-
-    margin-top: -20px;
-  }
-
-  .login-container {
-    margin-top: -25px;
+    max-height: 88px;
   }
 
   .login-title {
-    font-size: 21px;
+    font-size: 20px;
   }
 
   .login-card {
-    padding: 18px 14px;
+    padding: 22px 16px 18px;
   }
 
-  ::ng-deep .mat-mdc-text-field-wrapper {
-    min-height: 52px;
+  ::ng-deep .login-card .mat-mdc-text-field-wrapper {
+    min-height: 50px;
   }
 
-  ::ng-deep .mat-mdc-form-field-infix {
-    min-height: 52px;
+  ::ng-deep .login-card .mat-mdc-form-field-infix {
+    min-height: 50px;
   }
 }

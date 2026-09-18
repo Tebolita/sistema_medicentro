@@ -1,3 +1,5 @@
+export * from './api-response.model';
+export * from './auth.model';
 export * from './catalogo.model';
 export * from './fundamentos.model';
 export * from './paciente.model';
