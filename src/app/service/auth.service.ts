@@ -9,7 +9,7 @@ import { ErrorService } from "./error.service";
     providedIn: 'root'
 })
 export class AuthService {
-    private apiUrl = 'http://localhost:5042/api/Auth/login';
+    private apiUrl = 'https://localhost:7086/api/Auth/login';
 
     constructor(
         private http: HttpClient,

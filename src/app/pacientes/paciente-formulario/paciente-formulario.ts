@@ -23,6 +23,9 @@ import {
   TIPOS_SANGRE,
 } from '../pacientes-catalogos';
 
+import { PacienteService } from '../../service/paciente.service';
+
+
 function toIsoDate(value: Date | string | null): string | null {
   if (!value) {
     return null;
@@ -68,6 +71,7 @@ export class PacienteFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private pacientesService = inject(PacientesService);
+  private apiPaciente = inject(PacienteService);
 
   generos = GENEROS;
   tiposDocumento = TIPOS_DOCUMENTO;
@@ -231,6 +235,11 @@ export class PacienteFormulario {
   }
 
   guardar(): void {
+    this.apiPaciente.RetornarPacientes().subscribe((response) => {
+      if (response.exito) {
+        console.log('Pacientes:', response.datos);
+      }
+    });
     this.datosGenerales.markAllAsTouched();
     this.contacto.markAllAsTouched();
     this.contactosEmergencia.markAllAsTouched();
