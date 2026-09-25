@@ -1,26 +1,10 @@
 // Catálogos de ejemplo para Farmacia. En la BD real estos valores vienen de
-// cat_valor_catalogo; MEDICAMENTOS es un mock de la tabla real `medicamentos`.
+// cat_valor_catalogo.
 
 export interface OpcionCatalogo {
   id: number;
   label: string;
 }
-
-export interface MedicamentoOpcion {
-  id: number;
-  nombre: string;
-  presentacion: string;
-  requiereReceta: boolean;
-}
-
-export const MEDICAMENTOS: MedicamentoOpcion[] = [
-  { id: 1, nombre: 'Amoxicilina 500mg', presentacion: 'Cápsulas', requiereReceta: true },
-  { id: 2, nombre: 'Paracetamol 500mg', presentacion: 'Tabletas', requiereReceta: false },
-  { id: 3, nombre: 'Ibuprofeno 400mg', presentacion: 'Tabletas', requiereReceta: false },
-  { id: 4, nombre: 'Loratadina 10mg', presentacion: 'Tabletas', requiereReceta: false },
-  { id: 5, nombre: 'Ampicilina 1g inyectable', presentacion: 'Vial', requiereReceta: true },
-  { id: 6, nombre: 'Omeprazol 20mg', presentacion: 'Cápsulas', requiereReceta: false },
-];
 
 export const UNIDADES_MEDIDA: OpcionCatalogo[] = [
   { id: 1, label: 'Unidad' },

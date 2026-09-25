@@ -51,6 +51,10 @@
     }
   </div>
 
+  @if (errorCarga()) {
+    <p class="carga-error">{{ errorCarga() }}</p>
+  }
+
   <h2 class="section-title">
     {{ buscando() ? 'Resultados de búsqueda (' + items().length + ')' : 'Inventario de medicamentos' }}
   </h2>
@@ -78,7 +82,7 @@
       </a>
     }
 
-    @if (items().length === 0) {
+    @if (items().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
         <mat-icon>medication</mat-icon>
         <p>No se encontraron medicamentos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>

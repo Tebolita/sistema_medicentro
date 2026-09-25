@@ -26,6 +26,10 @@
     }
   </div>
 
+  @if (errorCarga()) {
+    <p class="carga-error">{{ errorCarga() }}</p>
+  }
+
   <div class="pago-grid">
     @for (p of pagos(); track p.idPago) {
       <a class="pago-card" [routerLink]="['/home/facturacion', p.idFactura]">
@@ -41,7 +45,7 @@
       </a>
     }
 
-    @if (pagos().length === 0) {
+    @if (pagos().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
         <mat-icon>payments</mat-icon>
         <p>No se encontraron pagos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>

@@ -50,7 +50,7 @@ export class CasosLista {
     if (c.idPaciente == null) {
       return c.nombrePaciente || 'Paciente no identificado';
     }
-    const p = this.pacientesService.listar().find((pac) => pac.idPaciente === c.idPaciente);
+    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === c.idPaciente);
     if (!p) {
       return 'Paciente no encontrado';
     }

@@ -8,7 +8,7 @@
 .page-header h1 {
   margin: 6px 0 0;
   font-size: 22px;
-  color: #455a64;
+  color: var(--c-text-muted);
 }
 
 .back-link {
@@ -16,12 +16,12 @@
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  color: #57727d;
+  color: var(--c-text-muted);
   text-decoration: none;
 }
 
 .back-link:hover {
-  color: #455a64;
+  color: var(--c-text-muted);
 }
 
 .back-link mat-icon {
@@ -34,7 +34,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #ffffff;
+  background: var(--c-surface);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   padding: 24px;
@@ -56,15 +56,15 @@
   gap: 8px;
   padding: 16px;
   border-radius: 12px;
-  background: #fafafa;
-  border: 1px solid #eceff1;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
 }
 
 .egreso-section h2 {
   margin: 0 0 4px;
   font-size: 14px;
   font-weight: 700;
-  color: #263238;
+  color: var(--c-text);
 }
 
 .egreso-section .form-grid {
@@ -84,7 +84,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: #ffffff;
+  background: var(--c-surface);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   padding: 24px;
@@ -101,7 +101,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: #263238;
+  color: var(--c-text);
 }
 
 .orden-row {
@@ -110,7 +110,7 @@
   gap: 10px;
   flex-wrap: wrap;
   padding: 10px 0;
-  border-top: 1px solid #eceff1;
+  border-top: 1px solid var(--c-border);
 }
 
 .orden-tipo {
@@ -120,24 +120,24 @@
   font-size: 10.5px;
   font-weight: 700;
   background: rgba(69, 90, 100, 0.12);
-  color: #455a64;
+  color: var(--c-text-muted);
   white-space: nowrap;
 }
 
 .orden-desc {
   flex: 1 1 240px;
   font-size: 13px;
-  color: #263238;
+  color: var(--c-text);
 }
 
 .orden-meta {
   flex-shrink: 0;
   font-size: 11.5px;
-  color: #90a4ae;
+  color: var(--c-text-soft);
 }
 
 .ordenes-empty {
   margin: 0;
   font-size: 13px;
-  color: #90a4ae;
+  color: var(--c-text-soft);
 }

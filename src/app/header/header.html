@@ -3,21 +3,42 @@
     <button
       matIconButton
       class="icon-btn"
-      [matBadge]="alertCount"
+      [matBadge]="contadorAlertas()"
       matBadgeColor="warn"
-      matBadgeSize="small"
-      [matBadgeHidden]="alertCount === 0"
+      matBadgeSize="medium"
+      [matBadgeHidden]="alertas().length === 0"
+      [matMenuTriggerFor]="alertasMenu"
       aria-label="Alertas"
     >
       <mat-icon>notifications</mat-icon>
     </button>
+    <mat-menu #alertasMenu="matMenu">
+      <div class="alertas-titulo" (click)="$event.stopPropagation()">
+        Alertas{{ moduloActual() ? ' · ' + moduloActual()!.title : '' }}
+      </div>
+      @for (a of alertas(); track a.id) {
+        <a mat-menu-item [routerLink]="a.ruta" [queryParams]="a.queryParams" class="alerta-item">
+          <mat-icon [class]="'alerta-icono ' + a.severidad">
+            {{ a.severidad === 'alta' ? 'error' : 'warning' }}
+          </mat-icon>
+          <span class="alerta-texto">
+            <span class="alerta-linea">{{ a.titulo }}</span>
+            <span class="alerta-detalle">{{ a.detalle }}</span>
+          </span>
+        </a>
+      } @empty {
+        <div class="alertas-vacio" (click)="$event.stopPropagation()">
+          {{ moduloActual() ? 'Sin alertas en este módulo.' : 'Entra a un módulo para ver sus alertas.' }}
+        </div>
+      }
+    </mat-menu>
   </div>
 
   <div class="header-center">
     <div class="datetime-pill">
       <mat-icon class="pill-icon">event</mat-icon>
       <span class="datetime-text">
-        {{ now() | date: 'EEEE d MMMM y' }} · {{ now() | date: 'HH:mm:ss' }}
+        {{ now() | date: "EEEE d 'de' MMMM 'de' y" }} · {{ now() | date: 'HH:mm:ss' }}
       </span>
       <button matIconButton class="icon-btn small" (click)="picker.open()" aria-label="Abrir calendario">
         <mat-icon>calendar_month</mat-icon>
@@ -30,6 +51,15 @@
   </div>
 
   <div class="header-right">
+    <button
+      matIconButton
+      class="icon-btn"
+      (click)="alternarTema()"
+      [attr.aria-label]="oscuro() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'"
+      [matTooltip]="oscuro() ? 'Tema claro' : 'Tema oscuro'"
+    >
+      <mat-icon>{{ oscuro() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
     <button matIconButton class="icon-btn avatar-btn" [matMenuTriggerFor]="userMenu" aria-label="Menú de usuario">
       <mat-icon>account_circle</mat-icon>
     </button>

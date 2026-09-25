@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,9 +7,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Receta, RecetaDetalle } from '../../models';
-import { RecetaCompleta, RecetasService } from '../recetas.service';
-import { ESTADOS_RECETA, MEDICAMENTOS } from '../farmacia-catalogos';
+import { RecetaDetalle } from '../../models';
+import { RecetaCompleta, RecetaInput, RecetasService } from '../../service/recetas.service';
+import { MedicamentosService } from '../../service/medicamentos.service';
+import { ESTADOS_RECETA } from '../farmacia-catalogos';
 import { MEDICOS } from '../../consultas-externas/consultas-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
@@ -35,9 +36,10 @@ export class RecetaFormulario {
   private recetasService = inject(RecetasService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   medicos = MEDICOS;
-  medicamentos = MEDICAMENTOS;
+  private medicamentosService = inject(MedicamentosService);
+  medicamentos = this.medicamentosService.listar;
   estadosReceta = ESTADOS_RECETA;
 
   idReceta = signal(0);
@@ -51,15 +53,20 @@ export class RecetaFormulario {
 
   detalles = this.fb.array<ReturnType<typeof this.crearDetalleGroup>>([]);
 
+  guardando = signal(false);
+  errorMsg = signal('');
+  private fechaEmisionOriginal: string | null = null;
+
   constructor() {
+    afterNextRender(() => this.medicamentosService.cargar());
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam && idParam !== 'nueva') {
-      const id = Number(idParam);
-      const registro = this.recetasService.obtener(id);
-      if (registro) {
-        this.cargar(registro);
-        return;
-      }
+      // Edición: se trae la receta del backend (sirve también al recargar la página).
+      this.recetasService.obtener(Number(idParam)).subscribe({
+        next: (registro) => this.cargar(registro),
+        error: (err: Error) => this.errorMsg.set(err.message),
+      });
+      return;
     }
     this.agregarDetalle();
   }
@@ -85,6 +92,7 @@ export class RecetaFormulario {
 
   private cargar(registro: RecetaCompleta): void {
     this.idReceta.set(registro.receta.idReceta);
+    this.fechaEmisionOriginal = registro.receta.fechaEmision;
     this.cabecera.patchValue({
       idPaciente: registro.receta.idPaciente,
       idMedico: registro.receta.idMedico,
@@ -103,42 +111,36 @@ export class RecetaFormulario {
     const cab = this.cabecera.getRawValue();
     const idReceta = this.idReceta();
 
-    const receta: Receta = {
-      idReceta,
+    const receta: RecetaInput = {
       idTratamiento: null,
       idPaciente: cab.idPaciente!,
       idMedico: cab.idMedico!,
-      fechaEmision: this.esNueva()
-        ? new Date().toISOString()
-        : (this.recetasService.obtener(idReceta)?.receta.fechaEmision ?? new Date().toISOString()),
+      fechaEmision: this.fechaEmisionOriginal ?? new Date().toISOString(),
       firmaDigitalHash: null,
       firmaDigitalUrl: null,
       idEstadoReceta: cab.idEstadoReceta,
-      activo: true,
-      fechaCreacion: this.esNueva()
-        ? new Date().toISOString()
-        : (this.recetasService.obtener(idReceta)?.receta.fechaCreacion ?? new Date().toISOString()),
-      fechaModificacion: this.esNueva() ? null : new Date().toISOString(),
-      idUsuarioCreacion: null,
-      idUsuarioModificacion: null,
-    };
-
-    const registro: RecetaCompleta = {
-      receta,
+      // idRecetaDetalle 0 = línea nueva; el backend da de baja las que no vengan.
       detalles: this.detalles.getRawValue().map((d) => ({
         idRecetaDetalle: d.id,
-        idReceta,
         idMedicamento: d.idMedicamento!,
         dosis: d.dosis,
         frecuencia: d.frecuencia,
         duracion: d.duracion || null,
         indicaciones: d.indicaciones || null,
-        activo: true,
-        fechaCreacion: new Date().toISOString(),
       })),
     };
 
-    this.recetasService.guardar(registro);
-    this.router.navigate(['/home/farmacia/recetas']);
+    this.guardando.set(true);
+    this.errorMsg.set('');
+    const peticion = this.esNueva()
+      ? this.recetasService.crear(receta)
+      : this.recetasService.actualizar(idReceta, receta);
+    peticion.subscribe({
+      next: () => this.router.navigate(['/home/farmacia/recetas']),
+      error: (err: Error) => {
+        this.errorMsg.set(err.message);
+        this.guardando.set(false);
+      },
+    });
   }
 }

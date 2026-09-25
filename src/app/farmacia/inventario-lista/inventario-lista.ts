@@ -1,11 +1,11 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { InventarioFarmaciaService } from '../inventario-farmacia.service';
+import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { ESTADOS_ITEM_INVENTARIO, UNIDADES_MEDIDA } from '../farmacia-catalogos';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 
@@ -27,7 +27,12 @@ export class InventarioLista {
 
   opcionesFarmacia = MENU_SECTIONS.find((s) => s.slug === 'farmacia')?.items ?? [];
 
+  cargando = this.inventarioService.cargando;
+  errorCarga = this.inventarioService.errorCarga;
+
   constructor() {
+    // Solo en el navegador: durante el prerender no hay backend ni sesión.
+    afterNextRender(() => this.inventarioService.cargar());
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       if (params.get('foco') !== 'buscar') {
         return;

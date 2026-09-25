@@ -1,4 +1,7 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { ApiResponse } from '../models/api-response.model';
 import {
   Paciente,
   PacienteAlergia,
@@ -38,6 +41,41 @@ function calcularEdad(fechaNacimiento: string): number {
 // los métodos de abajo por llamadas HTTP.
 @Injectable({ providedIn: 'root' })
 export class PacientesService {
+  private http = inject(HttpClient);
+
+  // Directorio real de pacientes (GET /api/Pacientes). Lo usan los demás
+  // módulos (recetas, facturas, citas...) para mostrar y elegir pacientes;
+  // los ids salen de la base de datos. El CRUD de la pantalla de Pacientes
+  // sigue sobre los datos en memoria de más abajo (`listar`/`guardar`)
+  // hasta que se conecte a la API.
+  private directorioRegistros = signal<(Paciente & { edad: number })[]>([]);
+  directorioCargando = signal(false);
+  directorioError = signal('');
+
+  directorio = computed(() => this.directorioRegistros().filter((p) => p.activo));
+
+  cargarDirectorio(): void {
+    this.directorioCargando.set(true);
+    this.directorioError.set('');
+    this.http.get<ApiResponse<(Paciente & { edad: number })[]>>('https://localhost:7086/api/Pacientes').subscribe({
+      next: (resp) => {
+        this.directorioRegistros.set(resp.datos ?? []);
+        this.directorioCargando.set(false);
+      },
+      error: () => {
+        this.directorioError.set('No se pudo cargar el listado de pacientes.');
+        this.directorioCargando.set(false);
+      },
+    });
+  }
+
+  constructor() {
+    // Solo en el navegador: durante el prerender no hay backend ni sesión.
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      setTimeout(() => this.cargarDirectorio());
+    }
+  }
+
   private nextPacienteId = 4;
   private nextSubId = 1;
 

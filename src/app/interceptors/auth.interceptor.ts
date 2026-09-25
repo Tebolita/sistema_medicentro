@@ -1,7 +1,8 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = localStorage.getItem('access_token');
+  // En SSR/prerender no existe localStorage; el login guarda el JWT como 'token'.
+  const token = typeof localStorage === 'undefined' ? null : localStorage.getItem('token');
 
   if (token) {
     const authReq = req.clone({

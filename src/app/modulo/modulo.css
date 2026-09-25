@@ -57,8 +57,8 @@
   gap: 14px;
   padding: 16px;
   border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #eceff1;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   cursor: pointer;
   text-decoration: none;
@@ -83,7 +83,7 @@
 .module-card.disabled:hover {
   transform: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border-color: #eceff1;
+  border-color: var(--c-border);
 }
 
 .module-card-icon {
@@ -101,7 +101,7 @@
 .module-card-label {
   font-size: 14px;
   font-weight: 500;
-  color: #263238;
+  color: var(--c-text);
 }
 
 .module-not-found {
@@ -110,5 +110,5 @@
   align-items: center;
   gap: 8px;
   padding: 48px 0;
-  color: #78909c;
+  color: var(--c-text-soft);
 }

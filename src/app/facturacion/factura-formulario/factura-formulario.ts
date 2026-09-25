@@ -8,10 +8,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Factura, FacturaDetalle } from '../../models';
-import { FacturaCompleta, FacturasService } from '../facturas.service';
+import { FacturaDetalle } from '../../models';
+import { FacturaCompleta, FacturaInput, FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA, FORMAS_PAGO, TASA_IVA, TIPOS_ITEM_FACTURA } from '../facturacion-catalogos';
-import { PolizasService } from '../../polizas/polizas.service';
+import { PolizasDirectorioService } from '../../service/polizas-directorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
 @Component({
@@ -35,9 +35,9 @@ export class FacturaFormulario {
   private router = inject(Router);
   facturasService = inject(FacturasService);
   private pacientesService = inject(PacientesService);
-  private polizasService = inject(PolizasService);
+  private polizasService = inject(PolizasDirectorioService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   polizas = this.polizasService.listar;
   tiposItem = TIPOS_ITEM_FACTURA;
   estadosFactura = ESTADOS_FACTURA;
@@ -90,6 +90,10 @@ export class FacturaFormulario {
   totalPagado = computed(() => (this.esNueva() ? 0 : this.facturasService.totalPagado(this.idFactura())));
   saldoPendiente = computed(() => Math.max(0, this.total() - this.totalPagado()));
 
+  guardando = signal(false);
+  errorMsg = signal('');
+  errorPago = signal('');
+
   constructor() {
     this.cabecera.controls.descuento.valueChanges
       .pipe(takeUntilDestroyed())
@@ -99,12 +103,13 @@ export class FacturaFormulario {
 
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam && idParam !== 'nueva') {
-      const id = Number(idParam);
-      const registro = this.facturasService.obtener(id);
-      if (registro) {
-        this.cargar(registro);
-        return;
-      }
+      // Edición: se trae la factura (con sus pagos) del backend; sirve
+      // también al recargar la página.
+      this.facturasService.obtenerPorId(Number(idParam)).subscribe({
+        next: (registro) => this.cargar(registro),
+        error: (err: Error) => this.errorMsg.set(err.message),
+      });
+      return;
     }
 
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
@@ -149,7 +154,7 @@ export class FacturaFormulario {
   }
 
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientesService.listar().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
     return p ? [p.primerNombre, p.primerApellido].filter(Boolean).join(' ') : '—';
   }
 
@@ -173,47 +178,26 @@ export class FacturaFormulario {
     }
 
     const cab = this.cabecera.getRawValue();
-    const idFactura = this.idFactura();
-    const numeroDocumento = this.esNueva()
-      ? `FAC-${String(idFactura || Date.now()).slice(-4).padStart(4, '0')}`
-      : (this.facturasService.obtener(idFactura)?.factura.numeroDocumento ?? '');
+    const original = this.registro()?.factura;
 
-    const factura: Factura = {
-      idFactura,
+    // Serie, número de documento y totales los asigna/calcula el backend.
+    // El número de autorización FEL solo se conserva si la factura ya lo
+    // tenía: la certificación real no se genera desde el cliente.
+    const factura: FacturaInput = {
       idPaciente: cab.idPaciente!,
-      idTipoDocumentoFiscal: 1,
-      serie: 'A',
-      numeroDocumento,
-      fechaEmision: this.esNueva()
-        ? new Date().toISOString()
-        : (this.facturasService.obtener(idFactura)?.factura.fechaEmision ?? new Date().toISOString()),
-      subtotal: this.subtotal(),
+      idTipoDocumentoFiscal: original?.idTipoDocumentoFiscal ?? 1,
+      serie: original?.serie ?? null,
+      fechaEmision: original?.fechaEmision ?? new Date().toISOString(),
       descuento: cab.descuento,
-      impuesto: this.impuesto(),
-      total: this.total(),
       idEstadoFactura: cab.idEstadoFactura,
-      numeroAutorizacionFel: this.esNueva()
-        ? `FEL-${Math.floor(10000 + Math.random() * 89999)}-${this.esDigefact() ? 'DIGEFACT' : 'SAT'}`
-        : (this.facturasService.obtener(idFactura)?.factura.numeroAutorizacionFel ?? null),
-      fechaCertificacionFel: this.esNueva()
-        ? new Date().toISOString()
-        : (this.facturasService.obtener(idFactura)?.factura.fechaCertificacionFel ?? null),
-      idConvenio: null,
-      idPoliza: cab.idPoliza,
-      activo: true,
-      fechaCreacion: this.esNueva()
-        ? new Date().toISOString()
-        : (this.facturasService.obtener(idFactura)?.factura.fechaCreacion ?? new Date().toISOString()),
-      fechaModificacion: this.esNueva() ? null : new Date().toISOString(),
-      idUsuarioCreacion: null,
-      idUsuarioModificacion: null,
-    };
-
-    const registro: FacturaCompleta = {
-      factura,
+      numeroAutorizacionFel: original?.numeroAutorizacionFel ?? null,
+      fechaCertificacionFel: original?.fechaCertificacionFel ?? null,
+      idConvenio: original?.idConvenio ?? null,
+      // Solo las facturas Digefact (copago de seguro) van ligadas a una póliza.
+      idPoliza: this.esDigefact() ? cab.idPoliza : null,
+      // idFacturaDetalle 0 = línea nueva; el backend da de baja las que no vengan.
       detalles: this.detalles.getRawValue().map((d) => ({
         idFacturaDetalle: d.id,
-        idFactura,
         idTipoItem: d.idTipoItem!,
         idCita: null,
         idTratamiento: null,
@@ -222,14 +206,24 @@ export class FacturaFormulario {
         cantidad: d.cantidad,
         precioUnitario: d.precioUnitario,
         descuento: d.descuento,
-        subtotal: Math.max(0, d.cantidad * d.precioUnitario - d.descuento),
-        activo: true,
-        fechaCreacion: new Date().toISOString(),
       })),
     };
 
-    const id = this.facturasService.guardar(registro);
-    this.router.navigate(['/home/facturacion', id]);
+    this.guardando.set(true);
+    this.errorMsg.set('');
+    const peticion = this.esNueva()
+      ? this.facturasService.crear(factura)
+      : this.facturasService.actualizar(this.idFactura(), factura);
+    peticion.subscribe({
+      next: (guardada) => {
+        this.guardando.set(false);
+        this.router.navigate(['/home/facturacion', guardada.factura.idFactura]);
+      },
+      error: (err: Error) => {
+        this.errorMsg.set(err.message);
+        this.guardando.set(false);
+      },
+    });
   }
 
   registrarPago(): void {
@@ -238,19 +232,26 @@ export class FacturaFormulario {
       return;
     }
     const v = this.pagoForm.getRawValue();
-    this.facturasService.registrarPago({
-      idFactura: this.idFactura(),
-      fechaPago: new Date().toISOString(),
-      monto: v.monto,
-      idFormaPago: v.idFormaPago!,
-      idEstadoPago: 1,
-      referenciaPago: v.referenciaPago || null,
-      observaciones: null,
-      fechaCreacion: new Date().toISOString(),
-      fechaModificacion: null,
-      idUsuarioCreacion: null,
-      idUsuarioModificacion: null,
-    });
-    this.pagoForm.reset({ monto: 0, idFormaPago: null, referenciaPago: '' });
+    this.errorPago.set('');
+    this.facturasService
+      .registrarPago(this.idFactura(), {
+        idFormaPago: v.idFormaPago!,
+        idEstadoPago: 1,
+        monto: v.monto,
+        referenciaPago: v.referenciaPago || null,
+        observaciones: null,
+      })
+      .subscribe({
+        next: () => {
+          // El servicio ya refrescó la factura (p. ej. pasa a "pagada").
+          const actualizada = this.facturasService.obtener(this.idFactura());
+          if (actualizada) {
+            this.registro.set(actualizada);
+            this.cabecera.patchValue({ idEstadoFactura: actualizada.factura.idEstadoFactura });
+          }
+          this.pagoForm.reset({ monto: this.saldoPendiente(), idFormaPago: null, referenciaPago: '' });
+        },
+        error: (err: Error) => this.errorPago.set(err.message),
+      });
   }
 }

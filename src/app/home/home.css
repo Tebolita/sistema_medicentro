@@ -2,7 +2,7 @@
   width: auto;
   height: 100%;
   border: none;
-  background: #f2f5f7;
+  background: var(--c-bg);
 }
 
 

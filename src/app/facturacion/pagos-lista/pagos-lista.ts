@@ -1,10 +1,10 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { FacturasService } from '../facturas.service';
+import { FacturasService } from '../../service/facturas.service';
 import { FORMAS_PAGO } from '../facturacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
@@ -25,7 +25,12 @@ export class PagosLista {
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
 
+  cargando = this.facturasService.cargando;
+  errorCarga = this.facturasService.errorCarga;
+
   constructor() {
+    afterNextRender(() => this.facturasService.cargar());
+
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       if (params.get('foco') !== 'buscar') {
         return;
@@ -57,7 +62,7 @@ export class PagosLista {
 
   pacienteDeFactura(idFactura: number): string {
     const idPaciente = this.facturasService.obtener(idFactura)?.factura.idPaciente;
-    const p = this.pacientesService.listar().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
     return p ? [p.primerNombre, p.primerApellido].filter(Boolean).join(' ') : 'Paciente no encontrado';
   }
 

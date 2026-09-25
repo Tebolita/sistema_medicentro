@@ -37,7 +37,7 @@ export class CasoFormulario {
   private casosService = inject(CasosEmergenciaService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   medicos = MEDICOS;
   nivelesTriage = NIVELES_TRIAGE;
   estadosCaso = ESTADOS_CASO;

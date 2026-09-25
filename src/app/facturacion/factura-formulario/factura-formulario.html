@@ -30,6 +30,7 @@
           }
         </mat-form-field>
 
+        @if (esDigefact()) {
         <mat-form-field appearance="outline">
           <mat-label>Póliza {{ esDigefact() ? '(copago de seguro)' : '(opcional)' }}</mat-label>
           <mat-select formControlName="idPoliza">
@@ -39,6 +40,7 @@
             }
           </mat-select>
         </mat-form-field>
+        }
 
         <mat-form-field appearance="outline">
           <mat-label>Descuento general (Q)</mat-label>
@@ -144,9 +146,13 @@
       }
     </div>
 
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/facturacion">Cancelar</a>
-      <button matButton="filled" type="button" (click)="guardar()">
+      <button matButton="filled" type="button" [disabled]="guardando()" (click)="guardar()">
         <mat-icon>save</mat-icon>
         Guardar factura
       </button>
@@ -190,6 +196,9 @@
             <mat-label>Referencia (opcional)</mat-label>
             <input matInput formControlName="referenciaPago" placeholder="No. de boleta, últimos 4 dígitos..." />
           </mat-form-field>
+          @if (errorPago()) {
+            <p class="form-error">{{ errorPago() }}</p>
+          }
           <button matButton="filled" type="button" (click)="registrarPago()">
             <mat-icon>payments</mat-icon>
             Registrar pago

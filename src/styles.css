@@ -1,1 +1,32 @@
-/* You can add global styles to this file, and also import other style files */
+/* Variables de color propias de la app (tema claro por defecto). Los
+   componentes las usan en lugar de colores fijos para poder cambiar de tema. */
+:root {
+  --c-bg: #f2f5f7;
+  --c-surface: #ffffff;
+  --c-border: #eceff1;
+  --c-text: #263238;
+  --c-text-muted: #57727d;
+  --c-text-soft: #78909c;
+  --c-accent: #00838f;
+  --c-accent-2: #0d6a8f;
+  --c-keep: 100%; /* % del color original en textos de color; en oscuro se aclaran con blanco */
+}
+
+/* Tema oscuro: lo activa TemaService con data-theme="dark" en <html>.
+   Angular Material cambia solo al ponerle color-scheme: dark al body. */
+:root[data-theme='dark'] {
+  --c-bg: #12181b;
+  --c-surface: #1c2529;
+  --c-border: #2c393f;
+  --c-text: #e3eaed;
+  --c-text-muted: #a7b8c0;
+  --c-text-soft: #8299a3;
+  --c-accent: #4dd0e1;
+  --c-accent-2: #4fb3d9;
+  --c-keep: 50%;
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] body {
+  color-scheme: dark;
+}

@@ -53,7 +53,7 @@ export class ConsultaFormulario {
   private consultasService = inject(ConsultasExternasService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   medicos = MEDICOS;
   tiposConsulta = TIPOS_CONSULTA;
   estadosCita = ESTADOS_CITA;

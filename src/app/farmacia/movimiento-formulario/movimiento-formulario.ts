@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -7,7 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { InventarioFarmaciaService } from '../inventario-farmacia.service';
+import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { TIPOS_MOVIMIENTO, TIPO_MOVIMIENTO_SALIDA } from '../farmacia-catalogos';
 
 @Component({
@@ -37,6 +37,8 @@ export class MovimientoFormulario {
   // pantalla se enmarca como venta (salida) en vez del formulario genérico
   // de movimiento de inventario.
   esVenta = signal(false);
+  guardando = signal(false);
+  errorMsg = signal('');
 
   form = this.fb.nonNullable.group({
     idItemInventario: this.fb.control<number | null>(null, Validators.required),
@@ -51,6 +53,7 @@ export class MovimientoFormulario {
   });
 
   constructor() {
+    afterNextRender(() => this.inventarioService.cargar());
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const itemParam = params.get('item');
       if (itemParam) {
@@ -71,7 +74,16 @@ export class MovimientoFormulario {
     }
 
     const v = this.form.getRawValue();
-    this.inventarioService.registrarMovimiento(v.idItemInventario!, v.idTipoMovimiento!, v.cantidad, v.motivo || null);
-    this.router.navigate(['/home/farmacia']);
+    this.guardando.set(true);
+    this.errorMsg.set('');
+    this.inventarioService
+      .registrarMovimiento(v.idItemInventario!, v.idTipoMovimiento!, v.cantidad, v.motivo || null)
+      .subscribe({
+        next: () => this.router.navigate(['/home/farmacia']),
+        error: (err: Error) => {
+          this.errorMsg.set(err.message);
+          this.guardando.set(false);
+        },
+      });
   }
 }

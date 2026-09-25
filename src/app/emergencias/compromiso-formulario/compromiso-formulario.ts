@@ -54,7 +54,7 @@ export class CompromisoFormulario {
   private compromisosService = inject(CompromisosPagoService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   medicos = MEDICOS;
   parentescos = PARENTESCOS;
   estadosConsentimiento = ESTADOS_CONSENTIMIENTO;

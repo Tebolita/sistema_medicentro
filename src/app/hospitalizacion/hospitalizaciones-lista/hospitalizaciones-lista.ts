@@ -57,7 +57,7 @@ export class HospitalizacionesLista {
   });
 
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientesService.listar().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
     if (!p) {
       return 'Paciente no encontrado';
     }

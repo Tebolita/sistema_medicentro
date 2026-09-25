@@ -1,0 +1,71 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a routerLink="/home/farmacia" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Farmacia
+      </a>
+      <h1>Catálogo de medicamentos</h1>
+      <p>Medicamentos disponibles para recetas e inventario.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/farmacia/medicamentos/nuevo">
+      <mat-icon>add</mat-icon>
+      Nuevo medicamento
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por nombre, principio activo o presentación..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="med-grid">
+    @for (m of medicamentos(); track m.idMedicamento) {
+      <a class="med-card" [routerLink]="['/home/farmacia/medicamentos', m.idMedicamento]">
+        <div class="med-icon"><mat-icon>medication</mat-icon></div>
+        <div class="med-info">
+          <h2>{{ m.nombre }}</h2>
+          <span class="med-meta">
+            {{ m.presentacion || 'Sin presentación' }}{{ m.concentracion ? ' · ' + m.concentracion : '' }}
+          </span>
+          @if (m.principioActivo) {
+            <span class="med-meta">{{ m.principioActivo }}</span>
+          }
+        </div>
+        @if (m.requiereReceta) {
+          <span class="receta-badge">Requiere receta</span>
+        }
+        <button
+          matIconButton
+          type="button"
+          class="med-delete"
+          [matTooltip]="'Dar de baja'"
+          (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(m.idMedicamento, m.nombre)"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      </a>
+    }
+
+    @if (medicamentos().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>medication</mat-icon>
+        <p>No se encontraron medicamentos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -55,7 +55,7 @@
 }
 
 .form-card {
-  background: #ffffff;
+  background: var(--c-surface);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -81,27 +81,27 @@
   padding-right: 56px;
   margin-bottom: 16px;
   border-radius: 12px;
-  background: #f7f9fa;
-  border: 1px solid #eceff1;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
 }
 
 .remove-btn {
   position: absolute;
   top: 8px;
   right: 8px;
-  color: #b71c1c;
+  color: color-mix(in srgb, #b71c1c var(--c-keep), white);
 }
 
 .add-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #0d6a8f;
+  color: var(--c-accent-2);
 }
 
 .empty-hint {
   margin: 0 0 16px;
-  color: #78909c;
+  color: var(--c-text-soft);
   font-size: 13px;
 }
 
@@ -116,17 +116,17 @@
 
 .severidad-baja {
   background: rgba(46, 125, 50, 0.12);
-  color: #2e7d32;
+  color: color-mix(in srgb, #2e7d32 var(--c-keep), white);
 }
 
 .severidad-media {
   background: rgba(239, 108, 0, 0.12);
-  color: #ef6c00;
+  color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
 }
 
 .severidad-alta {
   background: rgba(198, 40, 40, 0.12);
-  color: #c62828;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
 }
 
 .form-footer {
@@ -134,8 +134,8 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 24px;
-  border-top: 1px solid #eceff1;
-  background: #fafbfc;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-bg);
 }
 
 .form-footer button,

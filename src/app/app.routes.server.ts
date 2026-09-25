@@ -38,6 +38,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client
   },
   {
+    path: 'home/farmacia/medicamentos/:id',
+    renderMode: RenderMode.Client
+  },
+  {
     path: 'home/farmacia/recetas/:id',
     renderMode: RenderMode.Client
   },

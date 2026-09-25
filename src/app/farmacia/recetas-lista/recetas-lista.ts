@@ -1,12 +1,13 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RecetaCompleta, RecetasService } from '../recetas.service';
-import { ESTADOS_RECETA, MEDICAMENTOS } from '../farmacia-catalogos';
+import { RecetaCompleta, RecetasService } from '../../service/recetas.service';
+import { MedicamentosService } from '../../service/medicamentos.service';
+import { ESTADOS_RECETA } from '../farmacia-catalogos';
 import { MEDICOS } from '../../consultas-externas/consultas-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
@@ -18,6 +19,7 @@ import { PacientesService } from '../../pacientes/pacientes.service';
 })
 export class RecetasLista {
   private recetasService = inject(RecetasService);
+  private medicamentosService = inject(MedicamentosService);
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
 
@@ -27,7 +29,15 @@ export class RecetasLista {
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
 
+  cargando = this.recetasService.cargando;
+  errorCarga = this.recetasService.errorCarga;
+  errorAccion = signal('');
+
   constructor() {
+    afterNextRender(() => {
+      this.recetasService.cargar();
+      this.medicamentosService.cargar();
+    });
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       if (params.get('foco') !== 'buscar') {
         return;
@@ -54,7 +64,7 @@ export class RecetasLista {
   });
 
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientesService.listar().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
     if (!p) {
       return 'Paciente no encontrado';
     }
@@ -72,7 +82,7 @@ export class RecetasLista {
 
   medicamentosTexto(r: RecetaCompleta): string {
     return r.detalles
-      .map((d) => MEDICAMENTOS.find((m) => m.id === d.idMedicamento)?.nombre)
+      .map((d) => this.medicamentosService.nombreDe(d.idMedicamento))
       .filter(Boolean)
       .join(', ');
   }
@@ -95,6 +105,9 @@ export class RecetasLista {
     if (!confirm(`¿Eliminar la receta de "${paciente}"?`)) {
       return;
     }
-    this.recetasService.eliminar(id);
+    this.errorAccion.set('');
+    this.recetasService.eliminar(id).subscribe({
+      error: (err: Error) => this.errorAccion.set(err.message),
+    });
   }
 }

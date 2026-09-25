@@ -12,7 +12,7 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: #ffffff;
+  background-color: var(--c-surface);
   overflow-x: hidden;
 }
 
@@ -75,7 +75,7 @@
   padding: 0 10px;
   height: 36px;
   border-radius: 18px;
-  background-color: #f2f5f7;
+  background-color: var(--c-bg);
   flex-shrink: 0;
   overflow: hidden;
   max-width: 100%;
@@ -91,7 +91,7 @@
   font-size: 18px;
   width: 18px;
   height: 18px;
-  color: #78909c;
+  color: var(--c-text-soft);
   flex-shrink: 0;
 }
 
@@ -103,11 +103,11 @@
   min-width: 0;
   font-size: 13px;
   font-family: inherit;
-  color: #263238;
+  color: var(--c-text);
 }
 
 .search-input::placeholder {
-  color: #90a4ae;
+  color: var(--c-text-soft);
 }
 
 .search-clear {
@@ -116,7 +116,7 @@
   justify-content: center;
   border: none;
   background: transparent;
-  color: #78909c;
+  color: var(--c-text-soft);
   cursor: pointer;
   padding: 2px;
   flex-shrink: 0;
@@ -131,7 +131,7 @@
 .no-results {
   margin: 12px 16px;
   font-size: 13px;
-  color: #78909c;
+  color: var(--c-text-soft);
 }
 
 .menu-scroll {
@@ -177,7 +177,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  color: #57727d;
+  color: var(--c-text-muted);
   text-decoration: none;
   border-radius: 4px;
   transition:
@@ -187,7 +187,7 @@
 
 .section-link:hover,
 .section-link.active {
-  color: var(--section-color, #0d6a8f);
+  color: color-mix(in srgb, var(--section-color, #0d6a8f) var(--c-keep), white);
 }
 
 .section-link:active {
@@ -199,7 +199,7 @@
   width: 21px;
   height: 21px;
   flex-shrink: 0;
-  color: var(--section-color, #57727d);
+  color: color-mix(in srgb, var(--section-color, #57727d) var(--c-keep), white);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -233,7 +233,7 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: #90a4ae;
+  color: var(--c-text-soft);
   cursor: pointer;
   border-radius: 50%;
   transition:
@@ -244,7 +244,7 @@
 
 .section-toggle:hover {
   background-color: color-mix(in srgb, var(--section-color, #0d6a8f) 14%, transparent);
-  color: var(--section-color, #0d6a8f);
+  color: color-mix(in srgb, var(--section-color, #0d6a8f) var(--c-keep), white);
 }
 
 .section-toggle:active {
@@ -310,11 +310,11 @@
 
 .nav-item.active {
   background-color: rgba(13, 106, 143, 0.12);
-  color: #0d6a8f;
+  color: var(--c-accent-2);
 }
 
 .nav-item.active mat-icon {
-  color: #0d6a8f;
+  color: var(--c-accent-2);
 }
 
 .menu.collapsed .nav-item:hover {
@@ -358,7 +358,7 @@
 .menu.collapsed .section:not(:first-child) {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid #eceff1;
+  border-top: 1px solid var(--c-border);
   transition: margin-top 0.28s ease, padding-top 0.28s ease;
 }
 
@@ -413,7 +413,7 @@
   .menu .section:not(:first-child) {
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid #eceff1;
+    border-top: 1px solid var(--c-border);
   }
 
   .menu .nav-item {

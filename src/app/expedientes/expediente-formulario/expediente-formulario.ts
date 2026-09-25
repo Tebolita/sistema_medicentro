@@ -64,7 +64,7 @@ export class ExpedienteFormulario {
   private expedientesService = inject(ExpedientesService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   medicos = MEDICOS;
   tiposRegistro = TIPOS_REGISTRO_CLINICO;
   nivelesConfidencialidad = NIVELES_CONFIDENCIALIDAD;

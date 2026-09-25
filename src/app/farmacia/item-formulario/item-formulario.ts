@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, afterNextRender, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,8 +6,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { InventarioFarmaciaService } from '../inventario-farmacia.service';
-import { ESTADOS_ITEM_INVENTARIO, MEDICAMENTOS, UNIDADES_MEDIDA } from '../farmacia-catalogos';
+import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
+import { MedicamentosService } from '../../service/medicamentos.service';
+import { ESTADOS_ITEM_INVENTARIO, UNIDADES_MEDIDA } from '../farmacia-catalogos';
 
 @Component({
   selector: 'app-item-formulario',
@@ -28,9 +29,17 @@ export class ItemFormulario {
   private router = inject(Router);
   private inventarioService = inject(InventarioFarmaciaService);
 
-  medicamentos = MEDICAMENTOS;
+  private medicamentosService = inject(MedicamentosService);
+  medicamentos = this.medicamentosService.listar;
   unidadesMedida = UNIDADES_MEDIDA;
   estadosItem = ESTADOS_ITEM_INVENTARIO;
+
+  guardando = signal(false);
+  errorMsg = signal('');
+
+  constructor() {
+    afterNextRender(() => this.medicamentosService.cargar());
+  }
 
   form = this.fb.nonNullable.group({
     idMedicamento: this.fb.control<number | null>(null, Validators.required),
@@ -42,7 +51,7 @@ export class ItemFormulario {
   });
 
   onMedicamentoSeleccionado(idMedicamento: number): void {
-    const medicamento = this.medicamentos.find((m) => m.id === idMedicamento);
+    const medicamento = this.medicamentos().find((m) => m.idMedicamento === idMedicamento);
     if (medicamento && !this.form.controls.nombre.value) {
       this.form.patchValue({ nombre: medicamento.nombre });
     }
@@ -55,20 +64,24 @@ export class ItemFormulario {
     }
 
     const v = this.form.getRawValue();
-    this.inventarioService.agregarItem({
-      idMedicamento: v.idMedicamento,
-      idProveedor: null,
-      nombre: v.nombre,
-      idUnidadMedida: v.idUnidadMedida!,
-      stockMinimo: v.stockMinimo,
-      stockActual: v.stockActual,
-      idEstadoItem: v.idEstadoItem,
-      fechaCreacion: new Date().toISOString(),
-      fechaModificacion: null,
-      idUsuarioCreacion: null,
-      idUsuarioModificacion: null,
-    });
-
-    this.router.navigate(['/home/farmacia']);
+    this.guardando.set(true);
+    this.errorMsg.set('');
+    this.inventarioService
+      .agregarItem({
+        idMedicamento: v.idMedicamento,
+        idProveedor: null,
+        nombre: v.nombre,
+        idUnidadMedida: v.idUnidadMedida!,
+        stockMinimo: v.stockMinimo,
+        stockActual: v.stockActual,
+        idEstadoItem: v.idEstadoItem,
+      })
+      .subscribe({
+        next: () => this.router.navigate(['/home/farmacia']),
+        error: (err: Error) => {
+          this.errorMsg.set(err.message);
+          this.guardando.set(false);
+        },
+      });
   }
 }

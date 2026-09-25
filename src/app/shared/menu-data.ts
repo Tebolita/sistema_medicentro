@@ -196,6 +196,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         route: '/home/farmacia/recetas',
         queryParams: { foco: 'buscar' },
       },
+      { icon: 'medication', label: 'Catálogo de medicamentos', route: '/home/farmacia/medicamentos' },
       {
         icon: 'inventory_2',
         label: 'Inventario de farmacia',

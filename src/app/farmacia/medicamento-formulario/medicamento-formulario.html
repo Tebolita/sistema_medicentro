@@ -1,0 +1,50 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/farmacia/medicamentos" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Catálogo de medicamentos
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo medicamento' : 'Editar medicamento' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre comercial</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej. Amoxicilina 500mg" />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Principio activo</mat-label>
+        <input matInput formControlName="principioActivo" placeholder="Ej. Amoxicilina" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Presentación</mat-label>
+        <input matInput formControlName="presentacion" placeholder="Ej. Cápsulas" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Concentración</mat-label>
+        <input matInput formControlName="concentracion" placeholder="Ej. 500 mg" />
+      </mat-form-field>
+    </div>
+
+    <mat-checkbox formControlName="requiereReceta">Requiere receta médica</mat-checkbox>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/farmacia/medicamentos">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

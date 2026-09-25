@@ -24,6 +24,8 @@ import { OrdenMedicaFormulario } from './hospitalizacion/orden-medica-formulario
 import { InventarioLista } from './farmacia/inventario-lista/inventario-lista';
 import { ItemFormulario } from './farmacia/item-formulario/item-formulario';
 import { MovimientoFormulario } from './farmacia/movimiento-formulario/movimiento-formulario';
+import { MedicamentosLista } from './farmacia/medicamentos-lista/medicamentos-lista';
+import { MedicamentoFormulario } from './farmacia/medicamento-formulario/medicamento-formulario';
 import { RecetasLista } from './farmacia/recetas-lista/recetas-lista';
 import { RecetaFormulario } from './farmacia/receta-formulario/receta-formulario';
 import { FacturasLista } from './facturacion/facturas-lista/facturas-lista';
@@ -79,6 +81,9 @@ export const routes: Routes = [
             {path: 'farmacia',component: InventarioLista,},
             {path: 'farmacia/item-nuevo',component: ItemFormulario,},
             {path: 'farmacia/movimiento-nuevo',component: MovimientoFormulario,},
+            {path: 'farmacia/medicamentos',component: MedicamentosLista,},
+            {path: 'farmacia/medicamentos/nuevo',component: MedicamentoFormulario,},
+            {path: 'farmacia/medicamentos/:id',component: MedicamentoFormulario,},
             {path: 'farmacia/recetas',component: RecetasLista,},
             {path: 'farmacia/recetas/nueva',component: RecetaFormulario,},
             {path: 'farmacia/recetas/:id',component: RecetaFormulario,},

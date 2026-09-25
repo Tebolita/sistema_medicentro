@@ -4,7 +4,10 @@
   </mat-drawer>
   <mat-drawer-content class="content">
     <div class="header">
-      <app-header />
+      <!-- El encabezado depende del navegador (tema guardado, reloj, alertas),
+           así que se renderiza de nuevo en el cliente en vez de hidratarse:
+           evita el error NG0500 si el HTML del servidor no coincide. -->
+      <app-header ngSkipHydration />
     </div>
     <div class="content-rout">
       <router-outlet />

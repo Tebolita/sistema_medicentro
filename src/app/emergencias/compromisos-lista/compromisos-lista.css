@@ -15,12 +15,12 @@
 .page-header h1 {
   margin: 0 0 4px;
   font-size: 22px;
-  color: #c62828;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
 }
 
 .page-header p {
   margin: 0;
-  color: #57727d;
+  color: var(--c-text-muted);
 }
 
 .new-btn {
@@ -36,14 +36,14 @@
   gap: 10px;
   padding: 10px 16px;
   border-radius: 999px;
-  background: #ffffff;
-  border: 1px solid #eceff1;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   max-width: 480px;
 }
 
 .search-bar mat-icon {
-  color: #78909c;
+  color: var(--c-text-soft);
   flex-shrink: 0;
 }
 
@@ -64,13 +64,13 @@
   background: transparent;
   padding: 2px;
   cursor: pointer;
-  color: #90a4ae;
+  color: var(--c-text-soft);
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .search-clear:hover {
-  color: #c62828;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
   background: rgba(198, 40, 40, 0.08);
 }
 
@@ -92,8 +92,8 @@
   gap: 14px;
   padding: 18px;
   border-radius: 14px;
-  background: #ffffff;
-  border: 1px solid #eceff1;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   color: inherit;
@@ -134,7 +134,7 @@
 .compromiso-info h2 {
   margin: 0;
   font-size: 15px;
-  color: #263238;
+  color: var(--c-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -145,7 +145,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #78909c;
+  color: var(--c-text-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -176,17 +176,17 @@
 
 .status-badge.estado-pendiente {
   background: rgba(239, 108, 0, 0.14);
-  color: #ef6c00;
+  color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
 }
 
 .status-badge.estado-firmado {
   background: rgba(46, 125, 50, 0.12);
-  color: #2e7d32;
+  color: color-mix(in srgb, #2e7d32 var(--c-keep), white);
 }
 
 .status-badge.estado-revocado {
   background: rgba(198, 40, 40, 0.12);
-  color: #c62828;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
 }
 
 .empty-state {
@@ -196,7 +196,7 @@
   align-items: center;
   gap: 8px;
   padding: 48px 0;
-  color: #78909c;
+  color: var(--c-text-soft);
 }
 
 .empty-state mat-icon {

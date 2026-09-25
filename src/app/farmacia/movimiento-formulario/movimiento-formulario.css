@@ -8,7 +8,7 @@
 .page-header h1 {
   margin: 6px 0 0;
   font-size: 22px;
-  color: #00838f;
+  color: var(--c-accent);
 }
 
 .back-link {
@@ -16,12 +16,12 @@
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  color: #57727d;
+  color: var(--c-text-muted);
   text-decoration: none;
 }
 
 .back-link:hover {
-  color: #00838f;
+  color: var(--c-accent);
 }
 
 .back-link mat-icon {
@@ -34,7 +34,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #ffffff;
+  background: var(--c-surface);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   padding: 24px;
@@ -54,4 +54,15 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.form-error,
+.carga-error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(198, 40, 40, 0.08);
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  font-size: 13px;
+  font-weight: 600;
 }

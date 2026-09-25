@@ -12,8 +12,8 @@
       <mat-form-field appearance="outline">
         <mat-label>Medicamento</mat-label>
         <mat-select formControlName="idMedicamento" (selectionChange)="onMedicamentoSeleccionado($event.value)">
-          @for (m of medicamentos; track m.id) {
-            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
+          @for (m of medicamentos(); track m.idMedicamento) {
+            <mat-option [value]="m.idMedicamento">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
           }
         </mat-select>
         @if (form.controls.idMedicamento.invalid && form.controls.idMedicamento.touched) {
@@ -64,9 +64,13 @@
       </mat-form-field>
     </div>
 
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/farmacia">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
         Guardar
       </button>

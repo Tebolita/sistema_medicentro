@@ -54,7 +54,7 @@ export class PolizaFormulario {
   private polizasService = inject(PolizasService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   aseguradoras = ASEGURADORAS;
   ramos = RAMOS_SEGURO;
   titularidades = TITULARIDADES;

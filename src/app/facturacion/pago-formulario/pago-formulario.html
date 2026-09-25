@@ -52,9 +52,13 @@
       </mat-form-field>
     </div>
 
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/facturacion/pagos">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>payments</mat-icon>
         Registrar pago
       </button>

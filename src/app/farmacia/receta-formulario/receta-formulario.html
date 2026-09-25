@@ -73,8 +73,8 @@
             <mat-form-field appearance="outline">
               <mat-label>Medicamento</mat-label>
               <mat-select formControlName="idMedicamento">
-                @for (m of medicamentos; track m.id) {
-                  <mat-option [value]="m.id">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
+                @for (m of medicamentos(); track m.idMedicamento) {
+                  <mat-option [value]="m.idMedicamento">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
                 }
               </mat-select>
               @if (grupo.controls.idMedicamento.invalid && grupo.controls.idMedicamento.touched) {
@@ -112,9 +112,13 @@
       }
     </div>
 
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/farmacia/recetas">Cancelar</a>
-      <button matButton="filled" type="button" (click)="guardar()">
+      <button matButton="filled" type="button" [disabled]="guardando()" (click)="guardar()">
         <mat-icon>save</mat-icon>
         Guardar receta
       </button>

@@ -17,7 +17,11 @@ export class ErrorService {
 
         if (error.error) {
             // Manejar diferentes formatos de error de NestJS
-            if (typeof error.error === 'string') {
+            if (typeof error.error === 'object' && typeof error.error.mensaje === 'string') {
+                // Envoltorio de la API de MediCentro: { exito, mensaje, errores }
+                const detalle = Array.isArray(error.error.errores) ? error.error.errores[0] : null;
+                errorMessage = detalle ?? error.error.mensaje;
+            } else if (typeof error.error === 'string') {
                 // Error directo como string (BadRequestException con mensaje simple)
                 errorMessage = error.error;
             } else if (error.error.message) {
@@ -33,8 +37,10 @@ export class ErrorService {
                 errorMessage = `Error del servidor (Código ${error.status})`;
             }
         } else {
-            // Error sin body (conexión fallida, etc.)
-            errorMessage = `Error del servidor (Código ${error.status})`;
+            // Error sin body (conexión fallida, token vencido → 401 vacío, etc.)
+            errorMessage = error.status === 401
+                ? 'Tu sesión expiró o no es válida. Inicia sesión de nuevo.'
+                : `Error del servidor (Código ${error.status})`;
         }
     }
     // Retornamos el error limpio para que el componente lo lea

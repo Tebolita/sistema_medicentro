@@ -45,6 +45,10 @@
     }
   </div>
 
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
   <h2 class="section-title">
     {{ buscando() ? 'Resultados de búsqueda (' + facturas().length + ')' : 'Facturas emitidas' }}
   </h2>
@@ -80,7 +84,7 @@
       </a>
     }
 
-    @if (facturas().length === 0) {
+    @if (facturas().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
         <mat-icon>receipt_long</mat-icon>
         <p>No se encontraron facturas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>

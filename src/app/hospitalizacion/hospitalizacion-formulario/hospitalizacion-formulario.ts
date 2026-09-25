@@ -55,7 +55,7 @@ export class HospitalizacionFormulario {
   private hospitalizacionesService = inject(HospitalizacionesService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   medicos = MEDICOS;
   camas = CAMAS;
   estadosHospitalizacion = ESTADOS_HOSPITALIZACION;
@@ -104,7 +104,7 @@ export class HospitalizacionFormulario {
   }
 
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientesService.listar().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
     return p ? [p.primerNombre, p.primerApellido].filter(Boolean).join(' ') : '—';
   }
 

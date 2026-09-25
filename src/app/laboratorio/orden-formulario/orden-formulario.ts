@@ -58,7 +58,7 @@ export class OrdenFormulario {
   private laboratorioService = inject(LaboratorioService);
   private pacientesService = inject(PacientesService);
 
-  pacientes = this.pacientesService.listar;
+  pacientes = this.pacientesService.directorio;
   medicos = MEDICOS;
   prioridades = PRIORIDADES_ORDEN;
   estadosOrden = ESTADOS_ORDEN;

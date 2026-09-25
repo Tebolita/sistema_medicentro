@@ -15,12 +15,12 @@
 .page-header h1 {
   margin: 0 0 4px;
   font-size: 22px;
-  color: #c62828;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
 }
 
 .page-header p {
   margin: 0;
-  color: #57727d;
+  color: var(--c-text-muted);
 }
 
 .new-btn {
@@ -43,15 +43,15 @@
   gap: 10px;
   padding: 10px 16px;
   border-radius: 999px;
-  background: #ffffff;
-  border: 1px solid #eceff1;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   flex: 1 1 320px;
   max-width: 420px;
 }
 
 .search-bar mat-icon {
-  color: #78909c;
+  color: var(--c-text-soft);
   flex-shrink: 0;
 }
 
@@ -72,13 +72,13 @@
   background: transparent;
   padding: 2px;
   cursor: pointer;
-  color: #90a4ae;
+  color: var(--c-text-soft);
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .search-clear:hover {
-  color: #c62828;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
   background: rgba(198, 40, 40, 0.08);
 }
 
@@ -105,7 +105,7 @@
   background: linear-gradient(135deg, rgba(198, 40, 40, 0.08), rgba(198, 40, 40, 0.03));
   border: 1px solid rgba(198, 40, 40, 0.16);
   text-decoration: none;
-  color: #c62828;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -141,8 +141,8 @@
   gap: 14px;
   padding: 18px 18px 18px 22px;
   border-radius: 14px;
-  background: #ffffff;
-  border: 1px solid #eceff1;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   color: inherit;
@@ -212,7 +212,7 @@
 .caso-info h2 {
   margin: 0;
   font-size: 15px;
-  color: #263238;
+  color: var(--c-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -234,14 +234,14 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #78909c;
+  color: var(--c-text-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .caso-meta.motivo {
-  color: #57727d;
+  color: var(--c-text-muted);
   white-space: normal;
 }
 
@@ -270,22 +270,22 @@
 
 .status-badge.estado-esperando {
   background: rgba(239, 108, 0, 0.14);
-  color: #ef6c00;
+  color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
 }
 
 .status-badge.estado-en-atencion {
   background: rgba(13, 106, 143, 0.12);
-  color: #0d6a8f;
+  color: var(--c-accent-2);
 }
 
 .status-badge.estado-atendido {
   background: rgba(46, 125, 50, 0.12);
-  color: #2e7d32;
+  color: color-mix(in srgb, #2e7d32 var(--c-keep), white);
 }
 
 .status-badge.estado-referido {
   background: rgba(93, 64, 55, 0.12);
-  color: #5d4037;
+  color: color-mix(in srgb, #5d4037 var(--c-keep), white);
 }
 
 .empty-state {
@@ -295,7 +295,7 @@
   align-items: center;
   gap: 8px;
   padding: 48px 0;
-  color: #78909c;
+  color: var(--c-text-soft);
 }
 
 .empty-state mat-icon {

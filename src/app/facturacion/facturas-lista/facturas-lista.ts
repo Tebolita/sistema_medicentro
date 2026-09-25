@@ -1,11 +1,11 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FacturasService } from '../facturas.service';
+import { FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA } from '../facturacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
@@ -29,7 +29,14 @@ export class FacturasLista {
 
   opcionesFacturacion = MENU_SECTIONS.find((s) => s.slug === 'facturacion-cobros')?.items ?? [];
 
+  cargando = this.facturasService.cargando;
+  errorCarga = this.facturasService.errorCarga;
+  errorAccion = signal('');
+
   constructor() {
+    // Solo en el navegador: durante el prerender no hay backend ni sesión.
+    afterNextRender(() => this.facturasService.cargar());
+
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       if (params.get('foco') !== 'buscar') {
         return;
@@ -56,7 +63,7 @@ export class FacturasLista {
   });
 
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientesService.listar().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
     if (!p) {
       return 'Paciente no encontrado';
     }
@@ -94,6 +101,9 @@ export class FacturasLista {
     if (!confirm(`¿Anular la factura de "${paciente}"?`)) {
       return;
     }
-    this.facturasService.eliminar(id);
+    this.errorAccion.set('');
+    this.facturasService.eliminar(id).subscribe({
+      error: (err: Error) => this.errorAccion.set(err.message),
+    });
   }
 }

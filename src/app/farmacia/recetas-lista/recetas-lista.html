@@ -26,6 +26,10 @@
     }
   </div>
 
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
   <div class="receta-grid">
     @for (r of recetas(); track r.receta.idReceta) {
       <a class="receta-card" [routerLink]="['/home/farmacia/recetas', r.receta.idReceta]">
@@ -49,7 +53,7 @@
       </a>
     }
 
-    @if (recetas().length === 0) {
+    @if (recetas().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
         <mat-icon>receipt_long</mat-icon>
         <p>No se encontraron recetas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
