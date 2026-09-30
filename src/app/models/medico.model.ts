@@ -17,3 +17,25 @@ export interface Medico {
   correo: string | null;
   telefono: string | null;
 }
+
+// ============================================================
+// CONSUMO DE LA API  →  /api/especialidades
+// ============================================================
+
+// GET /api/especialidades  y  GET /api/especialidades/{id}  (y respuesta de POST y PUT)
+// Para mostrar el nombre de la especialidad junto al médico, se cruza
+// medico.idEspecialidad con especialidad.idEspecialidad.
+export interface EspecialidadMedica {
+  idEspecialidad: number;
+  nombre: string; // ej. 'Pediatría'
+  descripcion: string | null;
+  activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+}
+
+// POST /api/especialidades  y  PUT /api/especialidades/{id}
+export interface EspecialidadRequest {
+  nombre: string;
+  descripcion: string | null;
+}

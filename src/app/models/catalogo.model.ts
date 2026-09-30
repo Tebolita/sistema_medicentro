@@ -48,6 +48,7 @@ export interface CatalogoOpcion {
 // Códigos de los catálogos de Recepción, tal como están en cat_tipo_catalogo.
 // Usarlos desde aquí evita errores de dedo al llamar al servicio.
 export const CODIGOS_CATALOGO = {
+  // Pacientes
   GENERO: 'GENERO',
   TIPO_DOCUMENTO: 'TIPO_DOCUMENTO',
   ESTADO_CIVIL: 'ESTADO_CIVIL',
@@ -58,4 +59,13 @@ export const CODIGOS_CATALOGO = {
   TIPO_ALERGIA: 'TIPO_ALERGIA',
   SEVERIDAD: 'SEVERIDAD',
   TIPO_ANTECEDENTE: 'TIPO_ANTECEDENTE',
+
+  // Citas, salas, disponibilidad y recordatorios
+  ESTADO_CITA: 'ESTADO_CITA',
+  MOTIVO_CANCELACION: 'MOTIVO_CANCELACION',
+  TIPO_SALA: 'TIPO_SALA',
+  ESTADO_SALA: 'ESTADO_SALA',
+  DIA_SEMANA: 'DIA_SEMANA',
+  TIPO_RECORDATORIO: 'TIPO_RECORDATORIO',
+  ESTADO_ENVIO: 'ESTADO_ENVIO',
 } as const;
