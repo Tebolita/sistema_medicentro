@@ -45,8 +45,9 @@ export interface CatalogoOpcion {
   orden: number;
 }
 
-// Códigos de los catálogos de Recepción, tal como están en cat_tipo_catalogo.
-// Usarlos desde aquí evita errores de dedo al llamar al servicio.
+// Códigos de los catálogos de Recepción, Seguros y Expedientes, tal como
+// están en cat_tipo_catalogo. Usarlos desde aquí evita errores de dedo al
+// llamar al servicio. Ejemplo: RetornarCatalogo(CODIGOS_CATALOGO.GENERO)
 export const CODIGOS_CATALOGO = {
   // Pacientes
   GENERO: 'GENERO',
@@ -68,4 +69,16 @@ export const CODIGOS_CATALOGO = {
   DIA_SEMANA: 'DIA_SEMANA',
   TIPO_RECORDATORIO: 'TIPO_RECORDATORIO',
   ESTADO_ENVIO: 'ESTADO_ENVIO',
+
+  // Seguros médicos
+  RAMO_SEGURO: 'RAMO_SEGURO',
+  TITULARIDAD_POLIZA: 'TITULARIDAD_POLIZA',
+  ESTADO_POLIZA: 'ESTADO_POLIZA',
+  TIPO_ENTIDAD_CONVENIO: 'TIPO_ENTIDAD_CONVENIO',
+  ESTADO_CONVENIO: 'ESTADO_CONVENIO',
+  ESTADO_AFILIACION: 'ESTADO_AFILIACION',
+
+  // Expedientes clínicos y tratamientos
+  TIPO_REGISTRO_CLINICO: 'TIPO_REGISTRO_CLINICO',
+  ESTADO_TRATAMIENTO: 'ESTADO_TRATAMIENTO',
 } as const;
