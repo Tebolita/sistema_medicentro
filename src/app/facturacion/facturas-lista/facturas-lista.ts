@@ -9,6 +9,7 @@ import { FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA } from '../facturacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
+import { CatalogosService } from '../../service/catalogos.service';
 
 @Component({
   selector: 'app-facturas-lista',
@@ -20,6 +21,8 @@ export class FacturasLista {
   private facturasService = inject(FacturasService);
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
+  private catalogos = inject(CatalogosService);
+  private estadosFacturaApi = this.catalogos.obtener('ESTADO_FACTURA');
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -76,12 +79,14 @@ export class FacturasLista {
   }
 
   estadoLabel(idEstadoFactura: number): string {
-    return ESTADOS_FACTURA.find((e) => e.id === idEstadoFactura)?.label ?? '—';
+    const api = this.estadosFacturaApi();
+    const lista = api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : ESTADOS_FACTURA;
+    return lista.find((e) => e.id === idEstadoFactura)?.label ?? '—';
   }
 
   estadoClase(idEstadoFactura: number): string {
-    if (idEstadoFactura === 2) return 'estado-pagada';
-    if (idEstadoFactura === 3) return 'estado-anulada';
+    if (idEstadoFactura === (this.catalogos.idPorCodigo('ESTADO_FACTURA', 'PAGADA') ?? 2)) return 'estado-pagada';
+    if (idEstadoFactura === (this.catalogos.idPorCodigo('ESTADO_FACTURA', 'ANULADA') ?? 3)) return 'estado-anulada';
     return 'estado-emitida';
   }
 

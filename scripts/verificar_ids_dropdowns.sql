@@ -41,3 +41,9 @@ SELECT id_medicamento, nombre FROM medicamentos WHERE activo = 1 ORDER BY id_med
 -- 5) Items de inventario: el backend SOLO lista los que tienen id_tipo_item = 1
 SELECT id_item_inventario, nombre, id_tipo_item, id_unidad_medida, id_estado_item, id_medicamento, activo
 FROM items_inventario ORDER BY id_item_inventario;
+
+-- Longitud máxima real de descripcion en factura_detalle (relevante para el
+-- texto "descripción||url" que arma el comprobante de pago).
+SELECT c.name AS columna, t.name AS tipo, c.max_length AS max_length_bytes
+FROM sys.columns c JOIN sys.types t ON t.user_type_id = c.user_type_id
+WHERE c.object_id = OBJECT_ID('dbo.factura_detalle') AND c.name = 'descripcion';

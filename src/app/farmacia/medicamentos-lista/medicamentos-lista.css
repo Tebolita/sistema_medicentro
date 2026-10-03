@@ -43,6 +43,38 @@
   height: 18px;
 }
 
+.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.tab.active {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
 .search-bar {
   display: flex;
   align-items: center;
@@ -96,6 +128,15 @@
 
 .med-card:hover {
   box-shadow: 0 4px 12px rgba(0, 131, 143, 0.18);
+}
+
+.med-card.inactivo {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.med-card.inactivo:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .med-icon {

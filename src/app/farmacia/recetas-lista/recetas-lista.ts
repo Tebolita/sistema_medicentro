@@ -8,7 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RecetaCompleta, RecetasService } from '../../service/recetas.service';
 import { MedicamentosService } from '../../service/medicamentos.service';
 import { ESTADOS_RECETA } from '../farmacia-catalogos';
-import { MEDICOS } from '../../consultas-externas/consultas-catalogos';
+import { MedicosService } from '../../service/medicos.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
 @Component({
@@ -21,6 +21,7 @@ export class RecetasLista {
   private recetasService = inject(RecetasService);
   private medicamentosService = inject(MedicamentosService);
   private pacientesService = inject(PacientesService);
+  private medicosService = inject(MedicosService);
   private route = inject(ActivatedRoute);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
@@ -77,7 +78,7 @@ export class RecetasLista {
   }
 
   medicoLabel(idMedico: number): string {
-    return MEDICOS.find((m) => m.id === idMedico)?.nombre ?? '—';
+    return this.medicosService.nombreDe(idMedico);
   }
 
   medicamentosTexto(r: RecetaCompleta): string {

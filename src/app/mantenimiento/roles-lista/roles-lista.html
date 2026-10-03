@@ -1,0 +1,65 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo', 'mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Roles</h1>
+      <p>Roles y permisos de acceso al sistema (módulo Seguridad).</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/roles/nuevo">
+      <mat-icon>add</mat-icon>
+      Nuevo rol
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por nombre..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (r of roles(); track r.idRol) {
+      <a class="item-card" [routerLink]="['/home/mantenimiento/roles', r.idRol]">
+        <div class="item-icon"><mat-icon>badge</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ r.nombre }}</h2>
+          @if (r.descripcion) {
+            <span class="item-meta">{{ r.descripcion }}</span>
+          }
+        </div>
+        <button
+          matIconButton
+          type="button"
+          class="item-delete"
+          [matTooltip]="'Dar de baja'"
+          (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.idRol, r.nombre)"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      </a>
+    }
+
+    @if (roles().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>badge</mat-icon>
+        <p>No se encontraron roles{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

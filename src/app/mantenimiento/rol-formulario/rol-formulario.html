@@ -1,0 +1,63 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/roles" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Roles
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo rol' : 'Editar rol' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej. Recepción" />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Descripción (opcional)</mat-label>
+        <input matInput formControlName="descripcion" />
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/roles">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+
+  @if (!esNuevo()) {
+    <div class="form-panel permisos-panel">
+      <h2>Permisos</h2>
+      <p class="permisos-hint">Marca los permisos que tiene este rol.</p>
+
+      @if (errorPermisos()) {
+        <p class="form-error">{{ errorPermisos() }}</p>
+      }
+
+      <div class="permisos-lista">
+        @for (p of permisos(); track p.idPermiso) {
+          <mat-checkbox
+            [checked]="idsAsignados().has(p.idPermiso)"
+            (change)="alternarPermiso(p.idPermiso, $event.checked)"
+          >
+            {{ p.nombre }}
+          </mat-checkbox>
+        }
+        @if (permisos().length === 0) {
+          <p class="sin-roles">No hay permisos registrados todavía.</p>
+        }
+      </div>
+    </div>
+  }
+</div>

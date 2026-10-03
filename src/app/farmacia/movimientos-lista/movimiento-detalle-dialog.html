@@ -1,0 +1,49 @@
+<div class="detalle-dialog">
+  <div class="detalle-header" [class.entrada]="data.esEntrada">
+    <div class="detalle-icon">
+      <mat-icon>{{ data.esEntrada ? 'call_received' : 'call_made' }}</mat-icon>
+    </div>
+    <div>
+      <h2 mat-dialog-title>{{ data.nombreItem }}</h2>
+      <span class="detalle-tipo">{{ data.tipoLabel }}</span>
+    </div>
+    <button matIconButton class="detalle-close" (click)="cerrar()" aria-label="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div mat-dialog-content class="detalle-body">
+    <div class="detalle-cantidad" [class.entrada]="data.esEntrada">
+      {{ data.esEntrada ? '+' : '-' }}{{ data.movimiento.cantidad }}
+    </div>
+
+    <dl class="detalle-lista">
+      <div class="detalle-fila">
+        <dt>Fecha</dt>
+        <dd>{{ formatFecha(data.movimiento.fechaMovimiento) }}</dd>
+      </div>
+      <div class="detalle-fila">
+        <dt>Motivo</dt>
+        <dd>{{ data.movimiento.motivo || 'Sin especificar' }}</dd>
+      </div>
+      @if (data.stockActual !== null) {
+        <div class="detalle-fila">
+          <dt>Stock actual del medicamento</dt>
+          <dd>{{ data.stockActual }}</dd>
+        </div>
+      }
+      <div class="detalle-fila">
+        <dt>Id de movimiento</dt>
+        <dd>#{{ data.movimiento.idMovimiento }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div mat-dialog-actions class="detalle-actions">
+    <a matButton routerLink="/home/farmacia/movimiento-nuevo" (click)="cerrar()">
+      <mat-icon>add</mat-icon>
+      Registrar otro movimiento
+    </a>
+    <button matButton="filled" (click)="cerrar()">Cerrar</button>
+  </div>
+</div>

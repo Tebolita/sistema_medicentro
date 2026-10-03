@@ -24,6 +24,7 @@ import { OrdenMedicaFormulario } from './hospitalizacion/orden-medica-formulario
 import { InventarioLista } from './farmacia/inventario-lista/inventario-lista';
 import { ItemFormulario } from './farmacia/item-formulario/item-formulario';
 import { MovimientoFormulario } from './farmacia/movimiento-formulario/movimiento-formulario';
+import { MovimientosLista } from './farmacia/movimientos-lista/movimientos-lista';
 import { MedicamentosLista } from './farmacia/medicamentos-lista/medicamentos-lista';
 import { MedicamentoFormulario } from './farmacia/medicamento-formulario/medicamento-formulario';
 import { RecetasLista } from './farmacia/recetas-lista/recetas-lista';
@@ -32,6 +33,15 @@ import { FacturasLista } from './facturacion/facturas-lista/facturas-lista';
 import { FacturaFormulario } from './facturacion/factura-formulario/factura-formulario';
 import { PagosLista } from './facturacion/pagos-lista/pagos-lista';
 import { PagoFormulario } from './facturacion/pago-formulario/pago-formulario';
+import { CatalogosLista } from './mantenimiento/catalogos-lista/catalogos-lista';
+import { ProveedoresLista } from './mantenimiento/proveedores-lista/proveedores-lista';
+import { ProveedorFormulario } from './mantenimiento/proveedor-formulario/proveedor-formulario';
+import { ConveniosLista } from './mantenimiento/convenios-lista/convenios-lista';
+import { ConvenioFormulario } from './mantenimiento/convenio-formulario/convenio-formulario';
+import { UsuariosLista } from './mantenimiento/usuarios-lista/usuarios-lista';
+import { UsuarioFormulario } from './mantenimiento/usuario-formulario/usuario-formulario';
+import { RolesLista } from './mantenimiento/roles-lista/roles-lista';
+import { RolFormulario } from './mantenimiento/rol-formulario/rol-formulario';
 
 export const routes: Routes = [
 
@@ -80,7 +90,9 @@ export const routes: Routes = [
             {path: 'hospitalizacion/:id',component: HospitalizacionFormulario,},
             {path: 'farmacia',component: InventarioLista,},
             {path: 'farmacia/item-nuevo',component: ItemFormulario,},
+            {path: 'farmacia/item/:id',component: ItemFormulario,},
             {path: 'farmacia/movimiento-nuevo',component: MovimientoFormulario,},
+            {path: 'farmacia/movimientos',component: MovimientosLista,},
             {path: 'farmacia/medicamentos',component: MedicamentosLista,},
             {path: 'farmacia/medicamentos/nuevo',component: MedicamentoFormulario,},
             {path: 'farmacia/medicamentos/:id',component: MedicamentoFormulario,},
@@ -92,6 +104,19 @@ export const routes: Routes = [
             {path: 'facturacion/pagos',component: PagosLista,},
             {path: 'facturacion/pago-nuevo',component: PagoFormulario,},
             {path: 'facturacion/:id',component: FacturaFormulario,},
+            {path: 'mantenimiento/catalogos',component: CatalogosLista,},
+            {path: 'mantenimiento/proveedores',component: ProveedoresLista,},
+            {path: 'mantenimiento/proveedores/nuevo',component: ProveedorFormulario,},
+            {path: 'mantenimiento/proveedores/:id',component: ProveedorFormulario,},
+            {path: 'mantenimiento/convenios',component: ConveniosLista,},
+            {path: 'mantenimiento/convenios/nuevo',component: ConvenioFormulario,},
+            {path: 'mantenimiento/convenios/:id',component: ConvenioFormulario,},
+            {path: 'mantenimiento/usuarios',component: UsuariosLista,},
+            {path: 'mantenimiento/usuarios/nuevo',component: UsuarioFormulario,},
+            {path: 'mantenimiento/usuarios/:id',component: UsuarioFormulario,},
+            {path: 'mantenimiento/roles',component: RolesLista,},
+            {path: 'mantenimiento/roles/nuevo',component: RolFormulario,},
+            {path: 'mantenimiento/roles/:id',component: RolFormulario,},
         ],
     }
 

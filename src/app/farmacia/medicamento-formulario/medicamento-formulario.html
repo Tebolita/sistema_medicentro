@@ -31,6 +31,19 @@
         <mat-label>Concentración</mat-label>
         <input matInput formControlName="concentracion" placeholder="Ej. 500 mg" />
       </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Categoría (opcional)</mat-label>
+        <mat-select formControlName="idCategoriaMedicamento">
+          <mat-option [value]="null">Sin categoría</mat-option>
+          @for (c of categorias(); track c.id) {
+            <mat-option [value]="c.id">{{ c.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (!hayCategorias()) {
+          <mat-hint>Catálogo CATEGORIA_MEDICAMENTO sin sembrar en la base (corre sembrar_catalogos.sql)</mat-hint>
+        }
+      </mat-form-field>
     </div>
 
     <mat-checkbox formControlName="requiereReceta">Requiere receta médica</mat-checkbox>

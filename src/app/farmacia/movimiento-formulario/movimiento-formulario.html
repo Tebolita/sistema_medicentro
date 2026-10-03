@@ -25,7 +25,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Tipo de movimiento</mat-label>
           <mat-select formControlName="idTipoMovimiento">
-            @for (t of tiposMovimiento; track t.id) {
+            @for (t of tiposMovimiento(); track t.id) {
               <mat-option [value]="t.id">{{ t.label }}</mat-option>
             }
           </mat-select>
@@ -37,6 +37,8 @@
         <input matInput type="number" min="1" formControlName="cantidad" />
         @if (form.controls.cantidad.invalid && form.controls.cantidad.touched) {
           <mat-error>Indica una cantidad válida</mat-error>
+        } @else if (stockInsuficiente()) {
+          <mat-error>No puedes {{ esVenta() ? 'vender' : 'sacar' }} más de lo que hay en stock</mat-error>
         }
         @if (itemSeleccionado(); as item) {
           <mat-hint>Stock disponible: {{ item.stockActual }}</mat-hint>
@@ -49,13 +51,21 @@
       </mat-form-field>
     </div>
 
+    @if (stockInsuficiente()) {
+      <p class="form-error">
+        <mat-icon inline>warning</mat-icon>
+        No hay stock suficiente: quedan {{ itemSeleccionado()?.stockActual }} y estás intentando
+        {{ esVenta() ? 'vender' : 'sacar' }} {{ form.controls.cantidad.value }}.
+      </p>
+    }
+
     @if (errorMsg()) {
       <p class="form-error">{{ errorMsg() }}</p>
     }
 
     <div class="form-actions">
       <a matButton routerLink="/home/farmacia">Cancelar</a>
-      <button matButton="filled" type="submit" [disabled]="guardando()">
+      <button matButton="filled" type="submit" [disabled]="guardando() || stockInsuficiente()">
         <mat-icon>save</mat-icon>
         {{ esVenta() ? 'Registrar venta' : 'Guardar movimiento' }}
       </button>

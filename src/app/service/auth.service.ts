@@ -21,4 +21,16 @@ export class AuthService {
             catchError(this.errorService.handleError)
         )
     }
+
+    // Borra la sesión guardada localmente. El backend no tiene un endpoint
+    // de logout (el JWT solo expira solo, no se puede invalidar antes), así
+    // que cerrar sesión es, del lado del cliente, dejar de mandar el token.
+    logout(): void {
+        try {
+            localStorage.removeItem('token');
+            localStorage.removeItem('id_usuario');
+        } catch {
+            // Sin localStorage (SSR o navegación privada): no hay nada que borrar.
+        }
+    }
 }

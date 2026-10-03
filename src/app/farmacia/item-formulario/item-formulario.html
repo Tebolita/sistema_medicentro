@@ -4,7 +4,7 @@
       <mat-icon>arrow_back</mat-icon>
       Farmacia
     </a>
-    <h1>Nuevo medicamento en inventario</h1>
+    <h1>{{ esNuevo() ? 'Nuevo medicamento en inventario' : 'Editar medicamento en inventario' }}</h1>
   </div>
 
   <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
@@ -30,9 +30,19 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
+        <mat-label>Proveedor (opcional)</mat-label>
+        <mat-select formControlName="idProveedor">
+          <mat-option [value]="null">Sin proveedor</mat-option>
+          @for (p of proveedores(); track p.idProveedor) {
+            <mat-option [value]="p.idProveedor">{{ p.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
         <mat-label>Unidad de medida</mat-label>
         <mat-select formControlName="idUnidadMedida">
-          @for (u of unidadesMedida; track u.id) {
+          @for (u of unidadesMedida(); track u.id) {
             <mat-option [value]="u.id">{{ u.label }}</mat-option>
           }
         </mat-select>
@@ -41,7 +51,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
         <mat-select formControlName="idEstadoItem">
-          @for (e of estadosItem; track e.id) {
+          @for (e of estadosItem(); track e.id) {
             <mat-option [value]="e.id">{{ e.label }}</mat-option>
           }
         </mat-select>
@@ -52,6 +62,9 @@
         <input matInput type="number" min="0" formControlName="stockActual" />
         @if (form.controls.stockActual.invalid && form.controls.stockActual.touched) {
           <mat-error>Requerido</mat-error>
+        }
+        @if (!esNuevo()) {
+          <mat-hint>Para cambiar el stock, usa "Registrar movimiento"</mat-hint>
         }
       </mat-form-field>
 
@@ -72,7 +85,7 @@
       <a matButton routerLink="/home/farmacia">Cancelar</a>
       <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar
+        {{ esNuevo() ? 'Guardar' : 'Guardar cambios' }}
       </button>
     </div>
   </form>

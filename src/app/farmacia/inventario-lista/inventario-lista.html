@@ -68,6 +68,9 @@
         <div class="item-info">
           <h2>{{ i.nombre }}</h2>
           <span class="item-meta">{{ unidadLabel(i.idUnidadMedida) }} · {{ estadoLabel(i.idEstadoItem) }}</span>
+          @if (proveedorLabel(i.idProveedor); as proveedor) {
+            <span class="item-meta">Proveedor: {{ proveedor }}</span>
+          }
           <div class="stock-bar">
             <div class="stock-bar-fill" [style.width.%]="porcentajeStock(i.stockActual, i.stockMinimo)"></div>
           </div>
@@ -79,6 +82,15 @@
             Bajo stock
           </span>
         }
+        <button
+          matIconButton
+          type="button"
+          class="item-edit"
+          [matTooltip]="'Editar medicamento'"
+          (click)="editar($event, i.idItemInventario)"
+        >
+          <mat-icon>edit</mat-icon>
+        </button>
       </a>
     }
 

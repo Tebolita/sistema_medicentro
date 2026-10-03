@@ -8,11 +8,16 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { FacturaDetalle } from '../../models';
 import { FacturaCompleta, FacturaInput, FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA, FORMAS_PAGO, TASA_IVA, TIPOS_ITEM_FACTURA } from '../facturacion-catalogos';
+import { CatalogosService } from '../../service/catalogos.service';
 import { PolizasDirectorioService } from '../../service/polizas-directorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { ComprobantesService } from '../../service/comprobantes.service';
+import { ConveniosService } from '../../service/convenios.service';
+import { esImagenComprobante as esUrlDeImagen } from '../comprobante-descripcion.util';
 
 @Component({
   selector: 'app-factura-formulario',
@@ -36,12 +41,34 @@ export class FacturaFormulario {
   facturasService = inject(FacturasService);
   private pacientesService = inject(PacientesService);
   private polizasService = inject(PolizasDirectorioService);
+  private comprobantesService = inject(ComprobantesService);
+  private snackBar = inject(MatSnackBar);
+
+  // GET /api/convenios ya existe. Si por alguna razón no hay convenios
+  // sembrados todavía, se cae al campo numérico de respaldo para el id.
+  private conveniosService = inject(ConveniosService);
+  convenios = this.conveniosService.listar;
+  hayConvenios = computed(() => this.convenios().length > 0);
 
   pacientes = this.pacientesService.directorio;
   polizas = this.polizasService.listar;
   tiposItem = TIPOS_ITEM_FACTURA;
-  estadosFactura = ESTADOS_FACTURA;
-  formasPago = FORMAS_PAGO;
+
+  // ESTADO_FACTURA es el código real que ya usa el backend (resuelve
+  // "PAGADA" al aprobar un pago). FORMA_PAGO todavía no está confirmado con
+  // el backend: se intenta igual y, si no existe en la base, se cae a la
+  // lista de ejemplo.
+  private catalogos = inject(CatalogosService);
+  private estadosFacturaApi = this.catalogos.obtener('ESTADO_FACTURA');
+  estadosFactura = computed(() => {
+    const api = this.estadosFacturaApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : ESTADOS_FACTURA;
+  });
+  private formasPagoApi = this.catalogos.obtener('FORMA_PAGO');
+  formasPago = computed(() => {
+    const api = this.formasPagoApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : FORMAS_PAGO;
+  });
 
   idFactura = signal(0);
   esNueva = computed(() => this.idFactura() === 0);
@@ -58,6 +85,13 @@ export class FacturaFormulario {
     idPoliza: this.fb.control<number | null>(null),
     descuento: [0, [Validators.required, Validators.min(0)]],
     idEstadoFactura: [1, Validators.required],
+    // Campos opcionales de certificación FEL y convenio corporativo: el
+    // esquema ya los tiene (numero_autorizacion_fel, fecha_certificacion_fel,
+    // id_convenio) pero antes el formulario nunca los mostraba, así que
+    // siempre se guardaban vacíos.
+    numeroAutorizacionFel: [''],
+    fechaCertificacionFel: [''], // input type="date" (yyyy-MM-dd)
+    idConvenio: this.fb.control<number | null>(null),
   });
 
   detalles = this.fb.array<ReturnType<typeof this.crearDetalleGroup>>([]);
@@ -94,6 +128,19 @@ export class FacturaFormulario {
   errorMsg = signal('');
   errorPago = signal('');
 
+  // Comprobante de pago (foto de recibo/voucher, opcional). No hay tabla
+  // para esto en el backend .NET: la relación factura↔comprobante vive solo
+  // en el nombre del archivo en el servidor Node ("factura-<id>.<ext>", ver
+  // server.ts), nunca se le pide al backend que la guarde.
+  comprobanteUrl = signal<string | null>(null);
+  subiendoComprobante = signal(false);
+  errorComprobante = signal('');
+  // Si se sube un comprobante ANTES de guardar una factura nueva (todavía
+  // sin id), el servidor le pone un nombre al azar; acá se guarda ese nombre
+  // para, una vez el backend asigne el id real, pedirle a `confirmar()` que
+  // lo renombre a "factura-<id>.<ext>".
+  private comprobanteNombreTemporal = signal<string | null>(null);
+
   constructor() {
     this.cabecera.controls.descuento.valueChanges
       .pipe(takeUntilDestroyed())
@@ -123,7 +170,7 @@ export class FacturaFormulario {
     return this.fb.nonNullable.group({
       id: d?.idFacturaDetalle ?? 0,
       idTipoItem: this.fb.control<number | null>(d?.idTipoItem ?? 1, Validators.required),
-      descripcion: [d?.descripcion ?? '', Validators.required],
+      descripcion: [d?.descripcion ?? '', [Validators.required, Validators.maxLength(200)]],
       cantidad: [d?.cantidad ?? 1, [Validators.required, Validators.min(1)]],
       precioUnitario: [d?.precioUnitario ?? 0, [Validators.required, Validators.min(0)]],
       descuento: [d?.descuento ?? 0, [Validators.required, Validators.min(0)]],
@@ -147,10 +194,56 @@ export class FacturaFormulario {
       idPoliza: registro.factura.idPoliza,
       descuento: registro.factura.descuento,
       idEstadoFactura: registro.factura.idEstadoFactura,
+      numeroAutorizacionFel: registro.factura.numeroAutorizacionFel ?? '',
+      fechaCertificacionFel: registro.factura.fechaCertificacionFel?.slice(0, 10) ?? '',
+      idConvenio: registro.factura.idConvenio,
     });
     this.descuentoHeader.set(registro.factura.descuento);
     registro.detalles.forEach((d) => this.detalles.push(this.crearDetalleGroup(d)));
+
+    // El comprobante (si hay) no viaja en los datos de la factura: se busca
+    // por convención de nombre de archivo en el servidor Node.
+    this.comprobantesService.buscar(registro.factura.idFactura).subscribe((url) => this.comprobanteUrl.set(url));
+
     this.pagoForm.patchValue({ monto: this.saldoPendiente() });
+  }
+
+  onArchivoSeleccionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const archivo = input.files?.[0];
+    input.value = ''; // permite volver a elegir el mismo archivo después
+    if (!archivo) {
+      return;
+    }
+    this.subiendoComprobante.set(true);
+    this.errorComprobante.set('');
+    // Con id (edición) el archivo se guarda como "factura-<id>.<ext>" y
+    // reemplaza al anterior; en una factura nueva todavía no hay id, así
+    // que el servidor le pone un nombre al azar.
+    this.comprobantesService.subir(archivo, this.esNueva() ? undefined : this.idFactura()).subscribe({
+      next: (url) => {
+        // Reemplaza el comprobante anterior, si había uno. En factura nueva
+        // (sin id todavía) el archivo queda con nombre al azar; se guarda
+        // para renombrarlo en cuanto se cree la factura (ver guardar()).
+        this.comprobanteUrl.set(url);
+        this.comprobanteNombreTemporal.set(this.esNueva() ? this.comprobantesService.nombreDesdeUrl(url) : null);
+        this.subiendoComprobante.set(false);
+      },
+      error: (err: Error) => {
+        this.errorComprobante.set(err.message);
+        this.subiendoComprobante.set(false);
+      },
+    });
+  }
+
+  quitarComprobante(): void {
+    this.comprobanteUrl.set(null);
+    this.comprobanteNombreTemporal.set(null);
+  }
+
+  esImagenComprobante(): boolean {
+    const url = this.comprobanteUrl();
+    return url ? esUrlDeImagen(url) : false;
   }
 
   nombrePaciente(idPaciente: number): string {
@@ -159,7 +252,7 @@ export class FacturaFormulario {
   }
 
   formaPagoLabel(idFormaPago: number): string {
-    return FORMAS_PAGO.find((f) => f.id === idFormaPago)?.label ?? '—';
+    return this.formasPago().find((f) => f.id === idFormaPago)?.label ?? '—';
   }
 
   formatMonto(monto: number): string {
@@ -190,9 +283,9 @@ export class FacturaFormulario {
       fechaEmision: original?.fechaEmision ?? new Date().toISOString(),
       descuento: cab.descuento,
       idEstadoFactura: cab.idEstadoFactura,
-      numeroAutorizacionFel: original?.numeroAutorizacionFel ?? null,
-      fechaCertificacionFel: original?.fechaCertificacionFel ?? null,
-      idConvenio: original?.idConvenio ?? null,
+      numeroAutorizacionFel: cab.numeroAutorizacionFel.trim() || null,
+      fechaCertificacionFel: cab.fechaCertificacionFel ? new Date(cab.fechaCertificacionFel).toISOString() : null,
+      idConvenio: cab.idConvenio,
       // Solo las facturas Digefact (copago de seguro) van ligadas a una póliza.
       idPoliza: this.esDigefact() ? cab.idPoliza : null,
       // idFacturaDetalle 0 = línea nueva; el backend da de baja las que no vengan.
@@ -217,6 +310,18 @@ export class FacturaFormulario {
     peticion.subscribe({
       next: (guardada) => {
         this.guardando.set(false);
+        this.snackBar.open('Factura guardada correctamente', 'Cerrar', { duration: 4000 });
+        const nombreTemporal = this.comprobanteNombreTemporal();
+        if (nombreTemporal) {
+          // El archivo se subió con nombre al azar (factura todavía sin id);
+          // ahora que ya existe el id real, se renombra a "factura-<id>.ext"
+          // para que quede con el mismo formato estable que usan las
+          // ediciones. Es "best effort": si falla, la factura ya se guardó
+          // bien y el comprobante solo quedaría sin asociar por nombre.
+          this.comprobantesService.confirmar(nombreTemporal, guardada.factura.idFactura).subscribe({
+            error: () => {},
+          });
+        }
         this.router.navigate(['/home/facturacion', guardada.factura.idFactura]);
       },
       error: (err: Error) => {
@@ -236,7 +341,7 @@ export class FacturaFormulario {
     this.facturasService
       .registrarPago(this.idFactura(), {
         idFormaPago: v.idFormaPago!,
-        idEstadoPago: 1,
+        idEstadoPago: this.facturasService.idEstadoPagoAplicado(),
         monto: v.monto,
         referenciaPago: v.referenciaPago || null,
         observaciones: null,
@@ -250,6 +355,7 @@ export class FacturaFormulario {
             this.cabecera.patchValue({ idEstadoFactura: actualizada.factura.idEstadoFactura });
           }
           this.pagoForm.reset({ monto: this.saldoPendiente(), idFormaPago: null, referenciaPago: '' });
+          this.snackBar.open('Pago registrado correctamente', 'Cerrar', { duration: 4000 });
         },
         error: (err: Error) => this.errorPago.set(err.message),
       });

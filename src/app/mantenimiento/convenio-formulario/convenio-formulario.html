@@ -1,0 +1,83 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/convenios" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Convenios
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo convenio' : 'Editar convenio' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre del convenio</mat-label>
+        <input matInput formControlName="nombreConvenio" placeholder="Ej. Convenio Corporativo Empresa X" />
+        @if (form.controls.nombreConvenio.invalid && form.controls.nombreConvenio.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Aseguradora</mat-label>
+        <mat-select formControlName="idAseguradora">
+          @for (a of aseguradoras(); track a.idAseguradora) {
+            <mat-option [value]="a.idAseguradora">{{ a.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idAseguradora.invalid && form.controls.idAseguradora.touched) {
+          <mat-error>Selecciona una aseguradora</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoConvenio">
+          @for (e of estados(); track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idEstadoConvenio.invalid && form.controls.idEstadoConvenio.touched) {
+          <mat-error>Selecciona un estado</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de inicio</mat-label>
+        <input matInput type="date" formControlName="fechaInicio" />
+        @if (form.controls.fechaInicio.invalid && form.controls.fechaInicio.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de fin (opcional)</mat-label>
+        <input matInput type="date" formControlName="fechaFin" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cobertura general % (opcional)</mat-label>
+        <input matInput type="number" min="0" max="100" formControlName="porcentajeCoberturaGeneral" />
+        @if (form.controls.porcentajeCoberturaGeneral.invalid && form.controls.porcentajeCoberturaGeneral.touched) {
+          <mat-error>Debe estar entre 0 y 100</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Condiciones (opcional)</mat-label>
+        <textarea matInput formControlName="condiciones" rows="3"></textarea>
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/convenios">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

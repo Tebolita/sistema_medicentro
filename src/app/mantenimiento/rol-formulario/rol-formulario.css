@@ -1,0 +1,32 @@
+@import '../mantenimiento.css';
+
+.permisos-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.permisos-panel h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.permisos-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-text-soft);
+}
+
+.permisos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sin-roles {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-text-soft);
+}

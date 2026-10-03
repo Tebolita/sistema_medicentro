@@ -42,11 +42,31 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client
   },
   {
+    path: 'home/farmacia/item/:id',
+    renderMode: RenderMode.Client
+  },
+  {
     path: 'home/farmacia/recetas/:id',
     renderMode: RenderMode.Client
   },
   {
     path: 'home/facturacion/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/proveedores/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/convenios/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/usuarios/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/roles/:id',
     renderMode: RenderMode.Client
   },
   {

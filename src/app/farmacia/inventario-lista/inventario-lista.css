@@ -267,6 +267,23 @@
   height: 12px;
 }
 
+.item-edit {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 131, 143, 0.12);
+  color: var(--c-accent);
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.item-edit:hover {
+  background: var(--c-accent);
+  color: #fff;
+  transform: scale(1.08);
+}
+
 .empty-state {
   grid-column: 1 / -1;
   display: flex;

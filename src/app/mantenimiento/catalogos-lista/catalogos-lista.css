@@ -1,0 +1,98 @@
+@import '../mantenimiento.css';
+
+.catalogo-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  max-width: 700px;
+}
+
+.selector-field {
+  min-width: 0;
+}
+
+.valores-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 700px;
+}
+
+.valores-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.valores-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.valor-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 4px 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.valor-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.valores-tabla {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.valor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--c-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.valor-orden {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--c-bg);
+  color: var(--c-text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.valor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.valor-nombre {
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.valor-codigo {
+  font-size: 11px;
+  color: var(--c-text-soft);
+  font-family: monospace;
+}

@@ -42,3 +42,7 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Comprobantes de pago subidos desde el formulario de factura (server.ts)
+/public/uploads/comprobantes/*
+!/public/uploads/comprobantes/.gitkeep

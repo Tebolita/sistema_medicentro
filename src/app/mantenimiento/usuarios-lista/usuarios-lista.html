@@ -1,0 +1,64 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo', 'mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Usuarios</h1>
+      <p>Cuentas de acceso al sistema (módulo Seguridad).</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/usuarios/nuevo">
+      <mat-icon>add</mat-icon>
+      Nuevo usuario
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por usuario o correo..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (u of usuarios(); track u.idUsuario) {
+      <a class="item-card" [routerLink]="['/home/mantenimiento/usuarios', u.idUsuario]">
+        <div class="item-icon"><mat-icon>person</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ u.nombreUsuario }}</h2>
+          <span class="item-meta">{{ u.correo }}</span>
+          <span class="item-meta">{{ estadoLabel(u.idEstadoUsuario) }}</span>
+        </div>
+        <button
+          matIconButton
+          type="button"
+          class="item-delete"
+          [matTooltip]="'Dar de baja'"
+          (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(u.idUsuario, u.nombreUsuario)"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      </a>
+    }
+
+    @if (usuarios().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>person</mat-icon>
+        <p>No se encontraron usuarios{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>
