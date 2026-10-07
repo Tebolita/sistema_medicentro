@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,7 @@ import { provideNativeDateAdapter } from '@angular/material/core';
 import { FormsModule } from '@angular/forms';
 import { AlertasService } from '../alertas/alertas.service';
 import { TemaService } from '../service/tema.service';
+import { AuthService } from '../service/auth.service';
 
 @Component({
   selector: 'app-header',
@@ -66,7 +67,11 @@ export class Header implements OnInit, OnDestroy {
     }
   }
 
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
   cerrarSesion(): void {
-    console.log('Cerrando sesión...');
+    this.authService.logout();
+    this.router.navigate(['/']);
   }
 }

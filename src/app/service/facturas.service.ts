@@ -4,6 +4,7 @@ import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs'
 import { Factura, FacturaDetalle, Pago } from '../models';
 import { ApiResponse } from '../models/api-response.model';
 import { ErrorService } from './error.service';
+import { CatalogosService } from './catalogos.service';
 
 // Igual que FacturaCompletaDto del backend: { factura, detalles }.
 export interface FacturaCompleta {
@@ -48,14 +49,17 @@ export interface RegistrarPago {
   observaciones: string | null;
 }
 
-// Estado de pago "aprobado" (lo usa el backend para decidir si la factura
-// queda pagada).
-const ESTADO_PAGO_APROBADO = 1;
+// Código real que usa el backend para el estado de pago que cuenta para el
+// total cobrado (Servicios/FacturasService.cs: ESTADO_PAGO/"APLICADO"). Si el
+// catálogo aún no cargó se usa 1 como último recurso.
+const ESTADO_PAGO_APLICADO_CODIGO = 'APLICADO';
+const ESTADO_PAGO_APLICADO_FALLBACK = 1;
 
 @Injectable({ providedIn: 'root' })
 export class FacturasService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
+  private catalogos = inject(CatalogosService);
   private apiUrl = 'https://localhost:7086/api/facturas';
 
   private registros = signal<FacturaCompleta[]>([]);
@@ -81,9 +85,17 @@ export class FacturasService {
     return this.listarPagos().filter((p) => p.idFactura === idFactura);
   }
 
+  // Id real del estado de pago "Aplicado" (el que cuenta como cobrado).
+  idEstadoPagoAplicado(): number {
+    return (
+      this.catalogos.idPorCodigo('ESTADO_PAGO', ESTADO_PAGO_APLICADO_CODIGO) ?? ESTADO_PAGO_APLICADO_FALLBACK
+    );
+  }
+
   totalPagado(idFactura: number): number {
+    const idAplicado = this.idEstadoPagoAplicado();
     return this.pagos()
-      .filter((p) => p.idFactura === idFactura && p.idEstadoPago === ESTADO_PAGO_APROBADO)
+      .filter((p) => p.idFactura === idFactura && p.idEstadoPago === idAplicado)
       .reduce((suma, p) => suma + p.monto, 0);
   }
 

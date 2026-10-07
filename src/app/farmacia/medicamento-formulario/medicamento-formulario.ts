@@ -6,8 +6,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { Medicamento } from '../../models';
 import { MedicamentoInput, MedicamentosService } from '../../service/medicamentos.service';
+import { CatalogosService } from '../../service/catalogos.service';
 
 @Component({
   selector: 'app-medicamento-formulario',
@@ -19,6 +21,7 @@ import { MedicamentoInput, MedicamentosService } from '../../service/medicamento
     MatCheckboxModule,
     MatButtonModule,
     MatIconModule,
+    MatSelectModule,
   ],
   templateUrl: './medicamento-formulario.html',
   styleUrl: './medicamento-formulario.css',
@@ -33,8 +36,15 @@ export class MedicamentoFormulario {
   esNuevo = computed(() => this.idMedicamento() === 0);
   guardando = signal(false);
   errorMsg = signal('');
-  // La categoría no se edita aquí (no hay catálogo aún): se conserva la original.
-  private idCategoria: number | null = null;
+
+  // El backend valida que el id exista en cat_valor_catalogo (cualquier
+  // catálogo, no uno en particular), pero por convención debería ser del
+  // tipo CATEGORIA_MEDICAMENTO. Si ese catálogo no está sembrado en la
+  // base, se cae a un campo numérico para no bloquear el formulario.
+  private catalogos = inject(CatalogosService);
+  private categoriasApi = this.catalogos.obtener('CATEGORIA_MEDICAMENTO');
+  categorias = computed(() => this.categoriasApi());
+  hayCategorias = computed(() => this.categorias().length > 0);
 
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -42,6 +52,7 @@ export class MedicamentoFormulario {
     presentacion: [''],
     concentracion: [''],
     requiereReceta: [false],
+    idCategoriaMedicamento: this.fb.control<number | null>(null),
   });
 
   constructor() {
@@ -57,13 +68,13 @@ export class MedicamentoFormulario {
 
   private cargar(m: Medicamento): void {
     this.idMedicamento.set(m.idMedicamento);
-    this.idCategoria = m.idCategoriaMedicamento;
     this.form.patchValue({
       nombre: m.nombre,
       principioActivo: m.principioActivo ?? '',
       presentacion: m.presentacion ?? '',
       concentracion: m.concentracion ?? '',
       requiereReceta: m.requiereReceta,
+      idCategoriaMedicamento: m.idCategoriaMedicamento,
     });
   }
 
@@ -78,7 +89,7 @@ export class MedicamentoFormulario {
       principioActivo: v.principioActivo.trim() || null,
       presentacion: v.presentacion.trim() || null,
       concentracion: v.concentracion.trim() || null,
-      idCategoriaMedicamento: this.idCategoria,
+      idCategoriaMedicamento: v.idCategoriaMedicamento,
       requiereReceta: v.requiereReceta,
     };
 

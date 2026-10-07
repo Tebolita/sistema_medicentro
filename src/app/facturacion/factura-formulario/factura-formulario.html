@@ -13,6 +13,8 @@
     </h1>
   </div>
 
+  <div class="form-layout">
+  <div class="form-main">
   <div class="factura-form">
     <div class="form-panel" [formGroup]="cabecera">
       <div class="form-grid">
@@ -50,11 +52,39 @@
         <mat-form-field appearance="outline">
           <mat-label>Estado</mat-label>
           <mat-select formControlName="idEstadoFactura">
-            @for (e of estadosFactura; track e.id) {
+            @for (e of estadosFactura(); track e.id) {
               <mat-option [value]="e.id">{{ e.label }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>No. autorización FEL (opcional)</mat-label>
+          <input matInput formControlName="numeroAutorizacionFel" placeholder="Si ya fue certificada" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de certificación FEL (opcional)</mat-label>
+          <input matInput type="date" formControlName="fechaCertificacionFel" />
+        </mat-form-field>
+
+        @if (hayConvenios()) {
+          <mat-form-field appearance="outline">
+            <mat-label>Convenio (opcional)</mat-label>
+            <mat-select formControlName="idConvenio">
+              <mat-option [value]="null">Sin convenio</mat-option>
+              @for (c of convenios(); track c.idConvenio) {
+                <mat-option [value]="c.idConvenio">{{ c.nombreConvenio }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline">
+            <mat-label>Convenio (opcional)</mat-label>
+            <input matInput type="number" min="1" formControlName="idConvenio" placeholder="Id de convenio corporativo" />
+            <mat-hint>No hay convenios activos registrados todavía</mat-hint>
+          </mat-form-field>
+        }
       </div>
     </div>
 
@@ -92,9 +122,20 @@
 
             <mat-form-field appearance="outline" class="span-2">
               <mat-label>Descripción</mat-label>
-              <input matInput formControlName="descripcion" />
-              @if (grupo.controls.descripcion.invalid && grupo.controls.descripcion.touched) {
+              <input
+                matInput
+                formControlName="descripcion"
+                maxlength="200"
+                (keyup)="
+                  grupo.controls.descripcion.errors?.['maxlength'] && grupo.controls.descripcion.markAsTouched()
+                "
+              />
+              @if (grupo.controls.descripcion.errors?.['required'] && grupo.controls.descripcion.touched) {
                 <mat-error>Requerido</mat-error>
+              } @else if (grupo.controls.descripcion.errors?.['maxlength']) {
+                <mat-error>Máximo 200 caracteres</mat-error>
+              } @else {
+                <mat-hint align="end">{{ grupo.controls.descripcion.value.length }}/200</mat-hint>
               }
             </mat-form-field>
 
@@ -184,7 +225,7 @@
           <mat-form-field appearance="outline">
             <mat-label>Forma de pago</mat-label>
             <mat-select formControlName="idFormaPago">
-              @for (f of formasPago; track f.id) {
+              @for (f of formasPago(); track f.id) {
                 <mat-option [value]="f.id">{{ f.label }}</mat-option>
               }
             </mat-select>
@@ -207,4 +248,57 @@
       }
     </div>
   }
+  </div>
+
+  <aside class="comprobante-panel">
+    <h2>Comprobante de pago</h2>
+    <p class="comprobante-hint">Foto o PDF del recibo/voucher (opcional).</p>
+
+    @if (comprobanteUrl(); as url) {
+      <div class="comprobante-preview">
+        @if (esImagenComprobante()) {
+          <img [src]="url" alt="Comprobante de pago" />
+        } @else {
+          <a [href]="url" target="_blank" rel="noopener" class="comprobante-pdf">
+            <mat-icon>picture_as_pdf</mat-icon>
+            Ver comprobante (PDF)
+          </a>
+        }
+      </div>
+      <div class="comprobante-actions">
+        <button matButton type="button" (click)="archivoInput.click()" [disabled]="subiendoComprobante()">
+          <mat-icon>swap_horiz</mat-icon>
+          {{ subiendoComprobante() ? 'Subiendo...' : 'Cambiar' }}
+        </button>
+        <button matButton type="button" (click)="quitarComprobante()" [disabled]="subiendoComprobante()">
+          <mat-icon>delete</mat-icon>
+          Quitar
+        </button>
+      </div>
+    } @else {
+      <button
+        matButton="outlined"
+        type="button"
+        class="comprobante-subir"
+        (click)="archivoInput.click()"
+        [disabled]="subiendoComprobante()"
+      >
+        <mat-icon>upload</mat-icon>
+        {{ subiendoComprobante() ? 'Subiendo...' : 'Subir comprobante' }}
+      </button>
+    }
+
+    <input
+      #archivoInput
+      type="file"
+      accept="image/png,image/jpeg,image/webp,application/pdf"
+      hidden
+      (change)="onArchivoSeleccionado($event)"
+    />
+
+    @if (errorComprobante()) {
+      <p class="form-error">{{ errorComprobante() }}</p>
+    }
+  </aside>
+  </div>
 </div>

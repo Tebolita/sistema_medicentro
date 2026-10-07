@@ -29,6 +29,48 @@ export class MedicamentosService {
 
   listar = computed(() => [...this.registros()].sort((a, b) => a.nombre.localeCompare(b.nombre)));
 
+  // GET /api/medicamentos solo trae los activos (Where(m => m.Activo) en el
+  // backend) y no hay forma de pedir los dados de baja: falta un endpoint
+  // (GET /api/medicamentos/eliminados, propuesto). Mientras no exista, esto
+  // falla con un mensaje claro en vez de un error genérico.
+  private eliminados = signal<Medicamento[]>([]);
+  cargandoEliminados = signal(false);
+  errorEliminados = signal('');
+
+  listarEliminados = computed(() => [...this.eliminados()].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+
+  cargarEliminados(): void {
+    this.cargandoEliminados.set(true);
+    this.errorEliminados.set('');
+    this.http
+      .get<ApiResponse<Medicamento[]>>(`${this.apiUrl}/eliminados`)
+      .pipe(map((resp) => resp.datos ?? []))
+      .subscribe({
+        next: (lista) => {
+          this.eliminados.set(lista);
+          this.cargandoEliminados.set(false);
+        },
+        error: () => {
+          this.errorEliminados.set(
+            'Esta vista necesita un endpoint nuevo en el backend (GET /api/medicamentos/eliminados) que todavía no existe.',
+          );
+          this.cargandoEliminados.set(false);
+        },
+      });
+  }
+
+  // Igual: falta PUT /api/medicamentos/{id}/reactivar (propuesto).
+  reactivar(id: number): Observable<Medicamento> {
+    return this.http.put<ApiResponse<Medicamento>>(`${this.apiUrl}/${id}/reactivar`, {}).pipe(
+      map((resp) => resp.datos as Medicamento),
+      tap((m) => {
+        this.eliminados.update((lista) => lista.filter((x) => x.idMedicamento !== id));
+        this.guardarEnCache(m);
+      }),
+      catchError(this.errorService.handleError),
+    );
+  }
+
   obtener(id: number): Medicamento | undefined {
     return this.registros().find((m) => m.idMedicamento === id);
   }

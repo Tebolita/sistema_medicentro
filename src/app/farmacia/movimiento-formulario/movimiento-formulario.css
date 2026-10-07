@@ -58,6 +58,9 @@
 
 .form-error,
 .carga-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   padding: 10px 14px;
   border-radius: 10px;
@@ -65,4 +68,10 @@
   color: color-mix(in srgb, #c62828 var(--c-keep), white);
   font-size: 13px;
   font-weight: 600;
+}
+
+.form-error mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }

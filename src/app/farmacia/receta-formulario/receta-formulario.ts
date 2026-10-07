@@ -11,8 +11,9 @@ import { RecetaDetalle } from '../../models';
 import { RecetaCompleta, RecetaInput, RecetasService } from '../../service/recetas.service';
 import { MedicamentosService } from '../../service/medicamentos.service';
 import { ESTADOS_RECETA } from '../farmacia-catalogos';
-import { MEDICOS } from '../../consultas-externas/consultas-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { MedicosService } from '../../service/medicos.service';
+import { CatalogosService } from '../../service/catalogos.service';
 
 @Component({
   selector: 'app-receta-formulario',
@@ -37,10 +38,19 @@ export class RecetaFormulario {
   private pacientesService = inject(PacientesService);
 
   pacientes = this.pacientesService.directorio;
-  medicos = MEDICOS;
+  private medicosService = inject(MedicosService);
+  medicos = this.medicosService.listar;
   private medicamentosService = inject(MedicamentosService);
   medicamentos = this.medicamentosService.listar;
-  estadosReceta = ESTADOS_RECETA;
+
+  // ESTADO_RECETA real si el catálogo existe en la base; si no, se usa la
+  // lista de ejemplo (mismos ids 1/2/3 que ya asume el backend por defecto).
+  private catalogos = inject(CatalogosService);
+  private estadosRecetaApi = this.catalogos.obtener('ESTADO_RECETA');
+  estadosReceta = computed(() => {
+    const api = this.estadosRecetaApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : ESTADOS_RECETA;
+  });
 
   idReceta = signal(0);
   esNueva = computed(() => this.idReceta() === 0);

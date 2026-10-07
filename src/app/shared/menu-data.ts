@@ -197,6 +197,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         queryParams: { foco: 'buscar' },
       },
       { icon: 'medication', label: 'Catálogo de medicamentos', route: '/home/farmacia/medicamentos' },
+      { icon: 'swap_vert', label: 'Movimientos de medicamentos', route: '/home/farmacia/movimientos' },
       {
         icon: 'inventory_2',
         label: 'Inventario de farmacia',
@@ -228,6 +229,23 @@ export const MENU_SECTIONS: MenuSection[] = [
       }, // copago seguro
       { icon: 'credit_card', label: 'Formas de pago', route: '/home/facturacion/pago-nuevo' }, // efectivo, transferencia, depósito, POS
       { icon: 'point_of_sale', label: 'Recibos de cobro', route: '/home/facturacion/pagos' },
+    ],
+  },
+  {
+    slug: 'mantenimiento',
+    title: 'Mantenimiento',
+    icon: 'build',
+    description:
+      'Catálogos y datos de apoyo que usan los demás módulos (estados, formas de pago, proveedores, convenios...). Sin ruta propia: cada opción indica a qué módulo pertenece.',
+    color: '#455a64',
+    // Sin "route": usa el overview genérico (/home/modulo/mantenimiento),
+    // porque acá no hay una pantalla propia, solo enlaces a las 3 de abajo.
+    items: [
+      { icon: 'tune', label: 'Catálogos del sistema (General)', route: '/home/mantenimiento/catalogos' },
+      { icon: 'local_shipping', label: 'Proveedores (Farmacia)', route: '/home/mantenimiento/proveedores' },
+      { icon: 'handshake', label: 'Convenios (Facturación y Cobros)', route: '/home/mantenimiento/convenios' },
+      { icon: 'person', label: 'Usuarios (Seguridad)', route: '/home/mantenimiento/usuarios' },
+      { icon: 'badge', label: 'Roles (Seguridad)', route: '/home/mantenimiento/roles' },
     ],
   },
 ];

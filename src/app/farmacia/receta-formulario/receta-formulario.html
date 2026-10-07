@@ -27,8 +27,10 @@
         <mat-form-field appearance="outline">
           <mat-label>Médico</mat-label>
           <mat-select formControlName="idMedico">
-            @for (m of medicos; track m.id) {
-              <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+            @for (m of medicos(); track m.idEmpleado) {
+              <mat-option [value]="m.idEmpleado">
+                {{ m.nombreCompleto }}{{ m.colegiado ? ' · Colegiado ' + m.colegiado : '' }}
+              </mat-option>
             }
           </mat-select>
           @if (cabecera.controls.idMedico.invalid && cabecera.controls.idMedico.touched) {
@@ -39,7 +41,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Estado</mat-label>
           <mat-select formControlName="idEstadoReceta">
-            @for (e of estadosReceta; track e.id) {
+            @for (e of estadosReceta(); track e.id) {
               <mat-option [value]="e.id">{{ e.label }}</mat-option>
             }
           </mat-select>

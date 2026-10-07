@@ -6,9 +6,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { FacturasService } from '../../service/facturas.service';
 import { FORMAS_PAGO } from '../facturacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { CatalogosService } from '../../service/catalogos.service';
 
 @Component({
   selector: 'app-pago-formulario',
@@ -29,9 +31,19 @@ export class PagoFormulario {
   private router = inject(Router);
   private facturasService = inject(FacturasService);
   private pacientesService = inject(PacientesService);
+  private snackBar = inject(MatSnackBar);
 
-  facturasPendientes = computed(() => this.facturasService.listar().filter((r) => r.factura.idEstadoFactura === 1));
-  formasPago = FORMAS_PAGO;
+  private catalogos = inject(CatalogosService);
+  // "Emitida" (aún no pagada): id real si el catálogo existe, si no, 1.
+  facturasPendientes = computed(() => {
+    const idEmitida = this.catalogos.idPorCodigo('ESTADO_FACTURA', 'EMITIDA') ?? 1;
+    return this.facturasService.listar().filter((r) => r.factura.idEstadoFactura === idEmitida);
+  });
+  private formasPagoApi = this.catalogos.obtener('FORMA_PAGO');
+  formasPago = computed(() => {
+    const api = this.formasPagoApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : FORMAS_PAGO;
+  });
 
   guardando = signal(false);
   errorMsg = signal('');
@@ -71,13 +83,16 @@ export class PagoFormulario {
     this.facturasService
       .registrarPago(v.idFactura!, {
         idFormaPago: v.idFormaPago!,
-        idEstadoPago: 1,
+        idEstadoPago: this.facturasService.idEstadoPagoAplicado(),
         monto: v.monto,
         referenciaPago: v.referenciaPago || null,
         observaciones: null,
       })
       .subscribe({
-        next: () => this.router.navigate(['/home/facturacion/pagos']),
+        next: () => {
+          this.snackBar.open('Pago registrado correctamente', 'Cerrar', { duration: 4000 });
+          this.router.navigate(['/home/facturacion/pagos']);
+        },
         error: (err: Error) => {
           this.errorMsg.set(err.message);
           this.guardando.set(false);

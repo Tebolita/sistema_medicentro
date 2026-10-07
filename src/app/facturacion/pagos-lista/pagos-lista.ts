@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { FacturasService } from '../../service/facturas.service';
 import { FORMAS_PAGO } from '../facturacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { CatalogosService } from '../../service/catalogos.service';
 
 @Component({
   selector: 'app-pagos-lista',
@@ -18,6 +19,8 @@ export class PagosLista {
   private facturasService = inject(FacturasService);
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
+  private catalogos = inject(CatalogosService);
+  private formasPagoApi = this.catalogos.obtener('FORMA_PAGO');
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -67,7 +70,9 @@ export class PagosLista {
   }
 
   formaPagoLabel(idFormaPago: number): string {
-    return FORMAS_PAGO.find((f) => f.id === idFormaPago)?.label ?? '—';
+    const api = this.formasPagoApi();
+    const lista = api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : FORMAS_PAGO;
+    return lista.find((f) => f.id === idFormaPago)?.label ?? '—';
   }
 
   formatFecha(iso: string): string {

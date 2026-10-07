@@ -1,0 +1,125 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/usuarios" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Usuarios
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo usuario' : 'Editar usuario' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre de usuario</mat-label>
+        <input matInput formControlName="nombreUsuario" />
+        @if (form.controls.nombreUsuario.invalid && form.controls.nombreUsuario.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Correo</mat-label>
+        <input matInput type="email" formControlName="correo" />
+        @if (form.controls.correo.invalid && form.controls.correo.touched) {
+          <mat-error>Correo no válido</mat-error>
+        }
+      </mat-form-field>
+
+      @if (esNuevo()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Contraseña</mat-label>
+          <input matInput type="password" formControlName="contrasena" />
+          @if (form.controls.contrasena.invalid && form.controls.contrasena.touched) {
+            <mat-error>Mínimo 6 caracteres</mat-error>
+          }
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Empleado vinculado (opcional)</mat-label>
+        <mat-select formControlName="idEmpleado">
+          <mat-option [value]="null">Sin empleado (cuenta técnica)</mat-option>
+          @for (e of empleados(); track e.idEmpleado) {
+            <mat-option [value]="e.idEmpleado">
+              {{ e.primerNombre }} {{ e.primerApellido }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoUsuario">
+          @for (e of estados(); track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idEstadoUsuario.invalid && form.controls.idEstadoUsuario.touched) {
+          <mat-error>Selecciona un estado</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <mat-checkbox formControlName="requiereCambioPassword">
+      Obligar a cambiar la contraseña en el próximo inicio de sesión
+    </mat-checkbox>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/usuarios">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+
+  @if (!esNuevo()) {
+    <div class="form-panel roles-panel">
+      <h2>Roles asignados</h2>
+
+      @if (errorRoles()) {
+        <p class="form-error">{{ errorRoles() }}</p>
+      }
+
+      <div class="roles-lista">
+        @for (r of rolesAsignados(); track r.idRol) {
+          <div class="rol-chip">
+            <span>{{ r.nombreRol }}</span>
+            <button
+              matIconButton
+              type="button"
+              [matTooltip]="'Quitar rol'"
+              (click)="quitarRol(r.idRol, r.nombreRol)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+        @if (rolesAsignados().length === 0 && !cargandoRoles()) {
+          <p class="sin-roles">Este usuario no tiene roles asignados todavía.</p>
+        }
+      </div>
+
+      @if (rolesDisponibles().length > 0) {
+        <div class="asignar-rol">
+          <mat-form-field appearance="outline">
+            <mat-label>Asignar rol</mat-label>
+            <mat-select [value]="rolParaAsignar()" (selectionChange)="rolParaAsignar.set($event.value)">
+              @for (r of rolesDisponibles(); track r.idRol) {
+                <mat-option [value]="r.idRol">{{ r.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <button matButton="filled" type="button" (click)="asignarRol()">
+            <mat-icon>add</mat-icon>
+            Asignar
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

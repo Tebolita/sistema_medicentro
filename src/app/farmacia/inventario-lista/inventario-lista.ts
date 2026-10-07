@@ -1,13 +1,15 @@
 import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { ESTADOS_ITEM_INVENTARIO, UNIDADES_MEDIDA } from '../farmacia-catalogos';
 import { MENU_SECTIONS } from '../../shared/menu-data';
+import { CatalogosService } from '../../service/catalogos.service';
+import { ProveedoresService } from '../../service/proveedores.service';
 
 @Component({
   selector: 'app-inventario-lista',
@@ -18,6 +20,22 @@ import { MENU_SECTIONS } from '../../shared/menu-data';
 export class InventarioLista {
   private inventarioService = inject(InventarioFarmaciaService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private proveedoresService = inject(ProveedoresService);
+
+  // Mismo patrón que item-formulario: valores reales del catálogo si existen
+  // en la base, si no, la lista de ejemplo.
+  private catalogos = inject(CatalogosService);
+  private unidadesMedidaApi = this.catalogos.obtener('UNIDAD_MEDIDA');
+  private unidadesMedida = computed(() => {
+    const api = this.unidadesMedidaApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : UNIDADES_MEDIDA;
+  });
+  private estadosItemApi = this.catalogos.obtener('ESTADO_ITEM_INVENTARIO');
+  private estadosItem = computed(() => {
+    const api = this.estadosItemApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : ESTADOS_ITEM_INVENTARIO;
+  });
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -53,11 +71,26 @@ export class InventarioLista {
   });
 
   unidadLabel(idUnidadMedida: number): string {
-    return UNIDADES_MEDIDA.find((u) => u.id === idUnidadMedida)?.label ?? '—';
+    return this.unidadesMedida().find((u) => u.id === idUnidadMedida)?.label ?? '—';
   }
 
   estadoLabel(idEstadoItem: number): string {
-    return ESTADOS_ITEM_INVENTARIO.find((e) => e.id === idEstadoItem)?.label ?? '—';
+    return this.estadosItem().find((e) => e.id === idEstadoItem)?.label ?? '—';
+  }
+
+  proveedorLabel(idProveedor: number | null): string | null {
+    if (!idProveedor) {
+      return null;
+    }
+    return this.proveedoresService.listar().find((p) => p.idProveedor === idProveedor)?.nombre ?? null;
+  }
+
+  // Botón "editar" dentro de la tarjeta: evita que el clic también dispare
+  // la navegación de la tarjeta completa (que lleva a registrar movimiento).
+  editar(event: Event, idItemInventario: number): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.router.navigate(['/home/farmacia/item', idItemInventario]);
   }
 
   porcentajeStock(stockActual: number, stockMinimo: number): number {

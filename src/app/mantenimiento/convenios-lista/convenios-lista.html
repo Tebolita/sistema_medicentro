@@ -1,0 +1,71 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo','mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Convenios</h1>
+      <p>Convenios corporativos (módulo Facturación y Cobros).</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/convenios/nuevo">
+      <mat-icon>add</mat-icon>
+      Nuevo convenio
+    </a>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por nombre o aseguradora..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (c of convenios(); track c.idConvenio) {
+      <a class="item-card" [class.inactivo]="!c.activo" [routerLink]="['/home/mantenimiento/convenios', c.idConvenio]">
+        <div class="item-icon"><mat-icon>handshake</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ c.nombreConvenio }}</h2>
+          <span class="item-meta">{{ aseguradoraLabel(c.idAseguradora) }}</span>
+          <span class="item-meta">
+            Desde {{ formatFecha(c.fechaInicio) }}{{ c.fechaFin ? ' hasta ' + formatFecha(c.fechaFin) : '' }}
+          </span>
+        </div>
+        @if (!c.activo) {
+          <span class="badge inactivo">Inactivo</span>
+        }
+        @if (c.activo) {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.idConvenio, c.nombreConvenio)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (convenios().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>handshake</mat-icon>
+        <p>No se encontraron convenios{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+      </div>
+    }
+  </div>
+</div>

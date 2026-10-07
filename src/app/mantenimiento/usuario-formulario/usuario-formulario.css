@@ -1,0 +1,65 @@
+@import '../mantenimiento.css';
+
+.roles-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.roles-panel h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.roles-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rol-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: var(--c-bg);
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.rol-chip button {
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+}
+
+.rol-chip mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.sin-roles {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-text-soft);
+}
+
+.asignar-rol {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-border);
+}
+
+.asignar-rol mat-form-field {
+  flex: 1;
+}
+
+.asignar-rol button {
+  margin-top: 4px;
+}

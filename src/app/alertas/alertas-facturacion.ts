@@ -2,9 +2,8 @@ import { computed, inject } from '@angular/core';
 import { FacturasService } from '../service/facturas.service';
 import { PacientesService } from '../pacientes/pacientes.service';
 import { ESTADOS_FACTURA } from '../facturacion/facturacion-catalogos';
+import { CatalogosService } from '../service/catalogos.service';
 import { Alerta, FabricaAlertas } from './alerta.model';
-
-const ESTADO_EMITIDA = 1;
 // Una factura emitida sin cobrar por más de estos días se marca como urgente.
 const DIAS_URGENTE = 30;
 
@@ -13,6 +12,7 @@ const DIAS_URGENTE = 30;
 export const alertasFacturacion: FabricaAlertas = () => {
   const facturas = inject(FacturasService);
   const pacientes = inject(PacientesService);
+  const catalogos = inject(CatalogosService);
 
   const nombrePaciente = (id: number): string => {
     const p = pacientes.directorio().find((pac) => pac.idPaciente === id);
@@ -20,7 +20,10 @@ export const alertasFacturacion: FabricaAlertas = () => {
   };
 
   const alertas = computed<Alerta[]>(() => {
-    const estadosValidos = new Set(ESTADOS_FACTURA.map((e) => e.id));
+    // ESTADO_FACTURA real si el catálogo existe; si no, la lista de ejemplo.
+    const estadosApi = catalogos.obtener('ESTADO_FACTURA')();
+    const estadosValidos = new Set(estadosApi.length ? estadosApi.map((e) => e.id) : ESTADOS_FACTURA.map((e) => e.id));
+    const idEmitida = catalogos.idPorCodigo('ESTADO_FACTURA', 'EMITIDA') ?? 1;
     const resultado: Alerta[] = [];
 
     for (const { factura } of facturas.listar()) {
@@ -38,7 +41,7 @@ export const alertasFacturacion: FabricaAlertas = () => {
         continue;
       }
 
-      if (factura.idEstadoFactura === ESTADO_EMITIDA) {
+      if (factura.idEstadoFactura === idEmitida) {
         const saldo = factura.total - facturas.totalPagado(factura.idFactura);
         if (saldo <= 0) {
           continue;
