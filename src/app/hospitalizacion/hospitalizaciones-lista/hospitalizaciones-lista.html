@@ -55,12 +55,21 @@
         <div class="patient-avatar">{{ iniciales(r.hospitalizacion.idPaciente) }}</div>
         <div class="hosp-info">
           <h2>{{ nombrePaciente(r.hospitalizacion.idPaciente) }}</h2>
-          <span class="hosp-meta"><mat-icon>bed</mat-icon>{{ camaLabel(r.hospitalizacion.idCama) }}</span>
-          <span class="hosp-meta"><mat-icon>event</mat-icon>Ingreso: {{ formatFecha(r.hospitalizacion.fechaIngreso) }} · {{ medicoLabel(r.hospitalizacion.idMedicoResponsable) }}</span>
+          <span class="hosp-meta">
+            <mat-icon>bed</mat-icon>
+            {{ camaLabel(r.hospitalizacion.idCama) }}
+          </span>
+          <span class="hosp-meta">
+            <mat-icon>event</mat-icon>
+            Ingreso: {{ formatFecha(r.hospitalizacion.fechaIngreso) }} · {{ medicoLabel(r.hospitalizacion.idMedicoResponsable) }}
+          </span>
           <span class="hosp-meta motivo">{{ r.hospitalizacion.motivoIngreso }}</span>
         </div>
         <div class="hosp-actions">
-          <span class="status-badge" [class]="estadoClase(r.hospitalizacion.idEstadoHospitalizacion)">
+          <span
+            class="status-badge"
+            [ngClass]="estadoClase(r.hospitalizacion.idEstadoHospitalizacion)"
+          >
             {{ estadoLabel(r.hospitalizacion.idEstadoHospitalizacion) }}
           </span>
           <button

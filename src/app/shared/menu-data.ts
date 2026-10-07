@@ -11,7 +11,7 @@ export interface MenuSection {
   icon: string;
   description: string;
   color: string;
-  route?: string; // módulo real ya construido; si no está, cae al overview genérico /home/modulo/:slug
+  route?: string;
   items: MenuItem[];
 }
 
@@ -33,7 +33,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         route: '/home/pacientes',
         queryParams: { foco: 'buscar' },
       },
-      { icon: 'assignment_ind', label: 'Consulta externa', route: '/home/consultas' }, // primera / re-consulta
+      { icon: 'assignment_ind', label: 'Consulta externa', route: '/home/consultas' },
     ],
   },
   {
@@ -50,7 +50,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         label: 'Validación Mediprocesos',
         route: '/home/polizas',
         queryParams: { foco: 'buscar' },
-      }, // RPN, Roblered, ASSA
+      },
       { icon: 'request_quote', label: 'Copago consulta / hospital', route: '/home/polizas' },
       { icon: 'support_agent', label: 'Gestión seguro Mi Cope', route: '/home/polizas/nueva' },
     ],
@@ -95,7 +95,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     title: 'Laboratorio y Diagnóstico',
     icon: 'biotech',
     description:
-      'Órdenes y resultados de laboratorio, electrocardiogramas, rayos X y ultrasonidos solicitados durante la consulta.',
+      'Órdenes y resultados de laboratorio solicitados durante la consulta.',
     color: '#ef6c00',
     route: '/home/laboratorio',
     items: [
@@ -104,24 +104,6 @@ export const MENU_SECTIONS: MenuSection[] = [
         label: 'Orden de exámenes de laboratorio',
         route: '/home/laboratorio/nueva',
         queryParams: { categoria: '1' },
-      },
-      {
-        icon: 'monitor_heart',
-        label: 'Electrocardiograma',
-        route: '/home/laboratorio/nueva',
-        queryParams: { examen: '4' },
-      },
-      {
-        icon: 'image',
-        label: 'Rayos X',
-        route: '/home/laboratorio/nueva',
-        queryParams: { examen: '5' },
-      },
-      {
-        icon: 'pregnant_woman',
-        label: 'Ultrasonido',
-        route: '/home/laboratorio/nueva',
-        queryParams: { examen: '6' },
       },
     ],
   },
@@ -142,8 +124,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     slug: 'hospitalizacion',
     title: 'Hospitalización',
     icon: 'bed',
-    description:
-      'Ingreso hospitalario, órdenes médicas, control de medicamentos y costos durante la estancia del paciente.',
+    description: 'Ingreso hospitalario y órdenes médicas del paciente.',
     color: '#455a64',
     route: '/home/hospitalizacion',
     items: [
@@ -153,24 +134,6 @@ export const MENU_SECTIONS: MenuSection[] = [
         label: 'Órdenes médicas',
         route: '/home/hospitalizacion/orden-nueva',
         queryParams: { tipo: '1' },
-      },
-      {
-        icon: 'medication',
-        label: 'Control de medicamentos',
-        route: '/home/hospitalizacion/orden-nueva',
-        queryParams: { tipo: '3' },
-      },
-      {
-        icon: 'masks',
-        label: 'Hoja de anestesia',
-        route: '/home/hospitalizacion/orden-nueva',
-        queryParams: { tipo: '4' },
-      },
-      {
-        icon: 'payments',
-        label: 'Costo del paciente',
-        route: '/home/hospitalizacion',
-        queryParams: { foco: 'buscar' },
       },
     ],
   },
@@ -225,8 +188,8 @@ export const MENU_SECTIONS: MenuSection[] = [
         label: 'Facturación Digefact',
         route: '/home/facturacion/nueva',
         queryParams: { tipo: 'digefact' },
-      }, // copago seguro
-      { icon: 'credit_card', label: 'Formas de pago', route: '/home/facturacion/pago-nuevo' }, // efectivo, transferencia, depósito, POS
+      },
+      { icon: 'credit_card', label: 'Formas de pago', route: '/home/facturacion/pago-nuevo' },
       { icon: 'point_of_sale', label: 'Recibos de cobro', route: '/home/facturacion/pagos' },
     ],
   },

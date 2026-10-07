@@ -9,7 +9,7 @@
 
   <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
     <div class="form-grid">
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="full-width">
         <mat-label>Paciente</mat-label>
         <mat-select formControlName="idPaciente">
           @for (p of pacientes(); track p.idPaciente) {
@@ -26,8 +26,13 @@
       <mat-form-field appearance="outline">
         <mat-label>Médico</mat-label>
         <mat-select formControlName="idMedico">
-          @for (m of medicos; track m.id) {
-            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          @for (m of medicosSignal(); track m.id + '-' + $index) {
+            <mat-option [value]="m.id">
+              {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+            </mat-option>
+          }
+          @if (medicosSignal().length === 0) {
+            <mat-option disabled>No hay médicos registrados</mat-option>
           }
         </mat-select>
         @if (form.controls.idMedico.invalid && form.controls.idMedico.touched) {
@@ -39,7 +44,7 @@
         <mat-label>Fecha</mat-label>
         <input matInput [matDatepicker]="picker" formControlName="fecha" />
         <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
+        <mat-datepicker #picker panelClass="datepicker-azul"></mat-datepicker>
         @if (form.controls.fecha.invalid && form.controls.fecha.touched) {
           <mat-error>Selecciona la fecha</mat-error>
         }
@@ -48,57 +53,121 @@
       <mat-form-field appearance="outline">
         <mat-label>Prioridad</mat-label>
         <mat-select formControlName="idPrioridad">
-          @for (p of prioridades; track p.id) {
+          @for (p of prioridadesSignal(); track p.id + '-' + $index) {
             <mat-option [value]="p.id">{{ p.label }}</mat-option>
           }
         </mat-select>
+        @if (form.controls.idPrioridad.invalid && form.controls.idPrioridad.touched) {
+          <mat-error>Selecciona la prioridad</mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
         <mat-select formControlName="idEstadoOrden">
-          @for (e of estadosOrden; track e.id) {
+          @for (e of estadosSignal(); track e.id + '-' + $index) {
             <mat-option [value]="e.id">{{ e.label }}</mat-option>
           }
         </mat-select>
+        @if (form.controls.idEstadoOrden.invalid && form.controls.idEstadoOrden.touched) {
+          <mat-error>Selecciona el estado</mat-error>
+        }
       </mat-form-field>
     </div>
 
     <div class="examenes-section">
       <h2>Exámenes solicitados</h2>
-      @if (filtroCategoria() !== null) {
-        <p class="filtro-nota">
-          Mostrando solo exámenes de {{ categoriasExamen.find((c) => c.id === filtroCategoria())?.label }}.
-          <a routerLink="/home/laboratorio/nueva">Ver todos</a>
-        </p>
-      }
-      <div class="examenes-grid">
-        @for (t of examenesVisibles(); track t.id) {
-          <label class="examen-check">
-            <mat-checkbox
-              [checked]="examenesSeleccionados().has(t.id)"
-              (change)="toggleExamen(t.id)"
-            >
-              {{ t.nombre }}
-            </mat-checkbox>
-          </label>
+
+      <div class="buscador-examenes">
+        <mat-icon>search</mat-icon>
+        <input
+          type="text"
+          placeholder="Buscar examen por nombre o descripción..."
+          [ngModel]="filtroExamen()"
+          (ngModelChange)="filtroExamen.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        />
+        @if (filtroExamen()) {
+          <button type="button" class="limpiar" (click)="limpiarBusqueda()" aria-label="Limpiar búsqueda">
+            <mat-icon>close</mat-icon>
+          </button>
         }
       </div>
+
+      @if (cargandoTipos()) {
+        <p class="estado-tabla">Cargando exámenes...</p>
+      } @else if (examenesFiltrados().length === 0) {
+        <p class="estado-tabla">
+          No se encontraron exámenes{{ filtroExamen() ? ' para "' + filtroExamen() + '"' : '' }}.
+        </p>
+      } @else {
+        <div class="tabla-examenes">
+          <div class="tabla-header">
+            <span class="col-check"></span>
+            <span class="col-nombre">Nombre</span>
+            <span class="col-desc">Descripción</span>
+          </div>
+          @for (t of examenesFiltrados(); track t.idTipoExamen + '-' + $index) {
+            <div
+              class="tabla-fila"
+              [class.seleccionada]="estaSeleccionado(t.idTipoExamen)"
+              (click)="toggleExamen(t.idTipoExamen)"
+            >
+              <mat-checkbox
+                class="col-check"
+                [checked]="estaSeleccionado(t.idTipoExamen)"
+                (change)="toggleExamen(t.idTipoExamen)"
+                (click)="$event.stopPropagation()"
+              ></mat-checkbox>
+              <span class="col-nombre">{{ t.nombre }}</span>
+              <span class="col-desc">{{ t.descripcion || '—' }}</span>
+            </div>
+          }
+        </div>
+      }
+
       @if (seleccionInvalida()) {
         <p class="examenes-error">Selecciona al menos un examen.</p>
       }
     </div>
+
+    @if (detallesSeleccionados().length > 0) {
+      <div class="detalle-seleccionados">
+        <h3>Exámenes seleccionados ({{ detallesSeleccionados().length }})</h3>
+        @for (t of detallesSeleccionados(); track t.idTipoExamen + '-' + $index) {
+          <div class="detalle-card">
+            <div class="detalle-nombre">
+              <mat-icon>science</mat-icon>
+              <span>{{ t.nombre }}</span>
+              <button
+                type="button"
+                class="quitar"
+                (click)="toggleExamen(t.idTipoExamen)"
+                aria-label="Quitar examen"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+            <p class="detalle-desc">{{ t.descripcion || 'Sin descripción' }}</p>
+          </div>
+        }
+      </div>
+    }
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Notas</mat-label>
       <textarea matInput formControlName="notas" rows="2"></textarea>
     </mat-form-field>
 
+    @if (errorGuardar()) {
+      <p class="form-error">{{ errorGuardar() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/laboratorio">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar orden
+        {{ guardando() ? 'Guardando...' : 'Guardar orden' }}
       </button>
     </div>
   </form>

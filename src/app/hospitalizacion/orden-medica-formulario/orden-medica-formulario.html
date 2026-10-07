@@ -11,7 +11,8 @@
     <div class="form-grid">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Hospitalización</mat-label>
-        <mat-select formControlName="idHospitalizacion" [disabled]="hospitalizacionFija() !== null">
+        <!-- ✅ Sin [disabled], ahora se controla desde el TS -->
+        <mat-select formControlName="idHospitalizacion">
           @for (r of hospitalizacionesActivas(); track r.hospitalizacion.idHospitalizacion) {
             <mat-option [value]="r.hospitalizacion.idHospitalizacion">
               {{ nombrePaciente(r.hospitalizacion.idPaciente) }} — ingresó {{ r.hospitalizacion.fechaIngreso | slice: 0 : 10 }}
@@ -29,7 +30,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Tipo de orden</mat-label>
         <mat-select formControlName="idTipoOrden">
-          @for (t of tiposOrden; track t.id) {
+          @for (t of tiposOrdenSignal(); track t.id + '-' + $index) {
             <mat-option [value]="t.id">{{ t.label }}</mat-option>
           }
         </mat-select>
@@ -41,8 +42,13 @@
       <mat-form-field appearance="outline">
         <mat-label>Médico</mat-label>
         <mat-select formControlName="idMedico">
-          @for (m of medicos; track m.id) {
-            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          @for (m of medicosSignal(); track m.id + '-' + $index) {
+            <mat-option [value]="m.id">
+              {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+            </mat-option>
+          }
+          @if (medicosSignal().length === 0) {
+            <mat-option disabled>No hay médicos registrados</mat-option>
           }
         </mat-select>
         @if (form.controls.idMedico.invalid && form.controls.idMedico.touched) {
@@ -59,11 +65,15 @@
       </mat-form-field>
     </div>
 
+    @if (errorGuardar()) {
+      <p class="form-error">{{ errorGuardar() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/hospitalizacion">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar orden
+        {{ guardando() ? 'Guardando...' : 'Guardar orden' }}
       </button>
     </div>
   </form>

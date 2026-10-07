@@ -26,20 +26,28 @@
       <mat-form-field appearance="outline">
         <mat-label>Cama</mat-label>
         <mat-select formControlName="idCama">
-          @for (c of camas; track c.id) {
+          @for (c of camas(); track c.id + '-' + $index) {
             <mat-option [value]="c.id">{{ c.label }}</mat-option>
           }
         </mat-select>
         @if (form.controls.idCama.invalid && form.controls.idCama.touched) {
           <mat-error>Selecciona una cama</mat-error>
         }
+        @if (camas().length === 0) {
+          <mat-hint>Cargando camas...</mat-hint>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Médico responsable</mat-label>
         <mat-select formControlName="idMedicoResponsable">
-          @for (m of medicos; track m.id) {
-            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          @for (m of medicosSignal(); track m.id + '-' + $index) {
+            <mat-option [value]="m.id">
+              {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+            </mat-option>
+          }
+          @if (medicosSignal().length === 0) {
+            <mat-option disabled>No hay médicos registrados</mat-option>
           }
         </mat-select>
         @if (form.controls.idMedicoResponsable.invalid && form.controls.idMedicoResponsable.touched) {
@@ -51,7 +59,7 @@
         <mat-label>Fecha de ingreso</mat-label>
         <input matInput [matDatepicker]="pickerIngreso" formControlName="fechaIngreso" />
         <mat-datepicker-toggle matIconSuffix [for]="pickerIngreso"></mat-datepicker-toggle>
-        <mat-datepicker #pickerIngreso></mat-datepicker>
+        <mat-datepicker #pickerIngreso panelClass="datepicker-azul"></mat-datepicker>
         @if (form.controls.fechaIngreso.invalid && form.controls.fechaIngreso.touched) {
           <mat-error>Selecciona la fecha</mat-error>
         }
@@ -60,10 +68,13 @@
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
         <mat-select formControlName="idEstadoHospitalizacion">
-          @for (e of estadosHospitalizacion; track e.id) {
+          @for (e of estadosSignal(); track e.id + '-' + $index) {
             <mat-option [value]="e.id">{{ e.label }}</mat-option>
           }
         </mat-select>
+        @if (form.controls.idEstadoHospitalizacion.invalid && form.controls.idEstadoHospitalizacion.touched) {
+          <mat-error>Selecciona el estado</mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
@@ -82,7 +93,7 @@
           <mat-label>Fecha de egreso</mat-label>
           <input matInput [matDatepicker]="pickerEgreso" formControlName="fechaEgreso" />
           <mat-datepicker-toggle matIconSuffix [for]="pickerEgreso"></mat-datepicker-toggle>
-          <mat-datepicker #pickerEgreso></mat-datepicker>
+          <mat-datepicker #pickerEgreso panelClass="datepicker-azul"></mat-datepicker>
           <mat-hint>Déjalo vacío mientras el paciente siga internado.</mat-hint>
         </mat-form-field>
 
@@ -93,11 +104,15 @@
       </div>
     </div>
 
+    @if (errorGuardar()) {
+      <p class="form-error">{{ errorGuardar() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/hospitalizacion">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
       </button>
     </div>
   </form>
@@ -106,23 +121,102 @@
     <div class="ordenes-panel">
       <div class="ordenes-header">
         <h2>Órdenes médicas registradas</h2>
-        <a matButton routerLink="/home/hospitalizacion/orden-nueva" [queryParams]="{ hospitalizacion: idHospitalizacion() }">
+        <a matButton="filled" routerLink="/home/hospitalizacion/orden-nueva" [queryParams]="{ hospitalizacion: idHospitalizacion() }">
           <mat-icon>add</mat-icon>
           Agregar orden
         </a>
       </div>
 
-      @for (o of r.ordenes; track o.idOrdenMedica) {
-        <div class="orden-row">
-          <span class="orden-tipo">{{ tipoOrdenLabel(o.idTipoOrden) }}</span>
-          <span class="orden-desc">{{ o.descripcion }}</span>
-          <span class="orden-meta">{{ formatFecha(o.fechaOrden) }} · {{ medicoLabel(o.idMedico) }}</span>
-        </div>
-      }
-
       @if (r.ordenes.length === 0) {
         <p class="ordenes-empty">Aún no hay órdenes registradas para esta hospitalización.</p>
+      } @else {
+        @for (o of r.ordenes; track o.idOrdenMedica) {
+          <div class="orden-row">
+            <span class="orden-tipo">{{ tipoOrdenLabel(o.idTipoOrden) }}</span>
+            <span class="orden-desc">{{ o.descripcion }}</span>
+            <span class="orden-meta">{{ formatFecha(o.fechaOrden) }} · {{ medicoLabel(o.idMedico) }}</span>
+            <div class="orden-actions">
+              <button matIconButton type="button" matTooltip="Editar orden" (click)="abrirEditarOrden(o)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton type="button" matTooltip="Eliminar orden" (click)="eliminarOrden(o)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
       }
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Editar orden médica
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (ordenEditando(); as orden) {
+    <div class="modal-overlay" (click)="cancelarEditarOrden()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">edit_note</mat-icon>
+            <div>
+              <h2>Editar orden médica</h2>
+              <p class="modal-subtitle">Modifica los datos de la orden y guarda los cambios.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cancelarEditarOrden()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Tipo de orden</mat-label>
+            <mat-select [(value)]="orden.idTipoOrden" required>
+              @for (t of tiposOrdenSignal(); track t.id + '-' + $index) {
+                <mat-option [value]="t.id">{{ t.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Médico</mat-label>
+            <mat-select [(value)]="orden.idMedico" required>
+              @for (m of medicosSignal(); track m.id + '-' + $index) {
+                <mat-option [value]="m.id">
+                  {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+                </mat-option>
+              }
+              @if (medicosSignal().length === 0) {
+                <mat-option disabled>No hay médicos registrados</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Descripción</mat-label>
+            <textarea
+              matInput
+              [(ngModel)]="orden.descripcion"
+              rows="4"
+              placeholder="Ej. Ampicilina 1g IV cada 8 horas"
+            ></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="modal-actions">
+          <button matButton type="button" (click)="cancelarEditarOrden()">Cancelar</button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="guardandoOrden()"
+            (click)="guardarEdicionOrden(orden)"
+          >
+            <mat-icon>save</mat-icon>
+            {{ guardandoOrden() ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </div>
     </div>
   }
 </div>

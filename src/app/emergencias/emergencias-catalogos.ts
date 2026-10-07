@@ -1,52 +1,48 @@
-// Catálogos de ejemplo para Emergencias.
-//
-// "Atención prioritaria" no tiene tabla propia en el esquema compartido (no
-// aparece en el mapa de módulos) — NIVELES_TRIAGE y ESTADOS_CASO son mock
-// puro, inspirados en el estándar clínico de triaje por colores (Manchester/
-// ESI), documentado como pendiente de confirmar con el cliente en
-// PENDIENTES.md.
-//
-// "Hoja de compromiso de pago" sí se apoya en tablas reales: se modela como
-// un `ConsentimientoInformado` cuyo `idTipoConsentimiento` es el que se
-// define acá (ver consentimiento.model.ts).
+// Catálogos de Emergencias.
+// Los IDs coinciden con los valores insertados en `cat_valor_catalogo`.
 
 export interface OpcionCatalogo {
   id: number;
   label: string;
 }
 
+// id_tipo_catalogo = 11, valores 37-41
 export const NIVELES_TRIAGE: OpcionCatalogo[] = [
-  { id: 1, label: 'Rojo · Resucitación (inmediato)' },
-  { id: 2, label: 'Naranja · Emergencia (muy urgente)' },
-  { id: 3, label: 'Amarillo · Urgente' },
-  { id: 4, label: 'Verde · Menos urgente' },
-  { id: 5, label: 'Azul · No urgente' },
+  { id: 37, label: 'Rojo · Resucitación (inmediato)' },
+  { id: 38, label: 'Naranja · Emergencia (muy urgente)' },
+  { id: 39, label: 'Amarillo · Urgente' },
+  { id: 40, label: 'Verde · Menos urgente' },
+  { id: 41, label: 'Azul · No urgente' },
 ];
 
+// id_tipo_catalogo = 12, valores 42-45
 export const ESTADOS_CASO: OpcionCatalogo[] = [
-  { id: 1, label: 'Esperando' },
-  { id: 2, label: 'En atención' },
-  { id: 3, label: 'Atendido' },
-  { id: 4, label: 'Referido / trasladado' },
+  { id: 42, label: 'Esperando' },
+  { id: 43, label: 'En atención' },
+  { id: 44, label: 'Atendido' },
+  { id: 45, label: 'Referido / trasladado' },
 ];
 
-export const TIPO_CONSENTIMIENTO_COMPROMISO_PAGO = 1;
+// id_tipo_catalogo = 13, valor 46
+export const TIPO_CONSENTIMIENTO_COMPROMISO_PAGO = 46;
 
 export const TIPOS_CONSENTIMIENTO: OpcionCatalogo[] = [
-  { id: TIPO_CONSENTIMIENTO_COMPROMISO_PAGO, label: 'Compromiso de pago - Emergencia' },
+  { id: 46, label: 'Compromiso de pago - Emergencia' },
 ];
 
-export const ESTADOS_CONSENTIMIENTO: OpcionCatalogo[] = [
-  { id: 1, label: 'Pendiente de firma' },
-  { id: 2, label: 'Firmado' },
-  { id: 3, label: 'Revocado' },
-];
-
+// id_tipo_catalogo = 14, valores 47-52
 export const PARENTESCOS: OpcionCatalogo[] = [
-  { id: 1, label: 'Padre' },
-  { id: 2, label: 'Madre' },
-  { id: 3, label: 'Cónyuge' },
-  { id: 4, label: 'Hijo/a' },
-  { id: 5, label: 'Hermano/a' },
-  { id: 6, label: 'Otro' },
+  { id: 47, label: 'Padre' },
+  { id: 48, label: 'Madre' },
+  { id: 49, label: 'Cónyuge' },
+  { id: 50, label: 'Hijo/a' },
+  { id: 51, label: 'Hermano/a' },
+  { id: 52, label: 'Otro' },
+];
+
+// id_tipo_catalogo = 15, valores 53-55
+export const ESTADOS_CONSENTIMIENTO: OpcionCatalogo[] = [
+  { id: 53, label: 'Pendiente de firma' },
+  { id: 54, label: 'Firmado' },
+  { id: 55, label: 'Revocado' },
 ];

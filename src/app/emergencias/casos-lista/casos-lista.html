@@ -40,17 +40,26 @@
 
   <div class="caso-grid">
     @for (c of casos(); track c.idCaso) {
-      <a class="caso-card" [class]="triageClase(c.idNivelTriage)" [routerLink]="['/home/emergencias', c.idCaso]">
+      <a
+        class="caso-card"
+        [ngClass]="triageClase(c.idNivelTriage)"
+        [routerLink]="['/home/emergencias', c.idCaso]"
+      >
         <div class="triage-stripe"></div>
         <div class="patient-avatar">{{ iniciales(c) }}</div>
         <div class="caso-info">
           <h2>{{ nombrePaciente(c) }}</h2>
           <span class="triage-badge">{{ triageLabel(c.idNivelTriage) }}</span>
-          <span class="caso-meta"><mat-icon>schedule</mat-icon>{{ formatHora(c.horaLlegada) }} · {{ medicoLabel(c.idMedico) }}</span>
+          <span class="caso-meta">
+            <mat-icon>schedule</mat-icon>
+            {{ formatHora(c.horaLlegada) }} · {{ medicoLabel(c.idMedico) }}
+          </span>
           <span class="caso-meta motivo">{{ c.motivo }}</span>
         </div>
         <div class="caso-actions">
-          <span class="status-badge" [class]="estadoClase(c.idEstadoCaso)">{{ estadoLabel(c.idEstadoCaso) }}</span>
+          <span class="status-badge" [ngClass]="estadoClase(c.idEstadoCaso)">
+            {{ estadoLabel(c.idEstadoCaso) }}
+          </span>
           <button
             matIconButton
             type="button"

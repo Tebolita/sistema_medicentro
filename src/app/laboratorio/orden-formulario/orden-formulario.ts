@@ -1,7 +1,9 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -11,22 +13,29 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { OrdenDetalle, OrdenLaboratorio } from '../../models';
-import { LaboratorioService } from '../laboratorio.service';
-import { CATEGORIAS_EXAMEN, ESTADOS_ORDEN, PRIORIDADES_ORDEN, TIPOS_EXAMEN } from '../laboratorio-catalogos';
-import { MEDICOS } from '../../consultas-externas/consultas-catalogos';
+import {
+  LaboratorioService,
+  TipoExamen,
+  OpcionCatalogo,
+  MedicoOpcion,
+} from '../laboratorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
-function toIsoDate(value: Date | string | null): string | null {
-  if (!value) {
-    return null;
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
+/**
+ * Toma un Date del datepicker y le añade la HORA ACTUAL.
+ * Devuelve algo como "2026-10-06T17:52:30".
+ */
+function toIsoDateTime(value: Date | string | null): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  const ahora = new Date();
   const y = value.getFullYear();
   const m = String(value.getMonth() + 1).padStart(2, '0');
   const d = String(value.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const hh = String(ahora.getHours()).padStart(2, '0');
+  const mm = String(ahora.getMinutes()).padStart(2, '0');
+  const ss = String(ahora.getSeconds()).padStart(2, '0');
+  return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
 }
 
 function parseIsoDateLocal(iso: string): Date {
@@ -37,6 +46,7 @@ function parseIsoDateLocal(iso: string): Date {
 @Component({
   selector: 'app-orden-formulario',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     MatFormFieldModule,
@@ -59,60 +69,117 @@ export class OrdenFormulario {
   private pacientesService = inject(PacientesService);
 
   pacientes = this.pacientesService.directorio;
-  medicos = MEDICOS;
-  prioridades = PRIORIDADES_ORDEN;
-  estadosOrden = ESTADOS_ORDEN;
-  categoriasExamen = CATEGORIAS_EXAMEN;
-  todosLosExamenes = TIPOS_EXAMEN;
 
-  idOrden = signal(0);
-  esNueva = computed(() => this.idOrden() === 0);
+  medicosSignal = signal<MedicoOpcion[]>([]);
+  prioridadesSignal = signal<OpcionCatalogo[]>([]);
+  estadosSignal = signal<OpcionCatalogo[]>([]);
+  tiposExamen = signal<TipoExamen[]>([]);
 
-  // Filtro de categoría que llega del menú (Electrocardiograma / Rayos X /
-  // Ultrasonido son de categoría "Imagen"; Orden de laboratorio filtra a
-  // categoría "Laboratorio"). null = mostrar todos los exámenes.
-  filtroCategoria = signal<number | null>(null);
-  examenesVisibles = computed(() => {
-    const categoria = this.filtroCategoria();
-    return categoria == null ? this.todosLosExamenes : this.todosLosExamenes.filter((t) => t.idCategoriaExamen === categoria);
+  filtroExamen = signal('');
+
+  examenesFiltrados = computed(() => {
+    const term = this.filtroExamen().trim().toLowerCase();
+    const lista = this.tiposExamen();
+    if (!term) return lista;
+    return lista.filter(
+      (t) =>
+        t.nombre.toLowerCase().includes(term) ||
+        (t.descripcion ?? '').toLowerCase().includes(term),
+    );
   });
 
   examenesSeleccionados = signal<Set<number>>(new Set());
+
+  detallesSeleccionados = computed(() => {
+    const ids = this.examenesSeleccionados();
+    return this.tiposExamen().filter((t) => ids.has(t.idTipoExamen));
+  });
+
+  cargandoTipos = signal(false);
+  idOrden = signal(0);
+  esNueva = computed(() => this.idOrden() === 0);
+
+  guardando = signal(false);
+  errorGuardar = signal<string | null>(null);
   seleccionInvalida = signal(false);
 
-  // idOrdenDetalle original por tipo de examen (solo al editar), para no
-  // perder su identidad si el examen sigue marcado al guardar.
   private detalleIdOriginal = new Map<number, number>();
 
   form = this.fb.nonNullable.group({
     idPaciente: this.fb.control<number | null>(null, Validators.required),
     idMedico: this.fb.control<number | null>(null, Validators.required),
     fecha: this.fb.control<Date | null>(new Date(), Validators.required),
-    idPrioridad: this.fb.control<number | null>(1, Validators.required),
-    idEstadoOrden: [1, Validators.required],
+    idPrioridad: this.fb.control<number | null>(null, Validators.required),
+    idEstadoOrden: this.fb.control<number | null>(null, Validators.required),
     notas: [''],
   });
 
   constructor() {
+    this.laboratorioService.RetornarMedicos().subscribe({
+      next: (m) => {
+        console.log('✅ [OrdenFormulario] Médicos cargados:', m.length);
+        this.medicosSignal.set(m);
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error médicos:', err.status),
+    });
+
+    this.laboratorioService.RetornarPrioridades().subscribe({
+      next: (p) => {
+        console.log('✅ [OrdenFormulario] Prioridades cargadas:', p.length);
+        this.prioridadesSignal.set(p);
+        if (this.esNueva() && p.length > 0 && !this.form.controls.idPrioridad.value) {
+          const normal = p.find((x) => x.label.toLowerCase().includes('normal')) ?? p[0];
+          this.form.patchValue({ idPrioridad: normal.id });
+        }
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error prioridades:', err.status),
+    });
+
+    this.laboratorioService.RetornarEstadosOrden().subscribe({
+      next: (e) => {
+        console.log('✅ [OrdenFormulario] Estados cargados:', e.length);
+        this.estadosSignal.set(e);
+        if (this.esNueva() && e.length > 0 && !this.form.controls.idEstadoOrden.value) {
+          const solicitada = e.find((x) => x.label.toLowerCase().includes('solicit')) ?? e[0];
+          this.form.patchValue({ idEstadoOrden: solicitada.id });
+        }
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error estados:', err.status),
+    });
+
+    this.cargandoTipos.set(true);
+    this.laboratorioService.RetornarTiposExamen().subscribe({
+      next: (tipos) => {
+        console.log('✅ [OrdenFormulario] Tipos de examen cargados:', tipos.length);
+        this.tiposExamen.set(tipos);
+        this.cargandoTipos.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenFormulario] Error tipos examen:', err.status);
+        this.cargandoTipos.set(false);
+      },
+    });
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam && idParam !== 'nueva') {
       const id = Number(idParam);
       const registro = this.laboratorioService.obtener(id);
       if (registro) {
         this.cargar(registro);
+      } else {
+        this.laboratorioService.obtenerDesdeApi(id).subscribe({
+          next: (reg) => this.cargar(reg),
+          error: (err: HttpErrorResponse) =>
+            console.error('No se pudo cargar la orden', err),
+        });
       }
       return;
     }
 
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      const categoriaParam = params.get('categoria');
-      this.filtroCategoria.set(categoriaParam ? Number(categoriaParam) : null);
-
-      const examenParam = params.get('examen');
-      if (examenParam) {
-        this.examenesSeleccionados.set(new Set([Number(examenParam)]));
-      }
-
       const idPacienteParam = params.get('paciente');
       if (idPacienteParam) {
         this.form.patchValue({ idPaciente: Number(idPacienteParam) });
@@ -135,6 +202,14 @@ export class OrdenFormulario {
     }
   }
 
+  estaSeleccionado(idTipoExamen: number): boolean {
+    return this.examenesSeleccionados().has(idTipoExamen);
+  }
+
+  limpiarBusqueda(): void {
+    this.filtroExamen.set('');
+  }
+
   private cargar(registro: { orden: OrdenLaboratorio; detalles: OrdenDetalle[] }): void {
     this.idOrden.set(registro.orden.idOrden);
     this.form.patchValue({
@@ -146,7 +221,9 @@ export class OrdenFormulario {
       notas: registro.orden.notas ?? '',
     });
     this.examenesSeleccionados.set(new Set(registro.detalles.map((d) => d.idTipoExamen)));
-    this.detalleIdOriginal = new Map(registro.detalles.map((d) => [d.idTipoExamen, d.idOrdenDetalle]));
+    this.detalleIdOriginal = new Map(
+      registro.detalles.map((d) => [d.idTipoExamen, d.idOrdenDetalle]),
+    );
   }
 
   guardar(): void {
@@ -167,14 +244,16 @@ export class OrdenFormulario {
         idPaciente: v.idPaciente!,
         idMedico: v.idMedico!,
         idCita: null,
-        fechaOrden: toIsoDate(v.fecha)!,
-        idPrioridad: v.idPrioridad,
-        idEstadoOrden: v.idEstadoOrden,
+        // ✅ CAMBIO: hora actual añadida a la fecha del datepicker
+        fechaOrden: toIsoDateTime(v.fecha)!,
+        idPrioridad: v.idPrioridad!,
+        idEstadoOrden: v.idEstadoOrden!,
         notas: v.notas || null,
         activo: true,
         fechaCreacion: this.esNueva()
           ? new Date().toISOString()
-          : (this.laboratorioService.obtener(idOrden)?.orden.fechaCreacion ?? new Date().toISOString()),
+          : (this.laboratorioService.obtener(idOrden)?.orden.fechaCreacion ??
+              new Date().toISOString()),
         fechaModificacion: this.esNueva() ? null : new Date().toISOString(),
         idUsuarioCreacion: null,
         idUsuarioModificacion: null,
@@ -188,7 +267,19 @@ export class OrdenFormulario {
       })),
     };
 
-    this.laboratorioService.guardar(registro);
-    this.router.navigate(['/home/laboratorio']);
+    this.guardando.set(true);
+    this.errorGuardar.set(null);
+
+    this.laboratorioService.guardar(registro).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.router.navigate(['/home/laboratorio']);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardando.set(false);
+        this.errorGuardar.set('No se pudo guardar la orden. Intenta de nuevo.');
+        console.error('Error al guardar la orden', err);
+      },
+    });
   }
 }

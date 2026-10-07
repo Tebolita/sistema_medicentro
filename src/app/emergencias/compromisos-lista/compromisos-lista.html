@@ -31,12 +31,23 @@
         <div class="patient-avatar">{{ iniciales(c.consentimiento.idPaciente) }}</div>
         <div class="compromiso-info">
           <h2>{{ nombrePaciente(c.consentimiento.idPaciente) }}</h2>
-          <span class="compromiso-meta"><mat-icon>person</mat-icon>Responsable: {{ c.nombreResponsable }} ({{ parentescoLabel(c.idParentescoResponsable) }})</span>
-          <span class="compromiso-meta"><mat-icon>call</mat-icon>{{ c.telefonoResponsable }}</span>
-          <span class="compromiso-meta"><mat-icon>event</mat-icon>{{ formatFecha(c.consentimiento.fechaFirma) }} · {{ medicoLabel(c.consentimiento.idMedicoResponsable) }}</span>
+          <span class="compromiso-meta">
+            <mat-icon>person</mat-icon>
+            Responsable: {{ c.nombreResponsable }} ({{ parentescoLabel(c.idParentescoResponsable) }})
+          </span>
+          <span class="compromiso-meta">
+            <mat-icon>call</mat-icon>{{ c.telefonoResponsable }}
+          </span>
+          <span class="compromiso-meta">
+            <mat-icon>event</mat-icon>
+            {{ formatFecha(c.consentimiento.fechaFirma) }} · {{ medicoLabel(c.consentimiento.idMedicoResponsable) }}
+          </span>
         </div>
         <div class="compromiso-actions">
-          <span class="status-badge" [class]="estadoClase(c.consentimiento.idEstadoConsentimiento)">
+          <span
+            class="status-badge"
+            [ngClass]="estadoClase(c.consentimiento.idEstadoConsentimiento)"
+          >
             {{ estadoLabel(c.consentimiento.idEstadoConsentimiento) }}
           </span>
           <button

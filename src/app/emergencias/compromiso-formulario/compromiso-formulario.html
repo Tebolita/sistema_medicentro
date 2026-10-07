@@ -26,8 +26,13 @@
       <mat-form-field appearance="outline">
         <mat-label>Médico responsable</mat-label>
         <mat-select formControlName="idMedicoResponsable">
-          @for (m of medicos; track m.id) {
-            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          @for (m of medicosSignal(); track m.id + '-' + $index) {
+            <mat-option [value]="m.id">
+              {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+            </mat-option>
+          }
+          @if (medicosSignal().length === 0) {
+            <mat-option disabled>No hay médicos registrados</mat-option>
           }
         </mat-select>
         @if (form.controls.idMedicoResponsable.invalid && form.controls.idMedicoResponsable.touched) {
@@ -46,7 +51,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Parentesco</mat-label>
         <mat-select formControlName="idParentescoResponsable">
-          @for (p of parentescos; track p.id) {
+          @for (p of parentescosSignal(); track p.id + '-' + $index) {
             <mat-option [value]="p.id">{{ p.label }}</mat-option>
           }
         </mat-select>
@@ -67,25 +72,32 @@
         <mat-label>Fecha de firma</mat-label>
         <input matInput [matDatepicker]="picker" formControlName="fechaFirma" />
         <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
+        <mat-datepicker #picker panelClass="datepicker-azul"></mat-datepicker>
         <mat-hint>Déjalo vacío si aún no se ha firmado.</mat-hint>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
         <mat-select formControlName="idEstadoConsentimiento">
-          @for (e of estadosConsentimiento; track e.id) {
+          @for (e of estadosSignal(); track e.id + '-' + $index) {
             <mat-option [value]="e.id">{{ e.label }}</mat-option>
           }
         </mat-select>
+        @if (form.controls.idEstadoConsentimiento.invalid && form.controls.idEstadoConsentimiento.touched) {
+          <mat-error>Selecciona el estado</mat-error>
+        }
       </mat-form-field>
     </div>
 
+    @if (errorGuardar()) {
+      <p class="form-error">{{ errorGuardar() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/emergencias/compromisos">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar compromiso
+        {{ guardando() ? 'Guardando...' : 'Guardar compromiso' }}
       </button>
     </div>
   </form>

@@ -1,19 +1,24 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { HospitalizacionesService } from '../hospitalizaciones.service';
-import { CAMAS, ESTADOS_HOSPITALIZACION } from '../hospitalizacion-catalogos';
-import { MEDICOS } from '../../consultas-externas/consultas-catalogos';
+import {
+  HospitalizacionesService,
+  MedicoOpcion,
+  OpcionCatalogo,
+} from '../hospitalizaciones.service';
+import { CamaOpcion } from '../hospitalizacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 
 @Component({
   selector: 'app-hospitalizaciones-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './hospitalizaciones-lista.html',
   styleUrl: './hospitalizaciones-lista.css',
 })
@@ -28,9 +33,36 @@ export class HospitalizacionesLista {
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
 
+  // Signals con catálogos del backend
+  medicosSignal = signal<MedicoOpcion[]>([]);
+  estadosSignal = signal<OpcionCatalogo[]>([]);
+  camasSignal = signal<CamaOpcion[]>([]);
+
   opcionesHospitalizacion = MENU_SECTIONS.find((s) => s.slug === 'hospitalizacion')?.items ?? [];
 
   constructor() {
+    // Cargar médicos
+    this.hospitalizacionesService.RetornarMedicos().subscribe({
+      next: (m) => this.medicosSignal.set(m),
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [HospitalizacionesLista] Error médicos:', err.status),
+    });
+
+    // Cargar estados
+    this.hospitalizacionesService.RetornarEstadosHospitalizacion().subscribe({
+      next: (e) => this.estadosSignal.set(e),
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [HospitalizacionesLista] Error estados:', err.status),
+    });
+
+    // Cargar camas
+    this.hospitalizacionesService.RetornarCamas().subscribe({
+      next: (c) => this.camasSignal.set(c),
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [HospitalizacionesLista] Error camas:', err.status),
+    });
+
+    // Query param "foco"
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       if (params.get('foco') !== 'buscar') {
         return;
@@ -48,7 +80,11 @@ export class HospitalizacionesLista {
       return lista;
     }
     return lista.filter((r) =>
-      [this.nombrePaciente(r.hospitalizacion.idPaciente), this.medicoLabel(r.hospitalizacion.idMedicoResponsable), r.hospitalizacion.motivoIngreso]
+      [
+        this.nombrePaciente(r.hospitalizacion.idPaciente),
+        this.medicoLabel(r.hospitalizacion.idMedicoResponsable),
+        r.hospitalizacion.motivoIngreso,
+      ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
@@ -61,7 +97,9 @@ export class HospitalizacionesLista {
     if (!p) {
       return 'Paciente no encontrado';
     }
-    return [p.primerNombre, p.segundoNombre, p.primerApellido, p.segundoApellido].filter(Boolean).join(' ');
+    return [p.primerNombre, p.segundoNombre, p.primerApellido, p.segundoApellido]
+      .filter(Boolean)
+      .join(' ');
   }
 
   iniciales(idPaciente: number): string {
@@ -69,21 +107,25 @@ export class HospitalizacionesLista {
     return `${partes[0]?.charAt(0) ?? ''}${partes[1]?.charAt(0) ?? ''}`.toUpperCase();
   }
 
-  medicoLabel(idMedico: number): string {
-    return MEDICOS.find((m) => m.id === idMedico)?.nombre ?? '—';
+  medicoLabel(idMedico: number | null): string {
+    if (idMedico == null) return '—';
+    return this.medicosSignal().find((m) => m.id === idMedico)?.nombre ?? '—';
   }
 
-  camaLabel(idCama: number): string {
-    return CAMAS.find((c) => c.id === idCama)?.label ?? '—';
+  camaLabel(idCama: number | null): string {
+    if (idCama == null) return '—';
+    return this.camasSignal().find((c) => c.id === idCama)?.label ?? '—';
   }
 
-  estadoLabel(idEstadoHospitalizacion: number): string {
-    return ESTADOS_HOSPITALIZACION.find((e) => e.id === idEstadoHospitalizacion)?.label ?? '—';
+  estadoLabel(idEstadoHospitalizacion: number | null): string {
+    if (idEstadoHospitalizacion == null) return '—';
+    return this.estadosSignal().find((e) => e.id === idEstadoHospitalizacion)?.label ?? '—';
   }
 
-  estadoClase(idEstadoHospitalizacion: number): string {
-    if (idEstadoHospitalizacion === 2) return 'estado-alta';
-    if (idEstadoHospitalizacion === 3) return 'estado-trasladada';
+  estadoClase(idEstadoHospitalizacion: number | null): string {
+    const label = this.estadoLabel(idEstadoHospitalizacion).toLowerCase();
+    if (label.includes('alta')) return 'estado-alta';
+    if (label.includes('traslad')) return 'estado-trasladada';
     return 'estado-activa';
   }
 

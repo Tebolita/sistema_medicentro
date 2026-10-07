@@ -1,97 +1,404 @@
+/* =========================================================================
+   Página del formulario
+   ========================================================================= */
 .form-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 780px;
+  width: 100%;
 }
 
-.page-header h1 {
-  margin: 6px 0 0;
-  font-size: 22px;
-  color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .back-link {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--c-text-muted);
+  gap: 6px;
+  color: #666;
   text-decoration: none;
+  font-size: 13px;
+  width: fit-content;
 }
+.back-link:hover { color: #0d6a8f; }
+.back-link mat-icon { font-size: 18px; width: 18px; height: 18px; }
 
-.back-link:hover {
-  color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
-}
-
-.back-link mat-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
+.page-header h1 {
+  margin: 0;
+  font-size: 22px;
+  color: #0d6a8f;
 }
 
 .form-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  background: var(--c-surface);
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  gap: 20px;
   padding: 24px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 4px 16px;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+  row-gap: 20px;
+  align-items: start;
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+.form-grid > mat-form-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.form-grid .full-width {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .full-width {
-  grid-column: 1 / -1;
+  width: 100%;
 }
 
+/* =========================================================================
+   Sección de exámenes (tabla + buscador)
+   ========================================================================= */
 .examenes-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   padding: 16px;
+  background: #fafafa;
+  border: 1px solid #ececec;
   border-radius: 12px;
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
 }
-
 .examenes-section h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--c-text);
+  color: #333;
 }
 
-.filtro-nota {
-  margin: 0;
-  font-size: 12px;
-  color: var(--c-text-soft);
+.buscador-examenes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.filtro-nota a {
-  color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
-  font-weight: 600;
+.buscador-examenes mat-icon {
+  color: #888;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
-.examenes-grid {
+.buscador-examenes input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: inherit;
+  color: #333;
+}
+
+.buscador-examenes input::placeholder {
+  color: #999;
+}
+
+.buscador-examenes .limpiar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+}
+.buscador-examenes .limpiar:hover {
+  color: #0d6a8f;
+  background: rgba(13, 106, 143, 0.08);
+}
+.buscador-examenes .limpiar mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.tabla-examenes {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.tabla-header {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 4px 16px;
+  grid-template-columns: 40px 1fr 1.5fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  background: #f5f7f9;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.tabla-fila {
+  display: grid;
+  grid-template-columns: 40px 1fr 1.5fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.tabla-fila:hover {
+  background: rgba(13, 106, 143, 0.04);
+}
+
+.tabla-fila.seleccionada {
+  background: rgba(13, 106, 143, 0.08);
+}
+
+.tabla-fila:last-child {
+  border-bottom: none;
+}
+
+.col-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.col-nombre {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.col-desc {
+  color: #888;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.estado-tabla {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
 }
 
 .examenes-error {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  margin: 0;
+  color: #c62828;
+  font-size: 13px;
+}
+
+/* =========================================================================
+   Detalle de seleccionados
+   ========================================================================= */
+.detalle-seleccionados {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: #eaf3f7;
+  border: 1px solid #cfe3ec;
+  border-radius: 12px;
+}
+
+.detalle-seleccionados h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d6a8f;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.detalle-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.detalle-nombre {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #0d6a8f;
+  font-size: 14px;
+}
+
+.detalle-nombre mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.detalle-nombre span {
+  flex: 1;
+}
+
+.detalle-nombre .quitar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+}
+.detalle-nombre .quitar:hover {
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.08);
+}
+.detalle-nombre .quitar mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.detalle-desc {
+  margin: 6px 0 0 26px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.4;
+}
+
+/* =========================================================================
+   Form error / acciones
+   ========================================================================= */
+.form-error {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  background: #fdecea;
+  color: #c62828;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+/* =========================================================================
+   Panel del mat-select
+   ========================================================================= */
+:host ::ng-deep .mat-mdc-select-panel {
+  z-index: 10000 !important;
+  background: #ffffff !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+:host ::ng-deep .mat-mdc-option {
+  height: auto !important;
+  min-height: 48px !important;
+  padding: 12px 16px !important;
+  line-height: 1.4 !important;
+  font-size: 14px !important;
+  color: #333 !important;
+  background: #ffffff !important;
+}
+
+:host ::ng-deep .mat-mdc-option:hover:not(.mdc-list-item--disabled) {
+  background: rgba(13, 106, 143, 0.08) !important;
+  color: #0d6a8f !important;
+}
+
+:host ::ng-deep .mat-mdc-option.mdc-list-item--selected {
+  background: rgba(13, 106, 143, 0.14) !important;
+  color: #0d6a8f !important;
+  font-weight: 600 !important;
+}
+
+/* =========================================================================
+   Botón Guardar
+   ========================================================================= */
+:host ::ng-deep button[matButton="filled"] {
+  background-color: #0d6a8f !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  padding: 0 24px !important;
+  height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+:host ::ng-deep button[matButton="filled"]:hover:not([disabled]) {
+  background-color: #0a5570 !important;
+  box-shadow: 0 2px 6px rgba(13, 106, 143, 0.35) !important;
+}
+
+:host ::ng-deep button[matButton="filled"]:disabled {
+  background-color: #b0c7d0 !important;
+  color: #fff !important;
+  cursor: not-allowed !important;
+}
+
+:host ::ng-deep button[matButton="filled"] mat-icon {
+  color: #fff !important;
+}
+
+/* =========================================================================
+   Icono del calendario
+   ========================================================================= */
+:host ::ng-deep .mat-datepicker-toggle {
+  color: #0d6a8f !important;
+}
+:host ::ng-deep .mat-datepicker-toggle .mat-icon-button {
+  color: #0d6a8f !important;
+}
+:host ::ng-deep .mat-datepicker-toggle .mat-icon-button:hover {
+  background-color: rgba(13, 106, 143, 0.08) !important;
+}
+:host ::ng-deep .mat-datepicker-toggle mat-icon {
+  color: #0d6a8f !important;
 }
