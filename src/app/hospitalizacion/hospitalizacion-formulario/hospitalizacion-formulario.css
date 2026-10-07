@@ -202,7 +202,42 @@
 }
 
 /* =========================================================================
-   Modal de edición de orden — REDISEÑADO
+   Botón "Ver historial" (fuera del panel de órdenes)
+   ========================================================================= */
+.historial-btn-wrap {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.historial-btn-wrap button[matButton] {
+  color: #0d6a8f;
+  border: 1px solid rgba(13, 106, 143, 0.3);
+  border-radius: 999px;
+  padding: 0 18px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.historial-btn-wrap button[matButton]:hover {
+  background: rgba(13, 106, 143, 0.06);
+  box-shadow: 0 2px 6px rgba(13, 106, 143, 0.15);
+}
+
+.historial-btn-wrap button[matButton] mat-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* =========================================================================
+   Modal general (editar orden + historial)
    ========================================================================= */
 .modal-overlay {
   position: fixed;
@@ -355,6 +390,129 @@
   height: 18px !important;
 }
 
+/* =========================================================================
+   Modal de historial (más ancho)
+   ========================================================================= */
+.modal-card-historial {
+  max-width: 720px;
+}
+
+.historial-estado {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.historial-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.historial-item {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid #ececec;
+}
+
+.historial-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.historial-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.historial-badge mat-icon {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.historial-badge.accion-crear {
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+}
+
+.historial-badge.accion-modificar {
+  background: rgba(13, 106, 143, 0.12);
+  color: #0d6a8f;
+}
+
+.historial-badge.accion-eliminar {
+  background: rgba(198, 40, 40, 0.12);
+  color: #c62828;
+}
+
+.historial-badge.accion-default {
+  background: rgba(120, 120, 120, 0.12);
+  color: #555;
+}
+
+.historial-meta {
+  font-size: 12px;
+  color: #888;
+}
+
+.historial-cambios {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.historial-cambios thead th {
+  text-align: left;
+  padding: 6px 10px;
+  background: #f0f4f7;
+  color: #555;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.historial-cambios td {
+  padding: 6px 10px;
+  border-top: 1px solid #f0f0f0;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.historial-cambios .campo {
+  color: #666;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.historial-cambios .antes {
+  color: #b71c1c;
+}
+
+.historial-cambios .despues {
+  color: #2e7d32;
+  font-weight: 500;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 600px) {
   .modal-card {
@@ -372,6 +530,10 @@
 
   .modal-header h2 {
     font-size: 15.5px;
+  }
+
+  .historial-cambios .campo {
+    white-space: normal;
   }
 }
 

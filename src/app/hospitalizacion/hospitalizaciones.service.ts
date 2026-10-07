@@ -3,7 +3,11 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { Hospitalizacion, OrdenMedicaHospitalizacion } from '../models';
-import { CamaOpcion } from './hospitalizacion-catalogos';
+import {
+  CamaOpcion,
+  ESTADO_CAMA_LIBRE,
+  ESTADO_CAMA_OCUPADA,
+} from './hospitalizacion-catalogos';
 
 export interface HospitalizacionCompleta {
   hospitalizacion: Hospitalizacion;
@@ -21,6 +25,24 @@ export interface MedicoOpcion {
   especialidad: string;
 }
 
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
+export interface UsuarioOpcion {
+  id: number;
+  nombre: string;
+}
+
 interface ApiResponse<T> {
   exito: boolean;
   mensaje: string;
@@ -32,8 +54,11 @@ interface ApiResponse<T> {
 export class HospitalizacionesService {
   private apiUrl = 'https://localhost:7086/api/Hospitalizaciones';
   private apiUrlCamas = 'https://localhost:7086/api/Camas';
+  private apiUrlHabitaciones = 'https://localhost:7086/api/Habitaciones';
   private apiUrlMedicos = 'https://localhost:7086/api/empleados/medicos';
   private apiUrlCatalogos = 'https://localhost:7086/api/catalogos';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrlUsuarios = 'https://localhost:7086/api/Usuarios';
 
   private registros = signal<HospitalizacionCompleta[]>([]);
   private esNavegador: boolean;
@@ -310,48 +335,58 @@ export class HospitalizacionesService {
   // =============================================================
 
   RetornarCamas(): Observable<CamaOpcion[]> {
-    return this.http.get<ApiResponse<any[]>>(this.apiUrlCamas, {
+    return this.http.get<ApiResponse<any[]>>(this.apiUrlHabitaciones, {
       headers: this.getHeaders(),
     }).pipe(
       map((resp) => {
-        const camas = resp.datos ?? [];
+        const items = resp.datos ?? [];
+        const camas: CamaOpcion[] = [];
+
+        for (const item of items) {
+          const hab = item?.habitacion ?? {};
+          const camasDeHab = item?.camas ?? [];
+
+          if (!Array.isArray(camasDeHab)) continue;
+
+          const numeroHab =
+            hab.numero ?? hab.numeroHabitacion ?? hab.numero_habitacion ?? '?';
+
+          for (const c of camasDeHab) {
+            if (c?.activo === false) continue;
+
+            camas.push({
+              id: Number(c.idCama),
+              label: `Habitación ${numeroHab} · Cama ${c.numeroCama}`,
+              idTipoHabitacion: Number(hab.idTipoHabitacion ?? 0),
+              idHabitacion: Number(c.idHabitacion ?? hab.idHabitacion),
+              numeroCama: String(c.numeroCama),
+              idEstadoCama: Number(c.idEstadoCama),
+            });
+          }
+        }
+
         console.log('🔍 [Hospitalizaciones] Camas recibidas:', camas.length);
-        return camas
-          .filter((c) => c.activo !== false)
-          .map((c) => this.aCamaOpcion(c));
+        return camas;
       }),
     );
   }
 
-  private aCamaOpcion(c: any): CamaOpcion {
-    if (c.id != null && c.label != null) {
-      return {
-        id: Number(c.id),
-        label: String(c.label),
-        idTipoHabitacion: Number(c.idTipoHabitacion ?? 0),
-      };
-    }
-    const idCama = c.idCama ?? c.id_cama ?? c.IdCama ?? 0;
-    const idHabitacion = c.idHabitacion ?? c.id_habitacion ?? c.IdHabitacion ?? 0;
-    const numeroCama = c.numeroCama ?? c.numero_cama ?? c.NumeroCama ?? '?';
-    const numeroHabitacion =
-      c.numeroHabitacion ??
-      c.numero_habitacion ??
-      c.NumeroHabitacion ??
-      c.habitacion?.numero ??
-      c.Habitacion?.numero ??
-      `Hab ${idHabitacion}`;
-    const idTipoHabitacion =
-      c.idTipoHabitacion ??
-      c.id_tipo_habitacion ??
-      c.IdTipoHabitacion ??
-      c.habitacion?.idTipoHabitacion ??
-      0;
-    return {
-      id: Number(idCama),
-      label: `Habitación ${numeroHabitacion} · Cama ${numeroCama}`,
-      idTipoHabitacion: Number(idTipoHabitacion),
-    };
+  RetornarCamasLibres(): Observable<CamaOpcion[]> {
+    return this.RetornarCamas().pipe(
+      map((camas) => camas.filter((c) => c.idEstadoCama === ESTADO_CAMA_LIBRE)),
+      tap((camas) => console.log('🔍 [Hospitalizaciones] Camas libres:', camas.length)),
+    );
+  }
+
+  actualizarEstadoCama(cama: CamaOpcion, idEstadoCama: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(
+      `${this.apiUrlHabitaciones}/${cama.idHabitacion}/camas/${cama.id}`,
+      {
+        numeroCama: cama.numeroCama,
+        idEstadoCama,
+      },
+      { headers: this.getHeaders() },
+    );
   }
 
   // =============================================================
@@ -410,6 +445,70 @@ export class HospitalizacionesService {
     return this.retornarCatalogo('TIPO_ORDEN_HOSPITALIZACION').pipe(
       tap((items) =>
         console.log('🔍 [Hospitalizaciones] Tipos de orden cargados:', items.length, items),
+      ),
+    );
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  /**
+   * Trae el historial de auditoría de un registro específico.
+   */
+  RetornarBitacoraPorRegistro(
+    tablaAfectada: string,
+    idRegistro: number,
+  ): Observable<BitacoraItem[]> {
+    return this.http.get<ApiResponse<BitacoraItem[]>>(
+      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) =>
+        (resp.datos ?? [])
+          .filter((b) => b.idRegistroAfectado === idRegistro)
+          .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+      ),
+      tap((items) =>
+        console.log(
+          `🔍 [Hospitalizaciones] Bitácora de ${tablaAfectada}#${idRegistro}:`,
+          items.length,
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Trae TODA la bitácora de una tabla (sin filtrar por id de registro).
+   * Se usa para el historial general del módulo.
+   */
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http.get<ApiResponse<BitacoraItem[]>>(
+      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+      tap((items) =>
+        console.log(`🔍 [Hospitalizaciones] Bitácora general de ${tablaAfectada}:`, items.length),
+      ),
+    );
+  }
+
+  /**
+   * Trae todos los usuarios (para mostrar el nombre del que hizo el cambio).
+   */
+  RetornarUsuarios(): Observable<UsuarioOpcion[]> {
+    return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios, {
+      headers: this.getHeaders(),
+    }).pipe(
+      map((resp) =>
+        (resp.datos ?? []).map((u: any) => ({
+          id: u.idUsuario ?? u.id_usuario,
+          nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
+        })),
+      ),
+      tap((items) =>
+        console.log('🔍 [Hospitalizaciones] Usuarios cargados:', items.length),
       ),
     );
   }

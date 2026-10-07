@@ -101,4 +101,86 @@
       </button>
     </div>
   </form>
+
+  <!-- Botón de historial (solo si ya existe el compromiso) -->
+  @if (!esNuevo()) {
+    <div class="historial-btn-wrap">
+      <button matButton type="button" (click)="abrirHistorial()">
+        <mat-icon>history</mat-icon>
+        Ver historial de este compromiso
+      </button>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Historial del compromiso
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (historialAbierto()) {
+    <div class="modal-overlay" (click)="cerrarHistorial()">
+      <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">history</mat-icon>
+            <div>
+              <h2>Historial del compromiso #{{ idConsentimiento() }}</h2>
+              <p class="modal-subtitle">Todos los cambios registrados en este compromiso.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cerrarHistorial()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (cargandoHistorial()) {
+            <p class="historial-estado">Cargando historial...</p>
+          } @else if (bitacoraSignal().length === 0) {
+            <p class="historial-estado">No hay cambios registrados para este compromiso.</p>
+          } @else {
+            <div class="historial-lista">
+              @for (item of bitacoraSignal(); track item.idBitacora) {
+                <div class="historial-item">
+                  <div class="historial-item-header">
+                    <span class="historial-badge" [ngClass]="accionClase(item.idTipoAccion)">
+                      <mat-icon>{{ accionIcono(item.idTipoAccion) }}</mat-icon>
+                      {{ accionLabel(item.idTipoAccion) }}
+                    </span>
+                    <span class="historial-meta">
+                      {{ usuarioLabel(item.idUsuario) }} · {{ formatFechaHora(item.fechaHora) }}
+                    </span>
+                  </div>
+
+                  @if (camposCambiados(item).length > 0) {
+                    <table class="historial-cambios">
+                      <thead>
+                        <tr>
+                          <th>Campo</th>
+                          <th>Antes</th>
+                          <th>Después</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (c of camposCambiados(item); track c.campo) {
+                          <tr>
+                            <td class="campo">{{ c.campo }}</td>
+                            <td class="antes">{{ c.antes }}</td>
+                            <td class="despues">{{ c.despues }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-actions">
+          <button matButton="filled" type="button" (click)="cerrarHistorial()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

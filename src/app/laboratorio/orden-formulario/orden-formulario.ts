@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -11,13 +12,16 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { OrdenDetalle, OrdenLaboratorio } from '../../models';
 import {
+  BitacoraItem,
   LaboratorioService,
   TipoExamen,
   OpcionCatalogo,
   MedicoOpcion,
+  UsuarioOpcion,
 } from '../laboratorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
@@ -46,6 +50,7 @@ function parseIsoDateLocal(iso: string): Date {
 @Component({
   selector: 'app-orden-formulario',
   imports: [
+    NgClass,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
@@ -56,6 +61,7 @@ function parseIsoDateLocal(iso: string): Date {
     MatDatepickerModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './orden-formulario.html',
@@ -74,6 +80,7 @@ export class OrdenFormulario {
   prioridadesSignal = signal<OpcionCatalogo[]>([]);
   estadosSignal = signal<OpcionCatalogo[]>([]);
   tiposExamen = signal<TipoExamen[]>([]);
+  usuariosSignal = signal<UsuarioOpcion[]>([]);
 
   filtroExamen = signal('');
 
@@ -102,6 +109,13 @@ export class OrdenFormulario {
   guardando = signal(false);
   errorGuardar = signal<string | null>(null);
   seleccionInvalida = signal(false);
+
+  // ============================================================
+  // Historial de auditoría
+  // ============================================================
+  historialAbierto = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
+  cargandoHistorial = signal(false);
 
   private detalleIdOriginal = new Map<number, number>();
 
@@ -161,6 +175,16 @@ export class OrdenFormulario {
         console.error('❌ [OrdenFormulario] Error tipos examen:', err.status);
         this.cargandoTipos.set(false);
       },
+    });
+
+    // Cargar usuarios (para el nombre en la bitácora)
+    this.laboratorioService.RetornarUsuarios().subscribe({
+      next: (u) => {
+        console.log('✅ [OrdenFormulario] Usuarios cargados:', u.length);
+        this.usuariosSignal.set(u);
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error usuarios:', err.status),
     });
 
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -244,7 +268,6 @@ export class OrdenFormulario {
         idPaciente: v.idPaciente!,
         idMedico: v.idMedico!,
         idCita: null,
-        // ✅ CAMBIO: hora actual añadida a la fecha del datepicker
         fechaOrden: toIsoDateTime(v.fecha)!,
         idPrioridad: v.idPrioridad!,
         idEstadoOrden: v.idEstadoOrden!,
@@ -281,5 +304,164 @@ export class OrdenFormulario {
         console.error('Error al guardar la orden', err);
       },
     });
+  }
+
+  // ============================================================
+  // HISTORIAL DE AUDITORÍA
+  // ============================================================
+
+  abrirHistorial(): void {
+    const id = this.idOrden();
+    if (id === 0) return;
+
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.laboratorioService
+      .RetornarBitacoraPorRegistro('ordenes_laboratorio', id)
+      .subscribe({
+        next: (items) => {
+          this.bitacoraSignal.set(items);
+          this.cargandoHistorial.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          console.error('❌ Error al cargar bitácora:', err.status);
+          this.cargandoHistorial.set(false);
+        },
+      });
+  }
+
+  cerrarHistorial(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  /** Traduce el id_tipo_accion a texto legible. */
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  /** Clase CSS según el tipo de acción. */
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  /** Icono Material según el tipo de acción. */
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  /** Traduce el id de usuario a nombre. */
+  usuarioLabel(idUsuario: number | null): string {
+    if (idUsuario == null) return 'Sistema';
+    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
+    return u?.nombre ?? `Usuario ${idUsuario}`;
+  }
+
+  /** Formatea la fecha en hora local (bitácora). */
+ formatFechaHora(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';  // ← AGREGAR ESTA LÍNEA
+    const fecha = new Date(isoConZona);                        // ← CAMBIAR esto
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  /** Devuelve la lista de campos que cambiaron entre valoresAnteriores y valoresNuevos. */
+  camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
+    try {
+      const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
+      const despues = item.valoresNuevos ? JSON.parse(item.valoresNuevos) : {};
+
+      const camposIgnorados = new Set([
+        'IdUsuarioModificacion',
+        'FechaModificacion',
+        'IdUsuarioCreacion',
+      ]);
+
+      const idRegistroReal = this.idOrden();
+
+      const cambios: Array<{ campo: string; antes: string; despues: string }> = [];
+      const claves = new Set([...Object.keys(antes), ...Object.keys(despues)]);
+
+      for (const k of claves) {
+        if (camposIgnorados.has(k)) continue;
+
+        let a = antes[k];
+        let d = despues[k];
+
+        // Parche: el backend guarda mal el IdOrden. Usamos el ID real.
+        if (k === 'IdOrden' && idRegistroReal != null) {
+          a = idRegistroReal;
+          d = idRegistroReal;
+        }
+
+        if (JSON.stringify(a) === JSON.stringify(d)) continue;
+
+        cambios.push({
+          campo: this.formatearNombreCampo(k),
+          antes: this.formatearValor(a, k),
+          despues: this.formatearValor(d, k),
+        });
+      }
+
+      cambios.sort((x, y) => {
+        if (x.campo.toLowerCase().includes('id orden')) return -1;
+        if (y.campo.toLowerCase().includes('id orden')) return 1;
+        return x.campo.localeCompare(y.campo);
+      });
+
+      return cambios;
+    } catch {
+      return [];
+    }
+  }
+
+  private formatearNombreCampo(campo: string): string {
+    return campo
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (c) => c.toUpperCase())
+      .trim();
+  }
+
+   private formatearValor(valor: any, nombreCampo: string = ''): string {
+    if (valor === null || valor === undefined) return '—';
+
+    if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
+      const fecha = new Date(valor);  // ← SIN la Z (correcto, ya está en local)
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toLocaleString('es-GT', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+    }
+
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    return String(valor);
+  }
+
+  private esCampoFecha(nombreCampo: string): boolean {
+    return /fecha|fechahora|creacion|modificacion/i.test(nombreCampo);
   }
 }

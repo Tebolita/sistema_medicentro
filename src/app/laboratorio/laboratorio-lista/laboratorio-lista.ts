@@ -1,4 +1,5 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -12,13 +13,15 @@ import {
   TipoExamen,
   OpcionCatalogo,
   MedicoOpcion,
+  BitacoraItem,
+  UsuarioOpcion,
 } from '../laboratorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 
 @Component({
   selector: 'app-laboratorio-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './laboratorio-lista.html',
   styleUrl: './laboratorio-lista.css',
 })
@@ -37,6 +40,22 @@ export class LaboratorioLista {
   medicos = signal<MedicoOpcion[]>([]);
   estados = signal<OpcionCatalogo[]>([]);
   prioridades = signal<OpcionCatalogo[]>([]);
+  usuariosSignal = signal<UsuarioOpcion[]>([]);
+
+  // ============================================================
+  // Historial general de Laboratorio
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
+  filtroHistorial = signal<'todas' | 'ordenes'>('todas');
+
+  bitacoraFiltrada = computed(() => {
+    const filtro = this.filtroHistorial();
+    const items = this.bitacoraSignal();
+    if (filtro === 'todas') return items;
+    return items.filter((i) => i.tablaAfectada === 'ordenes_laboratorio');
+  });
 
   opcionesLaboratorio =
     MENU_SECTIONS.find((s) => s.slug === 'laboratorio-diagnostico')?.items ?? [];
@@ -76,6 +95,13 @@ export class LaboratorioLista {
       },
       error: (err: HttpErrorResponse) =>
         console.error('❌ [LaboratorioLista] Prioridades:', err.status),
+    });
+
+    // Cargar usuarios (para el nombre en la bitácora)
+    this.laboratorioService.RetornarUsuarios().subscribe({
+      next: (u) => this.usuariosSignal.set(u),
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [LaboratorioLista] Usuarios:', err.status),
     });
 
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
@@ -155,18 +181,97 @@ export class LaboratorioLista {
     return 'estado-solicitada';
   }
 
-  formatFecha(iso: string): string {
-    const fecha = new Date(iso);
-    return fecha.toLocaleString('es-GT', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+ // ✅ DESPUÉS (bien):
+formatFecha(iso: string): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-GT', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
   eliminar(id: number, paciente: string): void {
     if (!confirm(`¿Eliminar la orden de "${paciente}"?`)) return;
     this.laboratorioService.eliminar(id);
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+    this.filtroHistorial.set('todas');
+
+    this.laboratorioService.RetornarBitacoraGeneral('ordenes_laboratorio').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error bitácora laboratorio:', err.status);
+        this.cargandoHistorial.set(false);
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'ordenes_laboratorio') return 'Orden de laboratorio';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'ordenes_laboratorio') return 'science';
+    return 'description';
+  }
+
+  usuarioLabel(idUsuario: number | null): string {
+    if (idUsuario == null) return 'Sistema';
+    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
+    return u?.nombre ?? `Usuario ${idUsuario}`;
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 }

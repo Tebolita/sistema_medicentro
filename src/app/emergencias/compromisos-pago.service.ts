@@ -39,6 +39,24 @@ export interface MedicoOpcion {
   especialidad: string;
 }
 
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
+export interface UsuarioOpcion {
+  id: number;
+  nombre: string;
+}
+
 interface ApiResponse<T> {
   exito: boolean;
   mensaje: string;
@@ -51,6 +69,8 @@ export class CompromisosPagoService {
   private apiUrl = 'https://localhost:7086/api/compromisos-pago';
   private apiUrlMedicos = 'https://localhost:7086/api/empleados/medicos';
   private apiUrlCatalogos = 'https://localhost:7086/api/catalogos';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrlUsuarios = 'https://localhost:7086/api/Usuarios';
 
   private registros = signal<CompromisoPago[]>([]);
   private esNavegador: boolean;
@@ -253,7 +273,7 @@ export class CompromisosPagoService {
   }
 
   // =============================================================
-  // CATÁLOGOS GENÉRICOS (parentesco, estado consentimiento)
+  // CATÁLOGOS GENÉRICOS
   // =============================================================
 
   private retornarCatalogo(codigoTipo: string): Observable<OpcionCatalogo[]> {
@@ -282,6 +302,60 @@ export class CompromisosPagoService {
     return this.retornarCatalogo('ESTADO_CONSENTIMIENTO').pipe(
       tap((items) =>
         console.log('🔍 [CompromisosPago] Estados consentimiento cargados:', items.length, items),
+      ),
+    );
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  RetornarBitacoraPorRegistro(
+    tablaAfectada: string,
+    idRegistro: number,
+  ): Observable<BitacoraItem[]> {
+    return this.http.get<ApiResponse<BitacoraItem[]>>(
+      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) =>
+        (resp.datos ?? [])
+          .filter((b) => b.idRegistroAfectado === idRegistro)
+          .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+      ),
+      tap((items) =>
+        console.log(
+          `🔍 [CompromisosPago] Bitácora de ${tablaAfectada}#${idRegistro}:`,
+          items.length,
+        ),
+      ),
+    );
+  }
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http.get<ApiResponse<BitacoraItem[]>>(
+      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+      tap((items) =>
+        console.log(`🔍 [CompromisosPago] Bitácora general de ${tablaAfectada}:`, items.length),
+      ),
+    );
+  }
+
+  RetornarUsuarios(): Observable<UsuarioOpcion[]> {
+    return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios, {
+      headers: this.getHeaders(),
+    }).pipe(
+      map((resp) =>
+        (resp.datos ?? []).map((u: any) => ({
+          id: u.idUsuario ?? u.id_usuario,
+          nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
+        })),
+      ),
+      tap((items) =>
+        console.log('🔍 [CompromisosPago] Usuarios cargados:', items.length),
       ),
     );
   }

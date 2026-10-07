@@ -30,6 +30,24 @@ export interface MedicoOpcion {
   especialidad: string;
 }
 
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
+export interface UsuarioOpcion {
+  id: number;
+  nombre: string;
+}
+
 type OrdenApi =
   | (OrdenLaboratorio & { detalles: OrdenDetalle[] })
   | { orden: OrdenLaboratorio; detalles: OrdenDetalle[] };
@@ -47,6 +65,8 @@ export class LaboratorioService {
   private apiUrlTiposExamen = 'https://localhost:7086/api/tipos-examen';
   private apiUrlMedicos = 'https://localhost:7086/api/empleados/medicos';
   private apiUrlCatalogos = 'https://localhost:7086/api/catalogos';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrlUsuarios = 'https://localhost:7086/api/Usuarios';
 
   private registros = signal<OrdenCompleta[]>([]);
   private esNavegador: boolean;
@@ -290,6 +310,60 @@ export class LaboratorioService {
     return this.retornarCatalogo('ESTADO_ORDEN_LABORATORIO').pipe(
       tap((items) =>
         console.log('🔍 [LaboratorioService] Estados cargados:', items.length, items),
+      ),
+    );
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  RetornarBitacoraPorRegistro(
+    tablaAfectada: string,
+    idRegistro: number,
+  ): Observable<BitacoraItem[]> {
+    return this.http.get<ApiResponse<BitacoraItem[]>>(
+      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) =>
+        (resp.datos ?? [])
+          .filter((b) => b.idRegistroAfectado === idRegistro)
+          .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+      ),
+      tap((items) =>
+        console.log(
+          `🔍 [LaboratorioService] Bitácora de ${tablaAfectada}#${idRegistro}:`,
+          items.length,
+        ),
+      ),
+    );
+  }
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http.get<ApiResponse<BitacoraItem[]>>(
+      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+      tap((items) =>
+        console.log(`🔍 [LaboratorioService] Bitácora general de ${tablaAfectada}:`, items.length),
+      ),
+    );
+  }
+
+  RetornarUsuarios(): Observable<UsuarioOpcion[]> {
+    return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios, {
+      headers: this.getHeaders(),
+    }).pipe(
+      map((resp) =>
+        (resp.datos ?? []).map((u: any) => ({
+          id: u.idUsuario ?? u.id_usuario,
+          nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
+        })),
+      ),
+      tap((items) =>
+        console.log('🔍 [LaboratorioService] Usuarios cargados:', items.length),
       ),
     );
   }
