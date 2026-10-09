@@ -1,14 +1,21 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, PLATFORM_ID, computed, inject, signal, viewChild } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { PolizasService } from '../polizas.service';
-import { ASEGURADORAS, ESTADOS_POLIZA, RAMOS_SEGURO } from '../polizas-catalogos';
-import { PacientesService } from '../../pacientes/pacientes.service';
+import { forkJoin } from 'rxjs';
 import { MENU_SECTIONS } from '../../shared/menu-data';
+
+import { PolizaService } from '../../service/poliza.service';
+import { AseguradoraService } from '../../service/aseguradora.service';
+import { PacienteService } from '../../service/paciente.service';
+import { CatalogoService } from '../../service/catalogo.service';
+import { PolizaSeguro, AseguradoraListado } from '../../models/seguro.model';
+import { PacienteListado } from '../../models/paciente.model';
+import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
 
 @Component({
   selector: 'app-polizas-lista',
@@ -17,9 +24,12 @@ import { MENU_SECTIONS } from '../../shared/menu-data';
   styleUrl: './polizas-lista.css',
 })
 export class PolizasLista {
-  private polizasService = inject(PolizasService);
-  private pacientesService = inject(PacientesService);
+  private polizaService = inject(PolizaService);
+  private aseguradoraService = inject(AseguradoraService);
+  private pacienteService = inject(PacienteService);
+  private catalogoService = inject(CatalogoService);
   private route = inject(ActivatedRoute);
+  private platformId = inject(PLATFORM_ID);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -34,6 +44,13 @@ export class PolizasLista {
     (item) => item.route !== '/home/polizas' || item.queryParams,
   );
 
+  // Datos reales desde la API (ya no hay datos de ejemplo).
+  private lista = signal<PolizaSeguro[]>([]);
+  private pacientesApi = signal<PacienteListado[]>([]);
+  private aseguradoras = signal<AseguradoraListado[]>([]);
+  private ramos = signal<CatalogoOpcion[]>([]);
+  private estados = signal<CatalogoOpcion[]>([]);
+
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       if (params.get('foco') !== 'buscar') {
@@ -43,11 +60,35 @@ export class PolizasLista {
       queueMicrotask(() => this.searchInput()?.nativeElement.focus());
       setTimeout(() => this.resaltarBusqueda.set(false), 1600);
     });
+
+    // En el servidor (SSR) no hay sesión ni token: solo se consulta desde el navegador.
+    if (isPlatformBrowser(this.platformId)) {
+      this.cargar();
+    }
+  }
+
+  private cargar(): void {
+    forkJoin({
+      polizas: this.polizaService.RetornarPolizas(),
+      pacientes: this.pacienteService.RetornarPacientes(),
+      aseguradoras: this.aseguradoraService.RetornarAseguradoras(),
+      ramos: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.RAMO_SEGURO),
+      estados: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.ESTADO_POLIZA),
+    }).subscribe({
+      next: (r) => {
+        this.lista.set(r.polizas.datos ?? []);
+        this.pacientesApi.set(r.pacientes.datos ?? []);
+        this.aseguradoras.set(r.aseguradoras.datos ?? []);
+        this.ramos.set(r.ramos.datos ?? []);
+        this.estados.set(r.estados.datos ?? []);
+      },
+      error: (err: Error) => alert('No se pudieron cargar las pólizas: ' + err.message),
+    });
   }
 
   polizas = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.polizasService.listar();
+    const lista = this.lista();
     if (!term) {
       return lista;
     }
@@ -61,7 +102,7 @@ export class PolizasLista {
   });
 
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesApi().find((pac) => pac.idPaciente === idPaciente);
     if (!p) {
       return 'Paciente no encontrado';
     }
@@ -74,20 +115,22 @@ export class PolizasLista {
   }
 
   aseguradoraLabel(idAseguradora: number): string {
-    return ASEGURADORAS.find((a) => a.id === idAseguradora)?.nombre ?? '—';
+    return this.aseguradoras().find((a) => a.idAseguradora === idAseguradora)?.nombre ?? '—';
   }
 
   ramoLabel(idRamo: number): string {
-    return RAMOS_SEGURO.find((r) => r.id === idRamo)?.label ?? '—';
+    return this.ramos().find((r) => r.id === idRamo)?.nombre ?? '—';
   }
 
   estadoLabel(idEstadoPoliza: number): string {
-    return ESTADOS_POLIZA.find((e) => e.id === idEstadoPoliza)?.label ?? '—';
+    return this.estados().find((e) => e.id === idEstadoPoliza)?.nombre ?? '—';
   }
 
+  // Se compara por código (VIGENTE/VENCIDA/SUSPENDIDA): los ids dependen de cada base.
   estadoClase(idEstadoPoliza: number): string {
-    if (idEstadoPoliza === 2) return 'estado-vencida';
-    if (idEstadoPoliza === 3) return 'estado-suspendida';
+    const codigo = this.estados().find((e) => e.id === idEstadoPoliza)?.codigo;
+    if (codigo === 'VENCIDA') return 'estado-vencida';
+    if (codigo === 'SUSPENDIDA') return 'estado-suspendida';
     return 'estado-vigente';
   }
 
@@ -101,6 +144,9 @@ export class PolizasLista {
     if (!confirm(`¿Eliminar la póliza de "${paciente}"?`)) {
       return;
     }
-    this.polizasService.eliminar(id);
+    this.polizaService.EliminarPoliza(id).subscribe({
+      next: () => this.lista.update((l) => l.filter((p) => p.idPoliza !== id)),
+      error: (err: Error) => alert('No se pudo eliminar la póliza: ' + err.message),
+    });
   }
 }

@@ -69,6 +69,7 @@ export const CODIGOS_CATALOGO = {
   DIA_SEMANA: 'DIA_SEMANA',
   TIPO_RECORDATORIO: 'TIPO_RECORDATORIO',
   ESTADO_ENVIO: 'ESTADO_ENVIO',
+  TIPO_CONSULTA: 'TIPO_CONSULTA', // Primera vez / Reconsulta (se guarda en citas.notas)
 
   // Seguros médicos
   RAMO_SEGURO: 'RAMO_SEGURO',
