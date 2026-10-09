@@ -23,7 +23,12 @@ export interface CatalogoValor {
   id: number;
   codigo: string;
   nombre: string;
+  descripcion: string | null;
   orden: number;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 // GET /api/catalogos: lista TODOS los cat_tipo_catalogo que existen en la

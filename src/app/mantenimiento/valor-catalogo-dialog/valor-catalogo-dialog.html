@@ -12,6 +12,8 @@
         <mat-error>Requerido</mat-error>
       } @else if (form.controls.codigo.errors?.['pattern']) {
         <mat-error>Solo letras, números y guion bajo</mat-error>
+      } @else if (form.controls.codigo.errors?.['codigoDuplicado']) {
+        <mat-error>Ya hay otro valor con este código en este catálogo</mat-error>
       }
     </mat-form-field>
 
@@ -37,6 +39,16 @@
       <mat-label>Descripción (opcional)</mat-label>
       <input matInput formControlName="descripcion" />
     </mat-form-field>
+
+    @if (data.valor) {
+      <app-auditoria-info
+        class="full-width"
+        [fechaCreacion]="data.valor.fechaCreacion"
+        [idUsuarioCreacion]="data.valor.idUsuarioCreacion"
+        [fechaModificacion]="data.valor.fechaModificacion"
+        [idUsuarioModificacion]="data.valor.idUsuarioModificacion"
+      />
+    }
 
     @if (error()) {
       <p class="form-error full-width">{{ error() }}</p>

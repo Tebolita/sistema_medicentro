@@ -106,9 +106,6 @@ export class SalaFormulario {
     });
   }
 
-  // Igual que en la lista: el backend tiene el campo pero todavía no lo
-  // llena (ver SOLICITUD_ENDPOINTS_ELIMINADOS.md punto 5), así que esto
-  // muestra "—" hasta que eso se arregle del lado del backend.
   usuarioLabel(id: number | null): string {
     if (!id) {
       return '—';

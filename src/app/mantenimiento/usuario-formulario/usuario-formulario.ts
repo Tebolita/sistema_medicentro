@@ -14,6 +14,7 @@ import { Usuario, UsuarioRol, UsuariosService } from '../../service/usuarios.ser
 import { EmpleadosService } from '../../service/empleados.service';
 import { RolesService } from '../../service/roles.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 const ESTADOS_USUARIO_EJEMPLO = [
   { id: 1, label: 'Activo' },
@@ -33,6 +34,7 @@ const ESTADOS_USUARIO_EJEMPLO = [
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    AuditoriaInfo,
   ],
   templateUrl: './usuario-formulario.html',
   styleUrl: './usuario-formulario.css',
@@ -60,6 +62,7 @@ export class UsuarioFormulario {
   esNuevo = computed(() => this.idUsuario() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Usuario | null>(null);
 
   form = this.fb.nonNullable.group({
     nombreUsuario: ['', Validators.required],
@@ -123,6 +126,7 @@ export class UsuarioFormulario {
 
   private cargar(u: Usuario): void {
     this.idUsuario.set(u.idUsuario);
+    this.registro.set(u);
     this.form.patchValue({
       nombreUsuario: u.nombreUsuario,
       correo: u.correo,

@@ -1,0 +1,96 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo', 'mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Interacciones de medicamentos</h1>
+      <p>Pares de medicamentos que no deben combinarse, usados para las alertas de Farmacia.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/interacciones/nueva">
+      <mat-icon>add</mat-icon>
+      Nueva interacción
+    </a>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activas'" (click)="verActivas()">
+      <mat-icon>warning</mat-icon>
+      Activas
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminadas'" (click)="verEliminadas()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por medicamento o descripción..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (i of interacciones(); track i.idInteraccion) {
+      <a
+        class="item-card"
+        [class.inactivo]="vista() === 'eliminadas'"
+        [routerLink]="vista() === 'activas' ? ['/home/mantenimiento/interacciones', i.idInteraccion] : null"
+      >
+        <div class="item-icon"><mat-icon>warning</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ medicamentoNombre(i.idMedicamento1) }} ↔ {{ medicamentoNombre(i.idMedicamento2) }}</h2>
+          <span class="item-meta">{{ severidadLabel(i.idNivelSeveridad) }} · {{ i.descripcion }}</span>
+        </div>
+        @if (vista() === 'activas') {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(i.idInteraccion, medicamentoNombre(i.idMedicamento1) + ' / ' + medicamentoNombre(i.idMedicamento2))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(i.idInteraccion, medicamentoNombre(i.idMedicamento1) + ' / ' + medicamentoNombre(i.idMedicamento2))"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (interacciones().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>warning</mat-icon>
+        <p>
+          @if (vista() === 'activas') {
+            No se encontraron interacciones{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay interacciones eliminadas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

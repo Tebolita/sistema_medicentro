@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CatalogoValor, CatalogosService } from '../../service/catalogos.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 export interface ValorCatalogoDialogData {
   codigoTipo: string;
@@ -26,6 +27,7 @@ export interface ValorCatalogoDialogData {
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   templateUrl: './valor-catalogo-dialog.html',
   styleUrl: './valor-catalogo-dialog.css',
@@ -53,10 +55,26 @@ export class ValorCatalogoDialog {
     return duplicado ? { ordenDuplicado: true } : null;
   };
 
+  // Mismo patrón que ordenDuplicadoValidator: el backend ya rechaza un
+  // código repetido dentro del mismo catálogo (CatalogosService.cs,
+  // Crear/EditarValorAsync), pero avisar aquí evita la ida y vuelta al
+  // servidor para algo que ya se puede saber con lo que hay en caché.
+  private codigoDuplicadoValidator = (control: AbstractControl): ValidationErrors | null => {
+    const propio = this.data.valor?.id;
+    const codigo = (control.value ?? '').trim().toUpperCase();
+    const duplicado = this.catalogosService
+      .obtener(this.data.codigoTipo)()
+      .some((v) => v.codigo.toUpperCase() === codigo && v.id !== propio);
+    return duplicado ? { codigoDuplicado: true } : null;
+  };
+
   form = this.fb.nonNullable.group({
-    codigo: [this.data.valor?.codigo ?? '', [Validators.required, Validators.pattern(/^[A-Za-z0-9_]+$/)]],
+    codigo: [
+      this.data.valor?.codigo ?? '',
+      [Validators.required, Validators.pattern(/^[A-Za-z0-9_]+$/), this.codigoDuplicadoValidator],
+    ],
     nombre: [this.data.valor?.nombre ?? '', Validators.required],
-    descripcion: [''],
+    descripcion: [this.data.valor?.descripcion ?? ''],
     orden: [
       this.data.valor?.orden ?? this.data.siguienteOrden,
       [Validators.required, Validators.min(1), this.ordenDuplicadoValidator],

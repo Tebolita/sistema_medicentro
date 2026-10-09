@@ -1,0 +1,83 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo', 'mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Bitácora de auditoría</h1>
+      <p>Qué se creó, modificó o eliminó en el sistema, por quién y cuándo — últimos 500 registros, los más recientes primero.</p>
+    </div>
+  </div>
+
+  <div class="bitacora-filtros">
+    <mat-form-field appearance="outline">
+      <mat-label>Tabla afectada</mat-label>
+      <input matInput placeholder="Ej. medicamentos, usuarios, convenios..." [(ngModel)]="filtroTabla" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Usuario</mat-label>
+      <mat-select [(ngModel)]="filtroUsuario">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (u of usuariosService.listar(); track u.idUsuario) {
+          <mat-option [value]="u.idUsuario">{{ u.nombreUsuario }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <button matButton="filled" type="button" (click)="buscar()">
+      <mat-icon>search</mat-icon>
+      Buscar
+    </button>
+    <button matButton type="button" (click)="limpiar()">Limpiar</button>
+  </div>
+
+  @if (errorCarga()) {
+    <p class="carga-error">{{ errorCarga() }}</p>
+  }
+
+  <div class="bitacora-tabla">
+    @for (r of registros(); track r.idBitacora) {
+      <div class="bitacora-fila">
+        <button type="button" class="bitacora-resumen" (click)="toggleDetalle(r.idBitacora)">
+          <mat-icon class="bitacora-chevron" [class.abierto]="expandidos().has(r.idBitacora)">chevron_right</mat-icon>
+          <span class="bitacora-accion" [class]="'accion-' + r.idTipoAccion">{{ accionLabel(r.idTipoAccion) }}</span>
+          <span class="bitacora-tabla-nombre">{{ r.tablaAfectada }}</span>
+          @if (r.idRegistroAfectado != null) {
+            <span class="item-meta">#{{ r.idRegistroAfectado }}</span>
+          }
+          <span class="item-meta">{{ usuarioNombre(r.idUsuario) }}</span>
+          <span class="item-meta bitacora-fecha">{{ r.fechaHora | date: 'd MMM y, HH:mm' }}</span>
+        </button>
+
+        @if (expandidos().has(r.idBitacora)) {
+          <div class="bitacora-detalle">
+            @if (r.ipOrigen) {
+              <p class="item-meta">IP: {{ r.ipOrigen }}</p>
+            }
+            @if (r.valoresAnteriores) {
+              <div>
+                <strong>Valores anteriores</strong>
+                <pre>{{ r.valoresAnteriores }}</pre>
+              </div>
+            }
+            @if (r.valoresNuevos) {
+              <div>
+                <strong>Valores nuevos</strong>
+                <pre>{{ r.valoresNuevos }}</pre>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (registros().length === 0 && !cargando() && !errorCarga() && yaBusco()) {
+      <div class="empty-state">
+        <mat-icon>history</mat-icon>
+        <p>No hay registros de bitácora para estos filtros.</p>
+      </div>
+    }
+  </div>
+</div>

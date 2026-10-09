@@ -7,9 +7,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Cama, HabitacionCompleta, HabitacionInput, HabitacionesService } from '../../service/habitaciones.service';
+import { Cama, Habitacion, HabitacionCompleta, HabitacionInput, HabitacionesService } from '../../service/habitaciones.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_HABITACION, ESTADOS_HABITACION, ESTADOS_CAMA } from '../habitaciones-catalogos';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-habitacion-formulario',
@@ -22,6 +23,7 @@ import { TIPOS_HABITACION, ESTADOS_HABITACION, ESTADOS_CAMA } from '../habitacio
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    AuditoriaInfo,
   ],
   templateUrl: './habitacion-formulario.html',
   styleUrl: './habitacion-formulario.css',
@@ -53,6 +55,7 @@ export class HabitacionFormulario {
   esNueva = computed(() => this.idHabitacion() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Habitacion | null>(null);
 
   form = this.fb.nonNullable.group({
     numero: ['', Validators.required],
@@ -87,6 +90,7 @@ export class HabitacionFormulario {
 
   private cargar(r: HabitacionCompleta): void {
     this.idHabitacion.set(r.habitacion.idHabitacion);
+    this.registro.set(r.habitacion);
     this.form.patchValue({
       numero: r.habitacion.numero,
       piso: r.habitacion.piso,

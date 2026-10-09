@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Permiso, PermisoInput, PermisosService } from '../../service/permisos.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-permiso-formulario',
@@ -19,6 +20,7 @@ import { CatalogosService } from '../../service/catalogos.service';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   templateUrl: './permiso-formulario.html',
   styleUrl: './permiso-formulario.css',
@@ -45,6 +47,7 @@ export class PermisoFormulario {
   esNuevo = computed(() => this.idPermiso() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Permiso | null>(null);
 
   form = this.fb.nonNullable.group({
     codigo: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9_.:-]+$/)]],
@@ -66,6 +69,7 @@ export class PermisoFormulario {
 
   private cargar(p: Permiso): void {
     this.idPermiso.set(p.idPermiso);
+    this.registro.set(p);
     this.form.patchValue({
       codigo: p.codigo,
       nombre: p.nombre,

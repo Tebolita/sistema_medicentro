@@ -16,6 +16,10 @@ export interface Convenio {
   condiciones: string | null;
   idEstadoConvenio: number;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface ConvenioInput {

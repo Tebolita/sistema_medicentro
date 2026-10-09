@@ -27,6 +27,10 @@ export interface Empleado {
   correo: string | null;
   direccion: string | null;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 // EmpleadoInputDto real: igual que Empleado pero sin id/activo.

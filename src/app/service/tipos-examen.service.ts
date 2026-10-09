@@ -14,6 +14,10 @@ export interface TipoExamen {
   idCategoriaExamen: number;
   descripcion: string | null;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface TipoExamenInput {

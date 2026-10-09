@@ -15,6 +15,10 @@ export interface TipoConsentimiento {
   nombre: string;
   plantillaTexto: string | null;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface TipoConsentimientoInput {

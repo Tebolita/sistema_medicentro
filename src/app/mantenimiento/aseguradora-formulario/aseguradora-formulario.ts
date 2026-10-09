@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Aseguradora, AseguradoraInput, AseguradorasService } from '../../service/aseguradoras.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_ENTIDAD_ASEGURADORA } from '../aseguradoras-catalogos';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-aseguradora-formulario',
@@ -20,6 +21,7 @@ import { TIPOS_ENTIDAD_ASEGURADORA } from '../aseguradoras-catalogos';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   templateUrl: './aseguradora-formulario.html',
   styleUrl: './aseguradora-formulario.css',
@@ -41,6 +43,7 @@ export class AseguradoraFormulario {
   esNueva = computed(() => this.idAseguradora() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Aseguradora | null>(null);
 
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -64,6 +67,7 @@ export class AseguradoraFormulario {
 
   private cargar(a: Aseguradora): void {
     this.idAseguradora.set(a.idAseguradora);
+    this.registro.set(a);
     this.form.patchValue({
       nombre: a.nombre,
       nit: a.nit ?? '',

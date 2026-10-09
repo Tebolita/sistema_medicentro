@@ -1,0 +1,15 @@
+@import '../mantenimiento.css';
+
+.recurso-field {
+  max-width: 420px;
+  width: 100%;
+}
+
+.solo-lectura {
+  background: rgba(120, 144, 156, 0.12);
+  color: var(--c-text-muted);
+}
+
+.item-meta-baja {
+  font-style: italic;
+}

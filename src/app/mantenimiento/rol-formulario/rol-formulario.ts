@@ -8,10 +8,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Rol, RolPermiso, RolesService } from '../../service/roles.service';
 import { PermisosService } from '../../service/permisos.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-rol-formulario',
-  imports: [ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatCheckboxModule, MatButtonModule, MatIconModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatCheckboxModule,
+    MatButtonModule,
+    MatIconModule,
+    AuditoriaInfo,
+  ],
   templateUrl: './rol-formulario.html',
   styleUrl: './rol-formulario.css',
 })
@@ -28,6 +38,7 @@ export class RolFormulario {
   esNuevo = computed(() => this.idRol() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Rol | null>(null);
 
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -55,6 +66,7 @@ export class RolFormulario {
 
   private cargar(r: Rol): void {
     this.idRol.set(r.idRol);
+    this.registro.set(r);
     this.form.patchValue({ nombre: r.nombre, descripcion: r.descripcion ?? '' });
     this.cargarPermisos();
   }

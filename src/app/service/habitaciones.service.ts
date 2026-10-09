@@ -15,6 +15,10 @@ export interface Habitacion {
   idTipoHabitacion: number | null;
   idEstadoHabitacion: number;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface Cama {

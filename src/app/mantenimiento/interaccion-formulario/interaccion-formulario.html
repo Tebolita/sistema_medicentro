@@ -1,0 +1,78 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/interacciones" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Interacciones de medicamentos
+    </a>
+    <h1>{{ esNueva() ? 'Nueva interacción' : 'Editar interacción' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Medicamento 1</mat-label>
+        <mat-select formControlName="idMedicamento1">
+          @for (m of medicamentos(); track m.idMedicamento) {
+            <mat-option [value]="m.idMedicamento">{{ m.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedicamento1.invalid && form.controls.idMedicamento1.touched) {
+          <mat-error>Selecciona un medicamento</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Medicamento 2</mat-label>
+        <mat-select formControlName="idMedicamento2">
+          @for (m of medicamentos(); track m.idMedicamento) {
+            <mat-option [value]="m.idMedicamento">{{ m.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedicamento2.invalid && form.controls.idMedicamento2.touched) {
+          <mat-error>Selecciona un medicamento</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Severidad</mat-label>
+        <mat-select formControlName="idNivelSeveridad">
+          @for (s of severidades(); track s.id) {
+            <mat-option [value]="s.id">{{ s.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idNivelSeveridad.invalid && form.controls.idNivelSeveridad.touched) {
+          <mat-error>Selecciona la severidad</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Descripción</mat-label>
+        <textarea matInput formControlName="descripcion" rows="4" placeholder="Qué pasa si se combinan y qué hacer"></textarea>
+        @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (registro()) {
+      <app-auditoria-info
+        [fechaCreacion]="registro()!.fechaCreacion"
+        [idUsuarioCreacion]="registro()!.idUsuarioCreacion"
+        [fechaModificacion]="registro()!.fechaModificacion"
+        [idUsuarioModificacion]="registro()!.idUsuarioModificacion"
+      />
+    }
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/interacciones">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

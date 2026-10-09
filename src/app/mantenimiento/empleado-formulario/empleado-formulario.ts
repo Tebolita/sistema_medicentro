@@ -11,6 +11,7 @@ import { PuestosService } from '../../service/puestos.service';
 import { EspecialidadesService } from '../../service/especialidades.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { GENEROS, TIPOS_DOCUMENTO, ESTADOS_EMPLEADO } from '../empleados-catalogos';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-empleado-formulario',
@@ -22,6 +23,7 @@ import { GENEROS, TIPOS_DOCUMENTO, ESTADOS_EMPLEADO } from '../empleados-catalog
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   templateUrl: './empleado-formulario.html',
   styleUrl: './empleado-formulario.css',
@@ -60,6 +62,7 @@ export class EmpleadoFormulario {
   esNuevo = computed(() => this.idEmpleado() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Empleado | null>(null);
 
   form = this.fb.nonNullable.group({
     primerNombre: ['', Validators.required],
@@ -94,6 +97,7 @@ export class EmpleadoFormulario {
 
   private cargar(e: Empleado): void {
     this.idEmpleado.set(e.idEmpleado);
+    this.registro.set(e);
     this.form.patchValue({
       primerNombre: e.primerNombre,
       segundoNombre: e.segundoNombre ?? '',

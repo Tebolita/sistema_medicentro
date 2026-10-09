@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Convenio, ConvenioInput, ConveniosService } from '../../service/convenios.service';
 import { AseguradorasService } from '../../service/aseguradoras.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-convenio-formulario',
@@ -20,6 +21,7 @@ import { CatalogosService } from '../../service/catalogos.service';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   templateUrl: './convenio-formulario.html',
   styleUrl: './convenio-formulario.css',
@@ -53,6 +55,7 @@ export class ConvenioFormulario {
   esNuevo = computed(() => this.idConvenio() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Convenio | null>(null);
 
   form = this.fb.nonNullable.group({
     idAseguradora: this.fb.control<number | null>(null, Validators.required),
@@ -77,6 +80,7 @@ export class ConvenioFormulario {
 
   private cargar(c: Convenio): void {
     this.idConvenio.set(c.idConvenio);
+    this.registro.set(c);
     this.form.patchValue({
       idAseguradora: c.idAseguradora,
       nombreConvenio: c.nombreConvenio,

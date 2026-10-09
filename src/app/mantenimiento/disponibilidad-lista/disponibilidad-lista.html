@@ -1,0 +1,96 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo', 'mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Disponibilidad de médicos</h1>
+      <p>Horario semanal recurrente de cada médico (módulo Recursos Humanos).</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/disponibilidad-medicos/nueva">
+      <mat-icon>add</mat-icon>
+      Nueva disponibilidad
+    </a>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activas'" (click)="verActivas()">
+      <mat-icon>event_available</mat-icon>
+      Activas
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminadas'" (click)="verEliminadas()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por médico o día..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (d of disponibilidades(); track d.idDisponibilidad) {
+      <a
+        class="item-card"
+        [class.inactivo]="vista() === 'eliminadas'"
+        [routerLink]="vista() === 'activas' ? ['/home/mantenimiento/disponibilidad-medicos', d.idDisponibilidad] : null"
+      >
+        <div class="item-icon"><mat-icon>event_available</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ medicoNombre(d.idMedico) }}</h2>
+          <span class="item-meta">{{ diaLabel(d.idDiaSemana) }} · {{ d.horaInicio.slice(0, 5) }} - {{ d.horaFin.slice(0, 5) }}</span>
+        </div>
+        @if (vista() === 'activas') {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(d.idDisponibilidad, medicoNombre(d.idMedico) + ' - ' + diaLabel(d.idDiaSemana))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(d.idDisponibilidad, medicoNombre(d.idMedico) + ' - ' + diaLabel(d.idDiaSemana))"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (disponibilidades().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>event_available</mat-icon>
+        <p>
+          @if (vista() === 'activas') {
+            No se encontraron disponibilidades{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay disponibilidades eliminadas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

@@ -6,10 +6,19 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Especialidad, EspecialidadInput, EspecialidadesService } from '../../service/especialidades.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-especialidad-formulario',
-  imports: [ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    AuditoriaInfo,
+  ],
   templateUrl: './especialidad-formulario.html',
   styleUrl: './especialidad-formulario.css',
 })
@@ -23,6 +32,7 @@ export class EspecialidadFormulario {
   esNueva = computed(() => this.idEspecialidad() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Especialidad | null>(null);
 
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -42,6 +52,7 @@ export class EspecialidadFormulario {
 
   private cargar(e: Especialidad): void {
     this.idEspecialidad.set(e.idEspecialidad);
+    this.registro.set(e);
     this.form.patchValue({ nombre: e.nombre, descripcion: e.descripcion ?? '' });
   }
 

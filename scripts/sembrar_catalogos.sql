@@ -153,7 +153,24 @@ INSERT INTO @Seed VALUES
 
  ('ESTADO_SALA','Estado de sala','DISPONIBLE','Disponible',1),
  ('ESTADO_SALA','Estado de sala','OCUPADA','Ocupada',2),
- ('ESTADO_SALA','Estado de sala','MANTENIMIENTO','En mantenimiento',3);
+ ('ESTADO_SALA','Estado de sala','MANTENIMIENTO','En mantenimiento',3),
+
+ -- Reutilizado por Pacientes (severidad de alergia) e Interacciones de
+ -- medicamentos (severidad de la interacción) — mismos códigos que ya
+ -- asumía pacientes-catalogos.ts antes de que este catálogo existiera.
+ ('SEVERIDAD','Nivel de severidad','LEVE','Leve',1),
+ ('SEVERIDAD','Nivel de severidad','MODERADA','Moderada',2),
+ ('SEVERIDAD','Nivel de severidad','SEVERA','Severa',3),
+
+ -- CRÍTICO: MedicentroDbContext.RegistrarAuditoriaAsync busca estos 3
+ -- códigos exactos (CREAR/MODIFICAR/ELIMINAR_LOGICO) cada vez que se guarda
+ -- cualquier cosa en el sistema; si el código no existe en este catálogo,
+ -- la fila de bitácora se descarta en silencio (solo un log warning) — sin
+ -- esto sembrado, la bitácora de auditoría se queda vacía para TODO el
+ -- sistema, no solo para esta pantalla.
+ ('TIPO_ACCION_AUDITORIA','Tipo de acción de auditoría','CREAR','Crear',1),
+ ('TIPO_ACCION_AUDITORIA','Tipo de acción de auditoría','MODIFICAR','Modificar',2),
+ ('TIPO_ACCION_AUDITORIA','Tipo de acción de auditoría','ELIMINAR_LOGICO','Eliminar (baja lógica)',3);
 
 INSERT INTO cat_tipo_catalogo (codigo, nombre)
 SELECT DISTINCT s.tipo, s.tipoNombre FROM @Seed s
@@ -185,6 +202,7 @@ WHERE t.codigo IN (
     'FORMA_PAGO','UNIDAD_MEDIDA','ESTADO_ITEM_INVENTARIO','ESTADO_RECETA','CATEGORIA_MEDICAMENTO',
     'ESTADO_CXC','ESTADO_ALERTA_STOCK','MODULO_SISTEMA','TIPO_ENTIDAD_ASEGURADORA','CATEGORIA_EXAMEN',
     'TIPO_HABITACION','ESTADO_HABITACION','ESTADO_CAMA','ESTADO_CONVENIO','ESTADO_EMPLEADO',
-    'ESTADO_USUARIO','GENERO','TIPO_DOCUMENTO','TIPO_ITEM_FACTURA','TIPO_SALA','ESTADO_SALA'
+    'ESTADO_USUARIO','GENERO','TIPO_DOCUMENTO','TIPO_ITEM_FACTURA','TIPO_SALA','ESTADO_SALA','SEVERIDAD',
+    'TIPO_ACCION_AUDITORIA'
 )
 ORDER BY t.codigo, v.orden;

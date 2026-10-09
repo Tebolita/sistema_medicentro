@@ -72,6 +72,15 @@
       Obligar a cambiar la contraseña en el próximo inicio de sesión
     </mat-checkbox>
 
+    @if (registro()) {
+      <app-auditoria-info
+        [fechaCreacion]="registro()!.fechaCreacion"
+        [idUsuarioCreacion]="registro()!.idUsuarioCreacion"
+        [fechaModificacion]="registro()!.fechaModificacion"
+        [idUsuarioModificacion]="registro()!.idUsuarioModificacion"
+      />
+    }
+
     @if (errorMsg()) {
       <p class="form-error">{{ errorMsg() }}</p>
     }

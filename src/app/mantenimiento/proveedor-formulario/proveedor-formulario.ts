@@ -6,10 +6,19 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Proveedor, ProveedorInput, ProveedoresService } from '../../service/proveedores.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-proveedor-formulario',
-  imports: [ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    AuditoriaInfo,
+  ],
   templateUrl: './proveedor-formulario.html',
   styleUrl: './proveedor-formulario.css',
 })
@@ -23,6 +32,7 @@ export class ProveedorFormulario {
   esNuevo = computed(() => this.idProveedor() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Proveedor | null>(null);
 
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -46,6 +56,7 @@ export class ProveedorFormulario {
 
   private cargar(p: Proveedor): void {
     this.idProveedor.set(p.idProveedor);
+    this.registro.set(p);
     this.form.patchValue({
       nombre: p.nombre,
       nit: p.nit ?? '',

@@ -11,6 +11,10 @@ export interface Rol {
   nombre: string;
   descripcion: string | null;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface RolInput {

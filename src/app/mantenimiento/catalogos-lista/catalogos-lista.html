@@ -89,6 +89,12 @@
             <div class="valor-info">
               <span class="valor-nombre">{{ v.nombre }}</span>
               <span class="valor-codigo">{{ v.codigo }}</span>
+              @if (v.descripcion) {
+                <span class="valor-descripcion" [matTooltip]="v.descripcion">{{ truncar(v.descripcion) }}</span>
+              }
+              @if (autorResumen(v); as autor) {
+                <span class="valor-autor" [matTooltip]="autorTooltip(v)">{{ autor }}</span>
+              }
             </div>
             <div class="valor-acciones">
               <button matIconButton type="button" [matTooltip]="'Editar'" (click)="editarValor(v.id)">

@@ -11,6 +11,10 @@ export interface Especialidad {
   nombre: string;
   descripcion: string | null;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface EspecialidadInput {

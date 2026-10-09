@@ -17,6 +17,8 @@ export interface Usuario {
   fechaUltimoAcceso: string | null;
   fechaCreacion: string;
   fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 // CrearUsuarioDto: lleva contraseña, mínimo 6 caracteres (igual que el

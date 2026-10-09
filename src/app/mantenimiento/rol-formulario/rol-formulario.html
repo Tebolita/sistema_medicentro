@@ -23,6 +23,15 @@
       </mat-form-field>
     </div>
 
+    @if (registro()) {
+      <app-auditoria-info
+        [fechaCreacion]="registro()!.fechaCreacion"
+        [idUsuarioCreacion]="registro()!.idUsuarioCreacion"
+        [fechaModificacion]="registro()!.fechaModificacion"
+        [idUsuarioModificacion]="registro()!.idUsuarioModificacion"
+      />
+    }
+
     @if (errorMsg()) {
       <p class="form-error">{{ errorMsg() }}</p>
     }

@@ -226,6 +226,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         grupo: 'farmacia',
       },
       {
+        icon: 'warning',
+        label: 'Interacciones de medicamentos',
+        route: '/home/mantenimiento/interacciones',
+        grupo: 'farmacia',
+      },
+      {
         icon: 'handshake',
         label: 'Convenios',
         route: '/home/mantenimiento/convenios',
@@ -234,6 +240,7 @@ export const MENU_SECTIONS: MenuSection[] = [
       { icon: 'person', label: 'Usuarios', route: '/home/mantenimiento/usuarios', grupo: 'Seguridad' },
       { icon: 'badge', label: 'Roles', route: '/home/mantenimiento/roles', grupo: 'Seguridad' },
       { icon: 'key', label: 'Permisos', route: '/home/mantenimiento/permisos', grupo: 'Seguridad' },
+      { icon: 'history', label: 'Bitácora de auditoría', route: '/home/mantenimiento/bitacora', grupo: 'Seguridad' },
       {
         icon: 'health_and_safety',
         label: 'Aseguradoras',
@@ -262,11 +269,18 @@ export const MENU_SECTIONS: MenuSection[] = [
       { icon: 'badge', label: 'Empleados', route: '/home/mantenimiento/empleados', grupo: 'Recursos Humanos' },
       { icon: 'work', label: 'Puestos', route: '/home/mantenimiento/puestos', grupo: 'Recursos Humanos' },
       {
+        icon: 'event_available',
+        label: 'Disponibilidad de médicos',
+        route: '/home/mantenimiento/disponibilidad-medicos',
+        grupo: 'Recursos Humanos',
+      },
+      {
         icon: 'medical_services',
         label: 'Especialidades',
         route: '/home/mantenimiento/especialidades',
         grupo: 'Recursos Humanos',
       },
+      { icon: 'delete_outline', label: 'Papelera', route: '/home/mantenimiento/papelera', grupo: 'General' },
     ],
   },
 ];

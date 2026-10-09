@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TipoExamen, TipoExamenInput, TiposExamenService } from '../../service/tipos-examen.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { CATEGORIAS_EXAMEN } from '../../laboratorio/laboratorio-catalogos';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-tipo-examen-formulario',
@@ -20,6 +21,7 @@ import { CATEGORIAS_EXAMEN } from '../../laboratorio/laboratorio-catalogos';
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   templateUrl: './tipo-examen-formulario.html',
   styleUrl: './tipo-examen-formulario.css',
@@ -41,6 +43,7 @@ export class TipoExamenFormulario {
   esNuevo = computed(() => this.idTipoExamen() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<TipoExamen | null>(null);
 
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -61,6 +64,7 @@ export class TipoExamenFormulario {
 
   private cargar(t: TipoExamen): void {
     this.idTipoExamen.set(t.idTipoExamen);
+    this.registro.set(t);
     this.form.patchValue({
       nombre: t.nombre,
       idCategoriaExamen: t.idCategoriaExamen,

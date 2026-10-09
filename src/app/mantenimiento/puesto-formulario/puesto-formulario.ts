@@ -6,10 +6,19 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Puesto, PuestoInput, PuestosService } from '../../service/puestos.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-puesto-formulario',
-  imports: [ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    AuditoriaInfo,
+  ],
   templateUrl: './puesto-formulario.html',
   styleUrl: './puesto-formulario.css',
 })
@@ -23,6 +32,7 @@ export class PuestoFormulario {
   esNuevo = computed(() => this.idPuesto() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Puesto | null>(null);
 
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -42,6 +52,7 @@ export class PuestoFormulario {
 
   private cargar(p: Puesto): void {
     this.idPuesto.set(p.idPuesto);
+    this.registro.set(p);
     this.form.patchValue({ nombre: p.nombre, descripcion: p.descripcion ?? '' });
   }
 

@@ -61,6 +61,12 @@ import { TipoConsentimientoFormulario } from './mantenimiento/tipo-consentimient
 import { TiposExamenLista } from './mantenimiento/tipos-examen-lista/tipos-examen-lista';
 import { TipoExamenFormulario } from './mantenimiento/tipo-examen-formulario/tipo-examen-formulario';
 import { MiCuenta } from './cuenta/mi-cuenta/mi-cuenta';
+import { Papelera } from './mantenimiento/papelera/papelera';
+import { DisponibilidadLista } from './mantenimiento/disponibilidad-lista/disponibilidad-lista';
+import { DisponibilidadFormulario } from './mantenimiento/disponibilidad-formulario/disponibilidad-formulario';
+import { InteraccionesLista } from './mantenimiento/interacciones-lista/interacciones-lista';
+import { InteraccionFormulario } from './mantenimiento/interaccion-formulario/interaccion-formulario';
+import { BitacoraLista } from './mantenimiento/bitacora-lista/bitacora-lista';
 import { permisosGuard } from './service/permisos.guard';
 
 export const routes: Routes = [
@@ -166,6 +172,14 @@ export const routes: Routes = [
             {path: 'mantenimiento/tipos-examen',component: TiposExamenLista,},
             {path: 'mantenimiento/tipos-examen/nuevo',component: TipoExamenFormulario,},
             {path: 'mantenimiento/tipos-examen/:id',component: TipoExamenFormulario,},
+            {path: 'mantenimiento/papelera',component: Papelera,},
+            {path: 'mantenimiento/disponibilidad-medicos',component: DisponibilidadLista,},
+            {path: 'mantenimiento/disponibilidad-medicos/nueva',component: DisponibilidadFormulario,},
+            {path: 'mantenimiento/disponibilidad-medicos/:id',component: DisponibilidadFormulario,},
+            {path: 'mantenimiento/interacciones',component: InteraccionesLista,},
+            {path: 'mantenimiento/interacciones/nueva',component: InteraccionFormulario,},
+            {path: 'mantenimiento/interacciones/:id',component: InteraccionFormulario,},
+            {path: 'mantenimiento/bitacora',component: BitacoraLista,},
         ],
     }
 

@@ -13,7 +13,7 @@ import { AuthService } from '../service/auth.service';
 import { PermisosMenuService } from '../service/permisos-menu.service';
 import { ApiResponse } from '../models/api-response.model';
 import { LoginRequest, LoginData } from '../models/auth.model';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -44,6 +44,7 @@ export class Login {
   private authService = inject(AuthService);
   private permisosMenuService = inject(PermisosMenuService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
 
 
@@ -52,6 +53,15 @@ export class Login {
 
   mostrarPassword: boolean = false;
   mostrarCodigo: boolean = false;
+
+  constructor() {
+    // El interceptor manda acá con esto cuando un 401 lo saca de una
+    // pantalla por sesión vencida (ver auth.interceptor.ts) — se avisa en
+    // vez de dejar el formulario vacío sin explicación.
+    if (this.route.snapshot.queryParamMap.get('sesionVencida')) {
+      this.errorMsg.set('Tu sesión expiró. Inicia sesión de nuevo.');
+    }
+  }
 
 
   onLogin(): void {

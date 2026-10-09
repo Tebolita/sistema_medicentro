@@ -1,0 +1,74 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/disponibilidad-medicos" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Disponibilidad de médicos
+    </a>
+    <h1>{{ esNueva() ? 'Nueva disponibilidad' : 'Editar disponibilidad' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Médico</mat-label>
+        <mat-select formControlName="idMedico">
+          @for (m of medicos(); track m.idEmpleado) {
+            <mat-option [value]="m.idEmpleado">{{ m.nombreCompleto }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idMedico.invalid && form.controls.idMedico.touched) {
+          <mat-error>Selecciona un médico</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Día de la semana</mat-label>
+        <mat-select formControlName="idDiaSemana">
+          @for (d of dias; track d.id) {
+            <mat-option [value]="d.id">{{ d.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idDiaSemana.invalid && form.controls.idDiaSemana.touched) {
+          <mat-error>Selecciona un día</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hora de inicio</mat-label>
+        <input matInput type="time" formControlName="horaInicio" />
+        @if (form.controls.horaInicio.invalid && form.controls.horaInicio.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hora de fin</mat-label>
+        <input matInput type="time" formControlName="horaFin" />
+        @if (form.controls.horaFin.invalid && form.controls.horaFin.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (registro()) {
+      <app-auditoria-info
+        [fechaCreacion]="registro()!.fechaCreacion"
+        [idUsuarioCreacion]="registro()!.idUsuarioCreacion"
+        [fechaModificacion]="registro()!.fechaModificacion"
+        [idUsuarioModificacion]="registro()!.idUsuarioModificacion"
+      />
+    }
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/disponibilidad-medicos">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

@@ -15,6 +15,10 @@ export interface Permiso {
   idModulo: number;
   descripcion: string | null;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface PermisoInput {

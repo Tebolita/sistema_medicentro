@@ -1,0 +1,94 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo', 'mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Papelera</h1>
+      <p>Registros dados de baja en cualquier módulo del sistema — consúltalos y reactívalos desde un solo lugar.</p>
+    </div>
+  </div>
+
+  <mat-form-field appearance="outline" class="recurso-field">
+    <mat-label>Tipo de registro</mat-label>
+    <mat-select
+      [value]="recursoSeleccionado()"
+      (selectionChange)="seleccionar($event.value)"
+      [compareWith]="compararRecursos"
+    >
+      @for (grupo of grupos; track grupo.nombre) {
+        <mat-optgroup [label]="grupo.nombre">
+          @for (r of grupo.recursos; track r.recurso) {
+            <mat-option [value]="r">{{ r.label }}</mat-option>
+          }
+        </mat-optgroup>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (recursoSeleccionado()) {
+    <div class="search-bar">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="Buscar..."
+        [ngModel]="buscar()"
+        (ngModelChange)="buscar.set($event)"
+      />
+      @if (buscar().trim()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (esSoloLectura()) {
+      <p class="carga-error solo-lectura">Este recurso es de solo lectura: el backend todavía no tiene un endpoint para reactivarlo.</p>
+    }
+
+    @if (errorCarga() || errorAccion()) {
+      <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+    }
+
+    <div class="item-grid">
+      @for (r of registrosFiltrados(); track r.id) {
+        <div class="item-card inactivo">
+          <div class="item-icon"><mat-icon>delete_outline</mat-icon></div>
+          <div class="item-info">
+            <h2>{{ r.titulo }}</h2>
+            @if (r.detalle) {
+              <span class="item-meta">{{ r.detalle }}</span>
+            }
+            @if (quienYCuando(r)) {
+              <span class="item-meta item-meta-baja">{{ quienYCuando(r) }}</span>
+            }
+          </div>
+          @if (!esSoloLectura()) {
+            <button
+              matIconButton
+              type="button"
+              class="item-delete"
+              matTooltip="Reactivar"
+              (click)="reactivar(r)"
+            >
+              <mat-icon>restore</mat-icon>
+            </button>
+          }
+        </div>
+      }
+
+      @if (registrosFiltrados().length === 0 && !cargando() && !errorCarga()) {
+        <div class="empty-state">
+          <mat-icon>delete_outline</mat-icon>
+          <p>No hay {{ recursoSeleccionado()!.label.toLowerCase() }} eliminados{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="empty-state">
+      <mat-icon>delete_outline</mat-icon>
+      <p>Elige un tipo de registro para ver lo que se ha dado de baja.</p>
+    </div>
+  }
+</div>

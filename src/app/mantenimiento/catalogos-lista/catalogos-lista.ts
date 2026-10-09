@@ -1,10 +1,11 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { CatalogosService } from '../../service/catalogos.service';
+import { CatalogoValor, CatalogosService } from '../../service/catalogos.service';
+import { UsuariosService } from '../../service/usuarios.service';
 import { TIPOS_CATALOGO_CONOCIDOS, TipoCatalogoConocido } from '../mantenimiento-catalogos';
 import { TipoCatalogoDialog } from '../tipo-catalogo-dialog/tipo-catalogo-dialog';
 import { ValorCatalogoDialog } from '../valor-catalogo-dialog/valor-catalogo-dialog';
@@ -17,7 +18,20 @@ import { ValorCatalogoDialog } from '../valor-catalogo-dialog/valor-catalogo-dia
 })
 export class CatalogosLista {
   private catalogosService = inject(CatalogosService);
+  private usuariosService = inject(UsuariosService);
   private dialog = inject(MatDialog);
+
+  constructor() {
+    // CatalogosService (como el resto de servicios "singleton" de la app)
+    // solo pide los datos UNA vez, al construirse — si esa primera carga
+    // pasó antes de que el backend tuviera los campos nuevos (o antes de
+    // reiniciarlo), esta pantalla se queda viendo esa foto vieja hasta que
+    // alguien la fuerce a pedir de nuevo. Se hace acá, cada vez que se entra.
+    afterNextRender(() => {
+      this.usuariosService.cargar();
+      this.catalogosService.recargarTodos();
+    });
+  }
 
   // El backend ya tiene GET /api/catalogos (lista TODOS los que existen en
   // la base, con sus valores). Esa es la fuente de verdad; la lista curada
@@ -76,6 +90,7 @@ export class CatalogosLista {
 
   seleccionarTipo(codigo: string): void {
     this.tipoSeleccionado.set(codigo);
+    this.catalogosService.recargar(codigo);
   }
 
   volverACatalogos(): void {
@@ -109,6 +124,36 @@ export class CatalogosLista {
         siguienteOrden: this.valores().length + 1,
       },
     });
+  }
+
+  // Vista rápida: si la descripción es larga, se corta a 12 caracteres y se
+  // avisa con "…" — el texto completo queda en el tooltip (title) del span.
+  truncar(texto: string): string {
+    return texto.length > 12 ? `${texto.slice(0, 12)}…` : texto;
+  }
+
+  private nombreUsuario(id: number): string {
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `#${id}`;
+  }
+
+  // Versión corta para la tarjeta (poco espacio): solo "por fulano",
+  // priorizando quién modificó por última vez y cayendo a quién lo creó si
+  // nunca se modificó. El detalle completo (fechas de creación y
+  // modificación) va en el tooltip — ver autorTooltip().
+  autorResumen(v: CatalogoValor): string | null {
+    const id = v.idUsuarioModificacion ?? v.idUsuarioCreacion;
+    return id != null ? `por ${this.nombreUsuario(id)}` : null;
+  }
+
+  autorTooltip(v: CatalogoValor): string {
+    const partes: string[] = [];
+    if (v.idUsuarioCreacion != null) {
+      partes.push(`Creado por ${this.nombreUsuario(v.idUsuarioCreacion)}`);
+    }
+    if (v.idUsuarioModificacion != null) {
+      partes.push(`Modificado por ${this.nombreUsuario(v.idUsuarioModificacion)}`);
+    }
+    return partes.join(' · ');
   }
 
   editarValor(idValor: number): void {

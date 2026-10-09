@@ -16,6 +16,10 @@ export interface Aseguradora {
   telefono: string | null;
   correo: string | null;
   activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  idUsuarioCreacion: number | null;
+  idUsuarioModificacion: number | null;
 }
 
 export interface AseguradoraInput {

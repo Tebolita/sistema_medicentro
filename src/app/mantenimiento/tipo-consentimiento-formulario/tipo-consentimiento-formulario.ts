@@ -10,10 +10,19 @@ import {
   TipoConsentimientoInput,
   TiposConsentimientoService,
 } from '../../service/tipos-consentimiento.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 
 @Component({
   selector: 'app-tipo-consentimiento-formulario',
-  imports: [ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    AuditoriaInfo,
+  ],
   templateUrl: './tipo-consentimiento-formulario.html',
   styleUrl: './tipo-consentimiento-formulario.css',
 })
@@ -27,6 +36,7 @@ export class TipoConsentimientoFormulario {
   esNuevo = computed(() => this.idTipoConsentimiento() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<TipoConsentimiento | null>(null);
 
   form = this.fb.nonNullable.group({
     codigo: ['', [Validators.required, Validators.pattern(/^[A-Za-z0-9_]+$/)]],
@@ -47,6 +57,7 @@ export class TipoConsentimientoFormulario {
 
   private cargar(t: TipoConsentimiento): void {
     this.idTipoConsentimiento.set(t.idTipoConsentimiento);
+    this.registro.set(t);
     this.form.patchValue({
       codigo: t.codigo,
       nombre: t.nombre,

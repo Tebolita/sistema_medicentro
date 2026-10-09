@@ -106,6 +106,14 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client
   },
   {
+    path: 'home/mantenimiento/disponibilidad-medicos/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/interacciones/:id',
+    renderMode: RenderMode.Client
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender
   }
