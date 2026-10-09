@@ -1,12 +1,35 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ConsultasExternasService } from '../consultas-externas.service';
-import { ESTADOS_CITA, MEDICOS, TIPOS_CONSULTA } from '../consultas-catalogos';
-import { PacientesService } from '../../pacientes/pacientes.service';
+import { forkJoin } from 'rxjs';
+
+import { CitaService } from '../../service/cita.service';
+import { PacienteService } from '../../service/paciente.service';
+import { EmpleadoService } from '../../service/empleado.service';
+import { CatalogoService } from '../../service/catalogo.service';
+import { Cita } from '../../models/cita.model';
+import { PacienteListado } from '../../models/paciente.model';
+import { Medico } from '../../models/medico.model';
+import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+
+// La tabla `citas` no tiene columna de tipo de consulta (Primera vez /
+// Reconsulta): el formulario lo guarda al inicio de `notas` con este prefijo.
+const PREFIJO_TIPO = /^Tipo de consulta: ([^.]+)\.\s*/;
+
+// Fila que muestra la lista (misma forma que usaba la pantalla antes).
+interface ConsultaFila {
+  idCita: number;
+  idPaciente: number;
+  idMedico: number;
+  fechaHoraInicio: string;
+  idEstadoCita: number;
+  idTipoConsulta: number | null; // id del catálogo TIPO_CONSULTA
+  motivoConsulta: string | null;
+}
 
 @Component({
   selector: 'app-consultas-lista',
@@ -15,14 +38,69 @@ import { PacientesService } from '../../pacientes/pacientes.service';
   styleUrl: './consultas-lista.css',
 })
 export class ConsultasLista {
-  private consultasService = inject(ConsultasExternasService);
-  private pacientesService = inject(PacientesService);
+  private citaService = inject(CitaService);
+  private pacienteService = inject(PacienteService);
+  private empleadoService = inject(EmpleadoService);
+  private catalogoService = inject(CatalogoService);
+  private platformId = inject(PLATFORM_ID);
 
   buscar = signal('');
 
+  // Datos reales desde la API (ya no hay datos de ejemplo).
+  private lista = signal<ConsultaFila[]>([]);
+  private pacientesApi = signal<PacienteListado[]>([]);
+  private medicos = signal<Medico[]>([]);
+  private estados = signal<CatalogoOpcion[]>([]);
+  private tiposConsulta = signal<CatalogoOpcion[]>([]);
+
+  constructor() {
+    // En el servidor (SSR) no hay sesión ni token: solo se consulta desde el navegador.
+    if (isPlatformBrowser(this.platformId)) {
+      this.cargar();
+    }
+  }
+
+  private cargar(): void {
+    forkJoin({
+      citas: this.citaService.RetornarCitas(),
+      pacientes: this.pacienteService.RetornarPacientes(),
+      medicos: this.empleadoService.RetornarMedicos(),
+      estados: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.ESTADO_CITA),
+      tiposConsulta: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.TIPO_CONSULTA),
+    }).subscribe({
+      next: (r) => {
+        this.tiposConsulta.set(r.tiposConsulta.datos ?? []);
+        this.lista.set((r.citas.datos ?? []).map((c) => this.aFila(c.cita)));
+        this.pacientesApi.set(r.pacientes.datos ?? []);
+        this.medicos.set(r.medicos.datos ?? []);
+        this.estados.set(r.estados.datos ?? []);
+      },
+      error: (err: Error) => alert('No se pudieron cargar las consultas: ' + err.message),
+    });
+  }
+
+  private aFila(c: Cita): ConsultaFila {
+    return {
+      idCita: c.idCita,
+      idPaciente: c.idPaciente,
+      idMedico: c.idMedico,
+      fechaHoraInicio: c.fechaHoraInicio,
+      idEstadoCita: c.idEstadoCita,
+      idTipoConsulta: this.idTipoConsultaDesdeNotas(c.notas),
+      motivoConsulta: c.motivoConsulta,
+    };
+  }
+
+  // Traduce el texto guardado en `notas` ("Tipo de consulta: Reconsulta.") al id del catálogo.
+  private idTipoConsultaDesdeNotas(notas: string | null): number | null {
+    const nombre = notas?.match(PREFIJO_TIPO)?.[1]?.trim();
+    if (!nombre) return null;
+    return this.tiposConsulta().find((t) => t.nombre === nombre)?.id ?? null;
+  }
+
   consultas = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.consultasService.listar();
+    const lista = this.lista();
     if (!term) {
       return lista;
     }
@@ -36,7 +114,7 @@ export class ConsultasLista {
   });
 
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
+    const p = this.pacientesApi().find((pac) => pac.idPaciente === idPaciente);
     if (!p) {
       return 'Paciente no encontrado';
     }
@@ -44,27 +122,28 @@ export class ConsultasLista {
   }
 
   iniciales(idPaciente: number): string {
-    const nombre = this.nombrePaciente(idPaciente);
-    const partes = nombre.split(' ').filter(Boolean);
+    const partes = this.nombrePaciente(idPaciente).split(' ').filter(Boolean);
     return `${partes[0]?.charAt(0) ?? ''}${partes[1]?.charAt(0) ?? ''}`.toUpperCase();
   }
 
   medicoLabel(idMedico: number | null): string {
-    return MEDICOS.find((m) => m.id === idMedico)?.nombre ?? '—';
+    return this.medicos().find((m) => m.idEmpleado === idMedico)?.nombreCompleto ?? '—';
   }
 
   tipoConsultaLabel(idTipoConsulta: number | null): string {
-    return TIPOS_CONSULTA.find((t) => t.id === idTipoConsulta)?.label ?? '—';
+    return this.tiposConsulta().find((t) => t.id === idTipoConsulta)?.nombre ?? '—';
   }
 
   estadoLabel(idEstadoCita: number): string {
-    return ESTADOS_CITA.find((e) => e.id === idEstadoCita)?.label ?? '—';
+    return this.estados().find((e) => e.id === idEstadoCita)?.nombre ?? '—';
   }
 
+  // Se compara por código: los ids reales dependen de cada base.
   estadoClase(idEstadoCita: number): string {
-    if (idEstadoCita === 4) return 'estado-atendida';
-    if (idEstadoCita === 5) return 'estado-cancelada';
-    if (idEstadoCita === 3) return 'estado-en-atencion';
+    const codigo = this.estados().find((e) => e.id === idEstadoCita)?.codigo;
+    if (codigo === 'ATENDIDA') return 'estado-atendida';
+    if (codigo === 'CANCELADA') return 'estado-cancelada';
+    if (codigo === 'EN_ATENCION') return 'estado-en-atencion';
     return 'estado-programada';
   }
 
@@ -82,6 +161,9 @@ export class ConsultasLista {
     if (!confirm(`¿Eliminar la consulta de "${paciente}"?`)) {
       return;
     }
-    this.consultasService.eliminar(id);
+    this.citaService.EliminarCita(id).subscribe({
+      next: () => this.lista.update((l) => l.filter((c) => c.idCita !== id)),
+      error: (err: Error) => alert('No se pudo eliminar la consulta: ' + err.message),
+    });
   }
 }
