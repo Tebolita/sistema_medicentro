@@ -43,6 +43,45 @@ export class InventarioFarmaciaService {
   listar = computed(() => this.items());
   bajoStock = computed(() => this.items().filter((i) => i.bajoStock));
 
+  // GET /api/inventario-farmacia solo trae los activos; los dados de baja se
+  // piden aparte en /eliminados.
+  private eliminados = signal<ItemInventario[]>([]);
+  cargandoEliminados = signal(false);
+  errorEliminados = signal('');
+
+  listarEliminados = computed(() => this.eliminados());
+
+  cargarEliminados(): void {
+    this.cargandoEliminados.set(true);
+    this.errorEliminados.set('');
+    this.http
+      .get<ApiResponse<ItemInventario[]>>(`${this.apiUrl}/eliminados`)
+      .pipe(map((resp) => resp.datos ?? []))
+      .subscribe({
+        next: (lista) => {
+          this.eliminados.set(lista);
+          this.cargandoEliminados.set(false);
+        },
+        error: () => {
+          this.errorEliminados.set('No se pudieron cargar los items de inventario eliminados.');
+          this.cargandoEliminados.set(false);
+        },
+      });
+  }
+
+  // El backend solo confirma el reactivado (no devuelve el item completo),
+  // así que para verlo en la lista de activos hay que recargarla.
+  reactivar(id: number): Observable<void> {
+    return this.http.put<ApiResponse<unknown>>(`${this.apiUrl}/${id}/reactivar`, {}).pipe(
+      map(() => undefined),
+      tap(() => {
+        this.eliminados.update((lista) => lista.filter((x) => x.idItemInventario !== id));
+        this.cargar();
+      }),
+      catchError(this.errorService.handleError),
+    );
+  }
+
   // El backend no tiene un listado global de movimientos: se arma juntando
   // los de cada item (GET /api/inventario-farmacia/{id}/movimientos).
   private movimientos = signal<MovimientoInventario[]>([]);

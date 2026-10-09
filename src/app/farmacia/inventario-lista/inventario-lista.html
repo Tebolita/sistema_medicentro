@@ -51,8 +51,19 @@
     }
   </div>
 
-  @if (errorCarga()) {
-    <p class="carga-error">{{ errorCarga() }}</p>
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activos'" (click)="verActivos()">
+      <mat-icon>medication</mat-icon>
+      Activos
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminados'" (click)="verEliminados()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminados
+    </button>
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
   }
 
   <h2 class="section-title">
@@ -61,7 +72,13 @@
 
   <div class="item-grid">
     @for (i of items(); track i.idItemInventario) {
-      <a class="item-card" [class.bajo-stock]="i.bajoStock" [routerLink]="['/home/farmacia/movimiento-nuevo']" [queryParams]="{ item: i.idItemInventario }">
+      <a
+        class="item-card"
+        [class.bajo-stock]="i.bajoStock"
+        [class.inactivo]="vista() === 'eliminados'"
+        [routerLink]="vista() === 'activos' ? ['/home/farmacia/movimiento-nuevo'] : null"
+        [queryParams]="vista() === 'activos' ? { item: i.idItemInventario } : null"
+      >
         <div class="item-icon">
           <mat-icon>medication</mat-icon>
         </div>
@@ -75,6 +92,10 @@
             <div class="stock-bar-fill" [style.width.%]="porcentajeStock(i.stockActual, i.stockMinimo)"></div>
           </div>
           <span class="item-meta">Stock: {{ i.stockActual }} (mínimo {{ i.stockMinimo }})</span>
+          <span class="item-meta">
+            {{ vista() === 'activos' ? 'Creado' : 'Dado de baja' }} por:
+            {{ usuarioLabel(vista() === 'activos' ? i.idUsuarioCreacion : i.idUsuarioModificacion) }}
+          </span>
         </div>
         @if (i.bajoStock) {
           <span class="bajo-stock-badge">
@@ -82,22 +103,49 @@
             Bajo stock
           </span>
         }
-        <button
-          matIconButton
-          type="button"
-          class="item-edit"
-          [matTooltip]="'Editar medicamento'"
-          (click)="editar($event, i.idItemInventario)"
-        >
-          <mat-icon>edit</mat-icon>
-        </button>
+        @if (vista() === 'activos') {
+          <button
+            matIconButton
+            type="button"
+            class="item-edit"
+            [matTooltip]="'Editar medicamento'"
+            (click)="editar($event, i.idItemInventario)"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="eliminar($event, i.idItemInventario, i.nombre, i.stockActual)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="reactivar($event, i.idItemInventario, i.nombre)"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
       </a>
     }
 
     @if (items().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
         <mat-icon>medication</mat-icon>
-        <p>No se encontraron medicamentos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        <p>
+          @if (vista() === 'activos') {
+            No se encontraron medicamentos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay items eliminados{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
       </div>
     }
   </div>

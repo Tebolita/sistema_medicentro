@@ -7,6 +7,15 @@
     <h1>{{ esNuevo() ? 'Nuevo medicamento en inventario' : 'Editar medicamento en inventario' }}</h1>
   </div>
 
+  @if (registro(); as r) {
+    <p class="auditoria-info">
+      Creado por: {{ usuarioLabel(r.idUsuarioCreacion) }}
+      @if (r.idUsuarioModificacion) {
+        · Última modificación por: {{ usuarioLabel(r.idUsuarioModificacion) }}
+      }
+    </p>
+  }
+
   <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
     <div class="form-grid">
       <mat-form-field appearance="outline">

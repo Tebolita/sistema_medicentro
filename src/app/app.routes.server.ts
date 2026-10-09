@@ -70,6 +70,42 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client
   },
   {
+    path: 'home/mantenimiento/puestos/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/especialidades/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/empleados/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/permisos/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/aseguradoras/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/salas/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/habitaciones/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/tipos-consentimiento/:id',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'home/mantenimiento/tipos-examen/:id',
+    renderMode: RenderMode.Client
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender
   }

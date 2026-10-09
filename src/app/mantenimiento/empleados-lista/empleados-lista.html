@@ -1,0 +1,99 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo','mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Empleados</h1>
+      <p>Personal de la clínica (módulo Seguridad / Recursos Humanos).</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/empleados/nuevo">
+      <mat-icon>add</mat-icon>
+      Nuevo empleado
+    </a>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activos'" (click)="verActivos()">
+      <mat-icon>badge</mat-icon>
+      Activos
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminados'" (click)="verEliminados()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminados
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por nombre, correo o documento..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (e of empleados(); track e.idEmpleado) {
+      <a
+        class="item-card"
+        [class.inactivo]="vista() === 'eliminados'"
+        [routerLink]="vista() === 'activos' ? ['/home/mantenimiento/empleados', e.idEmpleado] : null"
+      >
+        <div class="item-icon"><mat-icon>badge</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ nombreCompleto(e.idEmpleado) }}</h2>
+          <span class="item-meta">{{ puestoLabel(e.idPuesto) }} · {{ estadoLabel(e.idEstadoEmpleado) }}</span>
+          @if (e.correo) {
+            <span class="item-meta">{{ e.correo }}</span>
+          }
+        </div>
+        @if (vista() === 'activos') {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(e.idEmpleado, nombreCompleto(e.idEmpleado))"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(e.idEmpleado, nombreCompleto(e.idEmpleado))"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (empleados().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>badge</mat-icon>
+        <p>
+          @if (vista() === 'activos') {
+            No se encontraron empleados{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay empleados eliminados{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

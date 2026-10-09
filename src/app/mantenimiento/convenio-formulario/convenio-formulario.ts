@@ -80,7 +80,7 @@ export class ConvenioFormulario {
     this.form.patchValue({
       idAseguradora: c.idAseguradora,
       nombreConvenio: c.nombreConvenio,
-      fechaInicio: c.fechaInicio.slice(0, 10),
+      fechaInicio: c.fechaInicio?.slice(0, 10) ?? '',
       fechaFin: c.fechaFin?.slice(0, 10) ?? '',
       porcentajeCoberturaGeneral: c.porcentajeCoberturaGeneral,
       idEstadoConvenio: c.idEstadoConvenio,

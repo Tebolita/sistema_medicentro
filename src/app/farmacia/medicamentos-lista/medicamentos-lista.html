@@ -60,6 +60,10 @@
           @if (m.principioActivo) {
             <span class="med-meta">{{ m.principioActivo }}</span>
           }
+          <span class="med-meta">
+            {{ vista() === 'activos' ? 'Creado' : 'Dado de baja' }} por:
+            {{ usuarioLabel(vista() === 'activos' ? m.idUsuarioCreacion : m.idUsuarioModificacion) }}
+          </span>
         </div>
         @if (m.requiereReceta) {
           <span class="receta-badge">Requiere receta</span>

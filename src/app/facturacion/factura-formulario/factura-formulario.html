@@ -13,6 +13,15 @@
     </h1>
   </div>
 
+  @if (registro(); as r) {
+    <p class="auditoria-info">
+      Creada por: {{ usuarioLabel(r.factura.idUsuarioCreacion) }}
+      @if (r.factura.idUsuarioModificacion) {
+        · Última modificación por: {{ usuarioLabel(r.factura.idUsuarioModificacion) }}
+      }
+    </p>
+  }
+
   <div class="form-layout">
   <div class="form-main">
   <div class="factura-form">
@@ -114,7 +123,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Tipo</mat-label>
               <mat-select formControlName="idTipoItem">
-                @for (t of tiposItem; track t.id) {
+                @for (t of tiposItem(); track t.id) {
                   <mat-option [value]="t.id">{{ t.label }}</mat-option>
                 }
               </mat-select>
@@ -208,6 +217,7 @@
         <div class="pago-row">
           <span class="pago-monto">{{ formatMonto(p.monto) }}</span>
           <span class="pago-forma">{{ formaPagoLabel(p.idFormaPago) }}</span>
+          <span class="pago-estado">{{ facturasService.estadoPagoLabel(p.idEstadoPago) }}</span>
           <span class="pago-fecha">{{ formatFecha(p.fechaPago) }}</span>
         </div>
       }

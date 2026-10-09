@@ -13,6 +13,7 @@ import { MedicamentosService } from '../../service/medicamentos.service';
 import { ESTADOS_ITEM_INVENTARIO, UNIDADES_MEDIDA } from '../farmacia-catalogos';
 import { CatalogosService } from '../../service/catalogos.service';
 import { ProveedoresService } from '../../service/proveedores.service';
+import { UsuariosService } from '../../service/usuarios.service';
 
 @Component({
   selector: 'app-item-formulario',
@@ -40,6 +41,7 @@ export class ItemFormulario {
   // GET /api/proveedores ya existe (ProveedoresController).
   private proveedoresService = inject(ProveedoresService);
   proveedores = this.proveedoresService.listar;
+  private usuariosService = inject(UsuariosService);
   // Códigos de catálogo sin confirmar con el backend todavía (a diferencia
   // de TIPO_MOVIMIENTO_INVENTARIO/TIPO_ITEM_INVENTARIO): si existen en la
   // base se usan sus valores reales, si no, la lista de ejemplo de siempre.
@@ -59,6 +61,7 @@ export class ItemFormulario {
   esNuevo = computed(() => this.idItemInventario() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<ItemInventario | undefined>(undefined);
 
   form = this.fb.nonNullable.group({
     idMedicamento: this.fb.control<number | null>(null, Validators.required),
@@ -88,6 +91,7 @@ export class ItemFormulario {
 
   private cargar(item: ItemInventario): void {
     this.idItemInventario.set(item.idItemInventario);
+    this.registro.set(item);
     this.form.patchValue({
       idMedicamento: item.idMedicamento,
       idProveedor: item.idProveedor,
@@ -144,5 +148,15 @@ export class ItemFormulario {
         this.guardando.set(false);
       },
     });
+  }
+
+  // Igual que en la lista: el backend tiene el campo pero todavía no lo
+  // llena (ver SOLICITUD_ENDPOINTS_ELIMINADOS.md punto 5), así que esto
+  // muestra "—" hasta que eso se arregle del lado del backend.
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 }

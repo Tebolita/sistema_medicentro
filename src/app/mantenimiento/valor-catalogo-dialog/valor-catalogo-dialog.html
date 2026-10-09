@@ -1,0 +1,53 @@
+<h2 mat-dialog-title>
+  {{ esNuevo ? 'Agregar valor' : 'Editar valor' }}
+  <span class="dialog-subtitle">{{ data.nombreTipo }}</span>
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Código</mat-label>
+      <input matInput formControlName="codigo" placeholder="Ej. PENDIENTE" />
+      @if (form.controls.codigo.errors?.['required'] && form.controls.codigo.touched) {
+        <mat-error>Requerido</mat-error>
+      } @else if (form.controls.codigo.errors?.['pattern']) {
+        <mat-error>Solo letras, números y guion bajo</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Orden</mat-label>
+      <input matInput type="number" min="1" formControlName="orden" />
+      @if (form.controls.orden.errors?.['required'] && form.controls.orden.touched) {
+        <mat-error>Requerido</mat-error>
+      } @else if (form.controls.orden.errors?.['ordenDuplicado']) {
+        <mat-error>Ya hay otro valor con este orden en este catálogo</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" placeholder="Ej. Pendiente" />
+      @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+        <mat-error>Requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Descripción (opcional)</mat-label>
+      <input matInput formControlName="descripcion" />
+    </mat-form-field>
+
+    @if (error()) {
+      <p class="form-error full-width">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cerrar()">Cancelar</button>
+    <button matButton="filled" type="submit" [disabled]="guardando() || form.invalid">
+      <mat-icon>save</mat-icon>
+      {{ esNuevo ? 'Agregar' : 'Guardar cambios' }}
+    </button>
+  </mat-dialog-actions>
+</form>

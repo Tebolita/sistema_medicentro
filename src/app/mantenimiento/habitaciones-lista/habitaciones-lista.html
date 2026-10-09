@@ -1,0 +1,102 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo','mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Habitaciones</h1>
+      <p>Habitaciones y camas del módulo Hospitalización.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/habitaciones/nueva">
+      <mat-icon>add</mat-icon>
+      Nueva habitación
+    </a>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activas'" (click)="verActivas()">
+      <mat-icon>bed</mat-icon>
+      Activas
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminadas'" (click)="verEliminadas()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por número..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (r of habitaciones(); track r.habitacion.idHabitacion) {
+      <a
+        class="item-card"
+        [class.inactivo]="vista() === 'eliminadas'"
+        [routerLink]="vista() === 'activas' ? ['/home/mantenimiento/habitaciones', r.habitacion.idHabitacion] : null"
+      >
+        <div class="item-icon"><mat-icon>bed</mat-icon></div>
+        <div class="item-info">
+          <h2>Habitación {{ r.habitacion.numero }}</h2>
+          <span class="item-meta">{{ tipoLabel(r.habitacion.idTipoHabitacion) }} · {{ estadoLabel(r.habitacion.idEstadoHabitacion) }}</span>
+          <span class="item-meta">
+            {{ r.camas.length }} cama{{ r.camas.length === 1 ? '' : 's' }}
+            @if (r.habitacion.piso) {
+              · Piso {{ r.habitacion.piso }}
+            }
+          </span>
+        </div>
+        @if (vista() === 'activas') {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.habitacion.idHabitacion, r.habitacion.numero)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(r.habitacion.idHabitacion, r.habitacion.numero)"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (habitaciones().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>bed</mat-icon>
+        <p>
+          @if (vista() === 'activas') {
+            No se encontraron habitaciones{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay habitaciones eliminadas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

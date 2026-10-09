@@ -1,0 +1,78 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Mi cuenta</h1>
+      <p>Datos de tu cuenta y contraseña.</p>
+    </div>
+  </div>
+
+  @if (errorCarga()) {
+    <p class="carga-error">{{ errorCarga() }}</p>
+  } @else {
+    <form [formGroup]="datosForm" (ngSubmit)="guardarDatos()" class="form-panel">
+      <h2>Datos de la cuenta</h2>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre de usuario</mat-label>
+          <input matInput formControlName="nombreUsuario" />
+          @if (datosForm.controls.nombreUsuario.invalid && datosForm.controls.nombreUsuario.touched) {
+            <mat-error>Requerido</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Correo</mat-label>
+          <input matInput type="email" formControlName="correo" />
+          @if (datosForm.controls.correo.invalid && datosForm.controls.correo.touched) {
+            <mat-error>Correo no válido</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (errorDatos()) {
+        <p class="form-error">{{ errorDatos() }}</p>
+      }
+
+      <div class="form-actions">
+        <button matButton="filled" type="submit" [disabled]="guardandoDatos() || cargando()">
+          <mat-icon>save</mat-icon>
+          Guardar cambios
+        </button>
+      </div>
+    </form>
+
+    <form [formGroup]="passwordForm" (ngSubmit)="cambiarContrasena()" class="form-panel">
+      <h2>Cambiar contraseña</h2>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Contraseña nueva</mat-label>
+          <input matInput type="password" formControlName="contrasenaNueva" autocomplete="new-password" />
+          @if (passwordForm.controls.contrasenaNueva.invalid && passwordForm.controls.contrasenaNueva.touched) {
+            <mat-error>Mínimo 6 caracteres</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Repetir contraseña nueva</mat-label>
+          <input matInput type="password" formControlName="repetirContrasenaNueva" autocomplete="new-password" />
+          @if (passwordForm.controls.repetirContrasenaNueva.hasError('required') && passwordForm.controls.repetirContrasenaNueva.touched) {
+            <mat-error>Requerido</mat-error>
+          } @else if (passwordForm.controls.repetirContrasenaNueva.hasError('noCoinciden')) {
+            <mat-error>No coincide con la contraseña nueva</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (errorPassword()) {
+        <p class="form-error">{{ errorPassword() }}</p>
+      }
+
+      <div class="form-actions">
+        <button matButton="filled" type="submit" [disabled]="guardandoPassword() || cargando() || passwordForm.invalid">
+          <mat-icon>lock_reset</mat-icon>
+          Cambiar contraseña
+        </button>
+      </div>
+    </form>
+  }
+</div>

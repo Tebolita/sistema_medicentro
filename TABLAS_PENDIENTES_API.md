@@ -40,7 +40,7 @@
 | `aseguradoras` | Solo listar | CRUD completo. |
 | `items_inventario` | Sin editar ni dar de baja | Ahora tiene `PUT` y `DELETE`. |
 | `ordenes_medicas_hospitalizacion` | Solo agregar | Ahora tiene `GET` individual, `PUT`, `DELETE`. |
-| `cat_tipo_catalogo` / `cat_valor_catalogo` | Solo listar valores | `POST` tipos, `POST`/`PUT`/`DELETE` valores — **esto es lo que necesita el futuro módulo de Catálogos.** |
+| `cat_tipo_catalogo` / `cat_valor_catalogo` | Solo listar valores | `POST` tipos, `POST`/`PUT`/`DELETE` valores. **Sigue faltando `GET /api/catalogos/tipos`** (listar TODOS los tipos que existen) — ver sección de abajo. |
 | `pagos` | Sin anular | `PUT /facturas/{id}/pagos/{idPago}/anular`. |
 
 ---
@@ -51,18 +51,47 @@ Después de esta revisión, no queda ninguna tabla usada por el frontend sin su 
 
 **Pendiente real, pero fuera del backend:** `libro de actas` (Recepción) no tiene tabla en el esquema — no es un caso de "falta el endpoint", es un concepto que no existe en el diseño de base de datos. Ver conversación aparte sobre si conviene reusar `historial_clinico` con un tipo de registro nuevo, o pedir una tabla propia.
 
+### ~~`GET /api/catalogos/tipos` (listar todos los tipos de catálogo)~~ — ✅ Resuelto
+
+El backend ya lo tiene, aunque con una forma un poco distinta a la propuesta
+original: es `GET /api/catalogos` (sin el `/tipos`, ya que la ruta base del
+controlador ya es `api/catalogos`), y de regalo devuelve cada tipo **con sus
+valores activos ya anidados** (`CatalogoTipoDto.Valores`), así que el
+frontend ni siquiera necesita pedirlos aparte uno por uno. `catalogos-lista.ts`
+y `catalogos.service.ts` ya se actualizaron para usarlo: la lista curada a
+mano (`TIPOS_CATALOGO_CONOCIDOS`) y el truco de recordar catálogos nuevos en
+`localStorage` ya no son la fuente de verdad, solo le dan un ícono más
+específico a los códigos que el frontend ya conocía de antes.
+
+### ~~`PUT /api/usuarios/{id}/contrasena`~~ — ✅ Resuelto, pero distinto a lo pedido
+
+El backend ya lo implementó, pero como un **reset sin verificación** en vez
+de "cambiar mi propia contraseña confirmando la actual": el DTO real es
+`CambiarContrasenaDto { NuevaContrasena, RequiereCambioPassword? }` — no
+tiene `ContrasenaActual` en absoluto, y el servicio nunca valida nada contra
+el hash guardado. Cualquiera con sesión puede cambiarle la contraseña a
+cualquier usuario (por id) sin saber la suya.
+
+`usuarios.service.ts`/`mi-cuenta.ts` ya se actualizaron para hablar con el
+DTO real, y se quitó el campo "Contraseña actual" del formulario de **Mi
+cuenta** (decisión del equipo: no tenía sentido pedirlo si el backend no lo
+revisa — daba una falsa sensación de seguridad).
+
+**Si en algún momento se quiere la verificación real** (recomendado, sobre
+todo si este mismo endpoint se llega a exponer para que el usuario cambie su
+propia contraseña, no solo para que un admin resetee la de otro), haría
+falta agregar `ContrasenaActual` al DTO y validarla con `IPasswordHasher`
+antes de cambiar el hash, igual que en el login — pero eso es una decisión
+de producto, no se ha pedido todavía.
+
 ---
 
 ## Qué sigue del lado del frontend
 
-Con esto, el trabajo pendiente deja de ser "pedir endpoints" y pasa a ser **conectar cada módulo a su API real**, igual que se hizo con Farmacia y Facturación:
-
-- Pacientes, Pólizas, Hospitalización, Laboratorio, Emergencias, Expedientes — ya tenían backend antes y ahora tienen aún más (notas de enfermería, resultados de examen, etc.).
+- Pacientes, Pólizas, Hospitalización, Laboratorio, Emergencias, Expedientes — otro equipo las está conectando a su API real.
 - Citas / Consultas Externas — ahora sí se puede conectar por primera vez.
-- Convenios — se puede reemplazar el campo numérico del formulario de factura por el selector real.
-- Proveedores — se puede agregar el selector real al formulario de item de inventario.
-- Catálogos — se puede construir la pantalla de mantenimiento que se tenía pendiente.
-- Usuarios, Roles, Permisos, Empleados — se puede construir una pantalla de administración/seguridad si se prioriza.
+- ✅ Convenios, Proveedores, Catálogos, Usuarios, Roles, Permisos, Empleados, Aseguradoras, Salas, Habitaciones, Puestos, Especialidades, Tipos de consentimiento, Tipos de examen — ya tienen su pantalla en Mantenimiento.
+- **Libro de actas** — sorpresa de esta revisión: `ActasController` ya tiene CRUD completo (no se había pedido explícitamente, pero ya está). Nadie ha construido el frontend todavía; la pantalla de Recepción sigue mostrando datos de ejemplo (`libro-actas.ts`).
 
 ## Cómo se armó esta actualización
 

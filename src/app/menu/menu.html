@@ -80,23 +80,30 @@
           </button>
         </div>
         <div class="section-body">
-          <mat-nav-list class="nav-list">
-            @for (item of section.items; track item.label) {
-              <a
-                mat-list-item
-                class="nav-item"
-                [routerLink]="item.route || null"
-                [queryParams]="item.queryParams || null"
-                [class.active]="isItemActive(item)"
-                [matTooltip]="item.label"
-                [matTooltipDisabled]="!collapsed()"
-                matTooltipPosition="right"
-              >
-                <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-                <span matListItemTitle class="label">{{ item.label }}</span>
-              </a>
+          <div class="section-groups">
+            @for (grupo of grupos(section); track grupo.nombre) {
+              @if (grupo.nombre && !collapsed()) {
+                <div class="nav-group-title">{{ grupo.nombre }}</div>
+              }
+              <mat-nav-list class="nav-list">
+                @for (item of grupo.items; track item.label) {
+                  <a
+                    mat-list-item
+                    class="nav-item"
+                    [routerLink]="item.route || null"
+                    [queryParams]="item.queryParams || null"
+                    [class.active]="isItemActive(item)"
+                    [matTooltip]="item.label"
+                    [matTooltipDisabled]="!collapsed()"
+                    matTooltipPosition="right"
+                  >
+                    <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+                    <span matListItemTitle class="label">{{ item.label }}</span>
+                  </a>
+                }
+              </mat-nav-list>
             }
-          </mat-nav-list>
+          </div>
         </div>
       </div>
     }

@@ -1,0 +1,154 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/empleados" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Empleados
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo empleado' : 'Editar empleado' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Primer nombre</mat-label>
+        <input matInput formControlName="primerNombre" />
+        @if (form.controls.primerNombre.invalid && form.controls.primerNombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Segundo nombre (opcional)</mat-label>
+        <input matInput formControlName="segundoNombre" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Primer apellido</mat-label>
+        <input matInput formControlName="primerApellido" />
+        @if (form.controls.primerApellido.invalid && form.controls.primerApellido.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Segundo apellido (opcional)</mat-label>
+        <input matInput formControlName="segundoApellido" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de nacimiento (opcional)</mat-label>
+        <input matInput type="date" formControlName="fechaNacimiento" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Género (opcional)</mat-label>
+        <mat-select formControlName="idGenero">
+          <mat-option [value]="null">Sin especificar</mat-option>
+          @for (g of generos(); track g.id) {
+            <mat-option [value]="g.id">{{ g.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de documento (opcional)</mat-label>
+        <mat-select formControlName="idTipoDocumento">
+          <mat-option [value]="null">Sin especificar</mat-option>
+          @for (t of tiposDocumento(); track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Número de documento (opcional)</mat-label>
+        <input matInput formControlName="numeroDocumento" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Puesto</mat-label>
+        <mat-select formControlName="idPuesto">
+          @for (p of puestos(); track p.idPuesto) {
+            <mat-option [value]="p.idPuesto">{{ p.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idPuesto.invalid && form.controls.idPuesto.touched) {
+          <mat-error>Selecciona un puesto</mat-error>
+        }
+        @if (puestos().length === 0) {
+          <mat-hint>No hay puestos creados todavía — <a routerLink="/home/mantenimiento/puestos/nuevo">crea uno primero</a>.</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Especialidad (opcional, solo médicos)</mat-label>
+        <mat-select formControlName="idEspecialidad">
+          <mat-option [value]="null">Sin especialidad</mat-option>
+          @for (e of especialidades(); track e.idEspecialidad) {
+            <mat-option [value]="e.idEspecialidad">{{ e.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Colegiado (opcional)</mat-label>
+        <input matInput formControlName="colegiado" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de ingreso</mat-label>
+        <input matInput type="date" formControlName="fechaIngreso" />
+        @if (form.controls.fechaIngreso.invalid && form.controls.fechaIngreso.touched) {
+          <mat-error>Requerida</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de egreso (opcional)</mat-label>
+        <input matInput type="date" formControlName="fechaEgreso" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoEmpleado">
+          @for (e of estados(); track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idEstadoEmpleado.invalid && form.controls.idEstadoEmpleado.touched) {
+          <mat-error>Selecciona un estado</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Teléfono (opcional)</mat-label>
+        <input matInput formControlName="telefono" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Correo (opcional)</mat-label>
+        <input matInput type="email" formControlName="correo" />
+        @if (form.controls.correo.invalid && form.controls.correo.touched) {
+          <mat-error>Correo no válido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Dirección (opcional)</mat-label>
+        <input matInput formControlName="direccion" />
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/empleados">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

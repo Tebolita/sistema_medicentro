@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { Medicamento } from '../../models';
 import { MedicamentoInput, MedicamentosService } from '../../service/medicamentos.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { UsuariosService } from '../../service/usuarios.service';
 
 @Component({
   selector: 'app-medicamento-formulario',
@@ -31,11 +32,13 @@ export class MedicamentoFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private medicamentosService = inject(MedicamentosService);
+  private usuariosService = inject(UsuariosService);
 
   idMedicamento = signal(0);
   esNuevo = computed(() => this.idMedicamento() === 0);
   guardando = signal(false);
   errorMsg = signal('');
+  registro = signal<Medicamento | undefined>(undefined);
 
   // El backend valida que el id exista en cat_valor_catalogo (cualquier
   // catálogo, no uno en particular), pero por convención debería ser del
@@ -68,6 +71,7 @@ export class MedicamentoFormulario {
 
   private cargar(m: Medicamento): void {
     this.idMedicamento.set(m.idMedicamento);
+    this.registro.set(m);
     this.form.patchValue({
       nombre: m.nombre,
       principioActivo: m.principioActivo ?? '',
@@ -105,5 +109,15 @@ export class MedicamentoFormulario {
         this.guardando.set(false);
       },
     });
+  }
+
+  // Igual que en la lista: el backend tiene el campo pero todavía no lo
+  // llena (ver SOLICITUD_ENDPOINTS_ELIMINADOS.md punto 5), así que esto
+  // muestra "—" hasta que eso se arregle del lado del backend.
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 }

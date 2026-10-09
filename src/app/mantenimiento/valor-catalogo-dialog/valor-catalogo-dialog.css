@@ -1,0 +1,36 @@
+.dialog-subtitle {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text-soft);
+}
+
+.dialog-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 4px 16px;
+  min-width: 320px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+/* El mat-error de "Orden" ("Ya hay otro valor con este orden en este
+   catálogo") es largo y se envuelve en 2 líneas, lo que hace esa celda más
+   alta que su vecina. Con el gap de 4px del grid, eso monta el error sobre
+   los campos de la fila siguiente. */
+.dialog-form-grid mat-form-field:has(mat-error) {
+  margin-bottom: 10px;
+}
+
+.form-error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(198, 40, 40, 0.08);
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  font-size: 13px;
+  font-weight: 600;
+}

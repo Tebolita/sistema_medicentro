@@ -26,6 +26,18 @@ export interface CatalogoValor {
   orden: number;
 }
 
+// GET /api/catalogos: lista TODOS los cat_tipo_catalogo que existen en la
+// base, cada uno con sus valores activos ya incluidos (evita pedirlos aparte
+// uno por uno). Si por algún motivo el endpoint no respondiera, se queda
+// vacío sin romper nada (la pantalla de Catálogos cae a su lista curada).
+export interface CatalogoTipo {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  valores: CatalogoValor[];
+}
+
 // GET /api/catalogos/{codigoTipo}: valores REALES de cat_valor_catalogo, en
 // vez de los ids fijos que traían los dropdowns antes. Solo unos pocos
 // códigos de catálogo están confirmados con el backend (ver comentarios en
@@ -40,6 +52,56 @@ export class CatalogosService {
   private apiUrl = 'https://localhost:7086/api/catalogos';
 
   private cache = new Map<string, ReturnType<typeof signal<CatalogoValor[]>>>();
+
+  // Lista de TODOS los tipos de catálogo que existen en la base (ver
+  // CatalogoTipo arriba). Se pide una sola vez; si el endpoint no existe
+  // todavía responde 404 y se deja vacía en silencio.
+  private tipos = signal<CatalogoTipo[]>([]);
+  tiposDesdeBackend = this.tipos.asReadonly();
+
+  constructor() {
+    if (this.esNavegador) {
+      this.cargarTodos();
+    }
+  }
+
+  private cargarTodos(): void {
+    if (!this.esNavegador) {
+      return;
+    }
+    this.http
+      .get<ApiResponse<CatalogoTipo[]>>(this.apiUrl)
+      .pipe(
+        map((resp) => resp.datos ?? []),
+        catchError(() => of([] as CatalogoTipo[])),
+      )
+      .subscribe((tipos) => {
+        this.tipos.set(tipos);
+        // Ya vienen los valores de cada catálogo en la misma respuesta: se
+        // precarga el caché de cada uno para no pedirlos aparte uno por uno.
+        // Importante: si algún componente ya había llamado a obtener() antes
+        // de que esto resolviera, ya tiene SU signal guardado en un campo;
+        // hay que actualizar ESE signal (con .set), no reemplazarlo en el
+        // mapa por uno nuevo, o ese componente se queda viendo el viejo.
+        for (const t of tipos) {
+          const existente = this.cache.get(t.codigo);
+          if (existente) {
+            existente.set(t.valores);
+          } else {
+            this.cache.set(t.codigo, signal(t.valores));
+          }
+        }
+      });
+  }
+
+  // Fuerza una recarga de TODOS los catálogos (ver cargarTodos arriba).
+  // La usa PermisosMenuService justo al iniciar sesión: si este servicio ya
+  // se había construido antes de que hubiera token (p. ej. hidratación de la
+  // página prerenderizada), su primera carga pudo haber salido sin sesión;
+  // esto la repite ya autenticada.
+  recargarTodos(): void {
+    this.cargarTodos();
+  }
 
   // Para la pantalla de mantenimiento: vuelve a pedir un catálogo (p. ej.
   // después de crear/editar/dar de baja un valor), aunque ya se haya
@@ -65,9 +127,10 @@ export class CatalogosService {
   }
 
   crearTipo(input: CatalogoTipoInput): Observable<unknown> {
-    return this.http
-      .post<ApiResponse<unknown>>(`${this.apiUrl}/tipos`, input)
-      .pipe(catchError(this.errorService.handleError));
+    return this.http.post<ApiResponse<unknown>>(`${this.apiUrl}/tipos`, input).pipe(
+      tap(() => this.cargarTodos()),
+      catchError(this.errorService.handleError),
+    );
   }
 
   crearValor(codigoTipo: string, input: CatalogoValorInput): Observable<CatalogoValor> {

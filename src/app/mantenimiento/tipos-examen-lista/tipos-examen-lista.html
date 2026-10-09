@@ -1,0 +1,99 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo','mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Tipos de examen</h1>
+      <p>Exámenes de laboratorio e imagen disponibles para órdenes médicas.</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/tipos-examen/nuevo">
+      <mat-icon>add</mat-icon>
+      Nuevo tipo
+    </a>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activos'" (click)="verActivos()">
+      <mat-icon>biotech</mat-icon>
+      Activos
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminados'" (click)="verEliminados()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminados
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por nombre..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (t of tipos(); track t.idTipoExamen) {
+      <a
+        class="item-card"
+        [class.inactivo]="vista() === 'eliminados'"
+        [routerLink]="vista() === 'activos' ? ['/home/mantenimiento/tipos-examen', t.idTipoExamen] : null"
+      >
+        <div class="item-icon"><mat-icon>biotech</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ t.nombre }}</h2>
+          <span class="item-meta">{{ categoriaLabel(t.idCategoriaExamen) }}</span>
+          @if (t.descripcion) {
+            <span class="item-meta">{{ t.descripcion }}</span>
+          }
+        </div>
+        @if (vista() === 'activos') {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(t.idTipoExamen, t.nombre)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(t.idTipoExamen, t.nombre)"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (tipos().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>biotech</mat-icon>
+        <p>
+          @if (vista() === 'activos') {
+            No se encontraron tipos de examen{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay tipos de examen eliminados{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

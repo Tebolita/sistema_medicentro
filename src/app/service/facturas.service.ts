@@ -5,6 +5,7 @@ import { Factura, FacturaDetalle, Pago } from '../models';
 import { ApiResponse } from '../models/api-response.model';
 import { ErrorService } from './error.service';
 import { CatalogosService } from './catalogos.service';
+import { ESTADOS_PAGO } from '../facturacion/facturacion-catalogos';
 
 // Igual que FacturaCompletaDto del backend: { factura, detalles }.
 export interface FacturaCompleta {
@@ -77,6 +78,47 @@ export class FacturasService {
     [...this.pagos()].sort((a, b) => b.fechaPago.localeCompare(a.fechaPago)),
   );
 
+  // GET /api/facturas solo trae las activas; las dadas de baja se piden
+  // aparte en /eliminadas.
+  private eliminadas = signal<FacturaCompleta[]>([]);
+  cargandoEliminadas = signal(false);
+  errorEliminadas = signal('');
+
+  listarEliminadas = computed(() =>
+    [...this.eliminadas()].sort((a, b) => b.factura.fechaEmision.localeCompare(a.factura.fechaEmision)),
+  );
+
+  cargarEliminadas(): void {
+    this.cargandoEliminadas.set(true);
+    this.errorEliminadas.set('');
+    this.http
+      .get<ApiResponse<FacturaCompleta[]>>(`${this.apiUrl}/eliminadas`)
+      .pipe(map((resp) => resp.datos ?? []))
+      .subscribe({
+        next: (lista) => {
+          this.eliminadas.set(lista);
+          this.cargandoEliminadas.set(false);
+        },
+        error: () => {
+          this.errorEliminadas.set('No se pudieron cargar las facturas eliminadas.');
+          this.cargandoEliminadas.set(false);
+        },
+      });
+  }
+
+  // El backend solo confirma el reactivado (no devuelve la factura
+  // completa), así que para verla en la lista de activas hay que recargarla.
+  reactivar(id: number): Observable<void> {
+    return this.http.put<ApiResponse<unknown>>(`${this.apiUrl}/${id}/reactivar`, {}).pipe(
+      map(() => undefined),
+      tap(() => {
+        this.eliminadas.update((lista) => lista.filter((x) => x.factura.idFactura !== id));
+        this.cargar();
+      }),
+      catchError(this.errorService.handleError),
+    );
+  }
+
   obtener(id: number): FacturaCompleta | undefined {
     return this.registros().find((r) => r.factura.idFactura === id);
   }
@@ -90,6 +132,15 @@ export class FacturasService {
     return (
       this.catalogos.idPorCodigo('ESTADO_PAGO', ESTADO_PAGO_APLICADO_CODIGO) ?? ESTADO_PAGO_APLICADO_FALLBACK
     );
+  }
+
+  // Para mostrar el estado del pago (Aplicado/Anulado) en las listas; antes
+  // no se mostraba en ningún lado. Catálogo real si existe, si no, la lista
+  // de ejemplo.
+  estadoPagoLabel(idEstadoPago: number): string {
+    const api = this.catalogos.obtener('ESTADO_PAGO')();
+    const lista = api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : ESTADOS_PAGO;
+    return lista.find((e) => e.id === idEstadoPago)?.label ?? '—';
   }
 
   totalPagado(idFactura: number): number {

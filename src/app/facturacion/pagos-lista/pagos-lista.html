@@ -41,7 +41,10 @@
           <span class="pago-meta">{{ numeroDocumento(p.idFactura) }} · {{ formaPagoLabel(p.idFormaPago) }}</span>
           <span class="pago-meta"><mat-icon>event</mat-icon>{{ formatFecha(p.fechaPago) }}</span>
         </div>
-        <span class="pago-monto">{{ formatMonto(p.monto) }}</span>
+        <div class="pago-right">
+          <span class="pago-monto">{{ formatMonto(p.monto) }}</span>
+          <span class="pago-estado">{{ estadoPagoLabel(p.idEstadoPago) }}</span>
+        </div>
       </a>
     }
 

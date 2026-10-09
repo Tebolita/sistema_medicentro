@@ -10,6 +10,9 @@ import { ESTADOS_ITEM_INVENTARIO, UNIDADES_MEDIDA } from '../farmacia-catalogos'
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
 import { ProveedoresService } from '../../service/proveedores.service';
+import { UsuariosService } from '../../service/usuarios.service';
+
+type Vista = 'activos' | 'eliminados';
 
 @Component({
   selector: 'app-inventario-lista',
@@ -22,6 +25,7 @@ export class InventarioLista {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private proveedoresService = inject(ProveedoresService);
+  private usuariosService = inject(UsuariosService);
 
   // Mismo patrón que item-formulario: valores reales del catálogo si existen
   // en la base, si no, la lista de ejemplo.
@@ -45,8 +49,16 @@ export class InventarioLista {
 
   opcionesFarmacia = MENU_SECTIONS.find((s) => s.slug === 'farmacia')?.items ?? [];
 
-  cargando = this.inventarioService.cargando;
-  errorCarga = this.inventarioService.errorCarga;
+  errorAccion = signal('');
+
+  // Pestaña "Eliminados": por ahora cualquiera con sesión la puede ver.
+  // TODO: restringir a admin cuando exista control de roles en el frontend.
+  vista = signal<Vista>('activos');
+  cargandoEliminados = this.inventarioService.cargandoEliminados;
+  errorEliminados = this.inventarioService.errorEliminados;
+
+  cargando = computed(() => (this.vista() === 'activos' ? this.inventarioService.cargando() : this.cargandoEliminados()));
+  errorCarga = computed(() => (this.vista() === 'activos' ? this.inventarioService.errorCarga() : this.errorEliminados()));
 
   constructor() {
     // Solo en el navegador: durante el prerender no hay backend ni sesión.
@@ -63,12 +75,54 @@ export class InventarioLista {
 
   items = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.inventarioService.listar();
+    const lista = this.vista() === 'activos' ? this.inventarioService.listar() : this.inventarioService.listarEliminados();
     if (!term) {
       return lista;
     }
     return lista.filter((i) => i.nombre.toLowerCase().includes(term));
   });
+
+  verActivos(): void {
+    this.vista.set('activos');
+  }
+
+  verEliminados(): void {
+    this.vista.set('eliminados');
+    // Se pide la primera vez que se entra a la pestaña, no en cada clic.
+    if (!this.inventarioService.listarEliminados().length) {
+      this.inventarioService.cargarEliminados();
+    }
+  }
+
+  eliminar(event: Event, idItemInventario: number, nombre: string, stockActual: number): void {
+    event.stopPropagation();
+    event.preventDefault();
+    const mensaje =
+      stockActual > 0
+        ? `"${nombre}" todavía tiene ${stockActual} unidades en stock.\n\n` +
+          `Si lo das de baja, deja de aparecer en el inventario activo pero el stock no se pierde.\n\n` +
+          `¿Seguro que deseas darlo de baja de todos modos?`
+        : `¿Dar de baja el item "${nombre}"?`;
+    if (!confirm(mensaje)) {
+      return;
+    }
+    this.errorAccion.set('');
+    this.inventarioService.eliminar(idItemInventario).subscribe({
+      error: (err: Error) => this.errorAccion.set(err.message),
+    });
+  }
+
+  reactivar(event: Event, idItemInventario: number, nombre: string): void {
+    event.stopPropagation();
+    event.preventDefault();
+    if (!confirm(`¿Reactivar el item "${nombre}"?`)) {
+      return;
+    }
+    this.errorAccion.set('');
+    this.inventarioService.reactivar(idItemInventario).subscribe({
+      error: (err: Error) => this.errorAccion.set(err.message),
+    });
+  }
 
   unidadLabel(idUnidadMedida: number): string {
     return this.unidadesMedida().find((u) => u.id === idUnidadMedida)?.label ?? '—';
@@ -91,6 +145,17 @@ export class InventarioLista {
     event.stopPropagation();
     event.preventDefault();
     this.router.navigate(['/home/farmacia/item', idItemInventario]);
+  }
+
+  // Igual que en medicamentos: el backend todavía no llena
+  // "idUsuarioCreacion"/"idUsuarioModificacion" con el usuario real (ver
+  // SOLICITUD_ENDPOINTS_ELIMINADOS.md punto 5), así que esto muestra "—"
+  // hasta que eso se arregle del lado del backend.
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
   porcentajeStock(stockActual: number, stockMinimo: number): number {

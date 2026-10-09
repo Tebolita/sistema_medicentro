@@ -45,6 +45,17 @@
     }
   </div>
 
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activas'" (click)="verActivas()">
+      <mat-icon>receipt_long</mat-icon>
+      Activas
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminadas'" (click)="verEliminadas()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
   @if (errorCarga() || errorAccion()) {
     <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
   }
@@ -55,7 +66,11 @@
 
   <div class="factura-grid">
     @for (r of facturas(); track r.factura.idFactura) {
-      <a class="factura-card" [routerLink]="['/home/facturacion', r.factura.idFactura]">
+      <a
+        class="factura-card"
+        [class.inactivo]="vista() === 'eliminadas'"
+        [routerLink]="vista() === 'activas' ? ['/home/facturacion', r.factura.idFactura] : null"
+      >
         <div class="patient-avatar">{{ iniciales(r.factura.idPaciente) }}</div>
         <div class="factura-info">
           <h2>{{ nombrePaciente(r.factura.idPaciente) }}</h2>
@@ -68,18 +83,33 @@
             }
           </span>
           <span class="factura-meta"><mat-icon>event</mat-icon>{{ formatFecha(r.factura.fechaEmision) }}</span>
+          <span class="factura-meta">
+            {{ vista() === 'activas' ? 'Creada' : 'Anulada' }} por:
+            {{ usuarioLabel(vista() === 'activas' ? r.factura.idUsuarioCreacion : r.factura.idUsuarioModificacion) }}
+          </span>
         </div>
         <div class="factura-actions">
           <span class="factura-total">{{ formatMonto(r.factura.total) }}</span>
           <span class="status-badge" [class]="estadoClase(r.factura.idEstadoFactura)">{{ estadoLabel(r.factura.idEstadoFactura) }}</span>
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Anular factura'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.factura.idFactura, nombrePaciente(r.factura.idPaciente))"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
+          @if (vista() === 'activas') {
+            <button
+              matIconButton
+              type="button"
+              [matTooltip]="'Anular factura'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.factura.idFactura, nombrePaciente(r.factura.idPaciente))"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          } @else {
+            <button
+              matIconButton
+              type="button"
+              [matTooltip]="'Reactivar'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(r.factura.idFactura, nombrePaciente(r.factura.idPaciente))"
+            >
+              <mat-icon>restore</mat-icon>
+            </button>
+          }
         </div>
       </a>
     }
@@ -87,7 +117,13 @@
     @if (facturas().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
         <mat-icon>receipt_long</mat-icon>
-        <p>No se encontraron facturas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        <p>
+          @if (vista() === 'activas') {
+            No se encontraron facturas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay facturas eliminadas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
       </div>
     }
   </div>

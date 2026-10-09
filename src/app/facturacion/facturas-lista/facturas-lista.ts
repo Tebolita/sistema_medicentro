@@ -10,6 +10,9 @@ import { ESTADOS_FACTURA } from '../facturacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
+import { UsuariosService } from '../../service/usuarios.service';
+
+type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-facturas-lista',
@@ -22,6 +25,7 @@ export class FacturasLista {
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
   private catalogos = inject(CatalogosService);
+  private usuariosService = inject(UsuariosService);
   private estadosFacturaApi = this.catalogos.obtener('ESTADO_FACTURA');
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
@@ -32,9 +36,16 @@ export class FacturasLista {
 
   opcionesFacturacion = MENU_SECTIONS.find((s) => s.slug === 'facturacion-cobros')?.items ?? [];
 
-  cargando = this.facturasService.cargando;
-  errorCarga = this.facturasService.errorCarga;
   errorAccion = signal('');
+
+  // Pestaña "Eliminadas": por ahora cualquiera con sesión la puede ver.
+  // TODO: restringir a admin cuando exista control de roles en el frontend.
+  vista = signal<Vista>('activas');
+  cargandoEliminadas = this.facturasService.cargandoEliminadas;
+  errorEliminadas = this.facturasService.errorEliminadas;
+
+  cargando = computed(() => (this.vista() === 'activas' ? this.facturasService.cargando() : this.cargandoEliminadas()));
+  errorCarga = computed(() => (this.vista() === 'activas' ? this.facturasService.errorCarga() : this.errorEliminadas()));
 
   constructor() {
     // Solo en el navegador: durante el prerender no hay backend ni sesión.
@@ -52,7 +63,7 @@ export class FacturasLista {
 
   facturas = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.facturasService.listar();
+    const lista = this.vista() === 'activas' ? this.facturasService.listar() : this.facturasService.listarEliminadas();
     if (!term) {
       return lista;
     }
@@ -64,6 +75,18 @@ export class FacturasLista {
         .includes(term),
     );
   });
+
+  verActivas(): void {
+    this.vista.set('activas');
+  }
+
+  verEliminadas(): void {
+    this.vista.set('eliminadas');
+    // Se pide la primera vez que se entra a la pestaña, no en cada clic.
+    if (!this.facturasService.listarEliminadas().length) {
+      this.facturasService.cargarEliminadas();
+    }
+  }
 
   nombrePaciente(idPaciente: number): string {
     const p = this.pacientesService.directorio().find((pac) => pac.idPaciente === idPaciente);
@@ -102,12 +125,33 @@ export class FacturasLista {
     return `Q${monto.toFixed(2)}`;
   }
 
+  // Igual que en medicamentos/inventario: el backend todavía no llena
+  // "idUsuarioCreacion"/"idUsuarioModificacion" con el usuario real (ver
+  // SOLICITUD_ENDPOINTS_ELIMINADOS.md punto 5), así que esto muestra "—"
+  // hasta que eso se arregle del lado del backend.
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
   eliminar(id: number, paciente: string): void {
     if (!confirm(`¿Anular la factura de "${paciente}"?`)) {
       return;
     }
     this.errorAccion.set('');
     this.facturasService.eliminar(id).subscribe({
+      error: (err: Error) => this.errorAccion.set(err.message),
+    });
+  }
+
+  reactivar(id: number, paciente: string): void {
+    if (!confirm(`¿Reactivar la factura de "${paciente}"?`)) {
+      return;
+    }
+    this.errorAccion.set('');
+    this.facturasService.reactivar(id).subscribe({
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

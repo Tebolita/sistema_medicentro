@@ -22,6 +22,17 @@ export class AuthService {
         )
     }
 
+    // Id del usuario de la sesión actual (del JWT, guardado al iniciar
+    // sesión). Lo usa la pantalla de "Mi cuenta" para saber a quién editar.
+    idUsuarioActual(): number | null {
+        try {
+            const id = localStorage.getItem('id_usuario');
+            return id ? Number(id) : null;
+        } catch {
+            return null;
+        }
+    }
+
     // Borra la sesión guardada localmente. El backend no tiene un endpoint
     // de logout (el JWT solo expira solo, no se puede invalidar antes), así
     // que cerrar sesión es, del lado del cliente, dejar de mandar el token.

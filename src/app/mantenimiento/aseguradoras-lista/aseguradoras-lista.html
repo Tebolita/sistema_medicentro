@@ -1,0 +1,99 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo','mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Aseguradoras</h1>
+      <p>Aseguradoras y entidades de pólizas (módulo Seguros Médicos).</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/aseguradoras/nueva">
+      <mat-icon>add</mat-icon>
+      Nueva aseguradora
+    </a>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activas'" (click)="verActivas()">
+      <mat-icon>health_and_safety</mat-icon>
+      Activas
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminadas'" (click)="verEliminadas()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por nombre, NIT, teléfono o correo..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (a of aseguradoras(); track a.idAseguradora) {
+      <a
+        class="item-card"
+        [class.inactivo]="vista() === 'eliminadas'"
+        [routerLink]="vista() === 'activas' ? ['/home/mantenimiento/aseguradoras', a.idAseguradora] : null"
+      >
+        <div class="item-icon"><mat-icon>health_and_safety</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ a.nombre }}</h2>
+          <span class="item-meta">{{ a.nit || 'Sin NIT' }}{{ a.telefono ? ' · ' + a.telefono : '' }}</span>
+          @if (a.correo) {
+            <span class="item-meta">{{ a.correo }}</span>
+          }
+        </div>
+        @if (vista() === 'activas') {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(a.idAseguradora, a.nombre)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(a.idAseguradora, a.nombre)"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (aseguradoras().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>health_and_safety</mat-icon>
+        <p>
+          @if (vista() === 'activas') {
+            No se encontraron aseguradoras{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay aseguradoras eliminadas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

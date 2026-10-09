@@ -40,6 +40,13 @@
         <div class="item-info">
           <h2>{{ u.nombreUsuario }}</h2>
           <span class="item-meta">{{ u.correo }}</span>
+          @if (u.idEmpleado) {
+            <span class="codigo-empleado">
+              <mat-icon>badge</mat-icon>
+              <span class="codigo-empleado-texto">Código:</span>
+              <span class="codigo-empleado-valor">{{ u.idEmpleado }}</span>
+            </span>
+          }
           <span class="item-meta">{{ estadoLabel(u.idEstadoUsuario) }}</span>
         </div>
         <button

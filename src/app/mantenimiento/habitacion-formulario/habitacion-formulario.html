@@ -1,0 +1,122 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/habitaciones" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Habitaciones
+    </a>
+    <h1>{{ esNueva() ? 'Nueva habitación' : 'Editar habitación' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Número</mat-label>
+        <input matInput formControlName="numero" placeholder="Ej. 101" />
+        @if (form.controls.numero.invalid && form.controls.numero.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Piso (opcional)</mat-label>
+        <input matInput type="number" formControlName="piso" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo (opcional)</mat-label>
+        <mat-select formControlName="idTipoHabitacion">
+          <mat-option [value]="null">Sin especificar</mat-option>
+          @for (t of tipos(); track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoHabitacion">
+          @for (e of estados(); track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idEstadoHabitacion.invalid && form.controls.idEstadoHabitacion.touched) {
+          <mat-error>Selecciona un estado</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/habitaciones">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+
+  @if (!esNueva()) {
+    <div class="form-panel roles-panel">
+      <h2>Camas</h2>
+
+      @if (errorCamas()) {
+        <p class="form-error">{{ errorCamas() }}</p>
+      }
+
+      @if (mostrandoFormCama()) {
+        <form [formGroup]="camaForm" (ngSubmit)="guardarCama()" class="valor-form">
+          <mat-form-field appearance="outline">
+            <mat-label>Número de cama</mat-label>
+            <input matInput formControlName="numeroCama" placeholder="Ej. A" />
+            @if (camaForm.controls.numeroCama.invalid && camaForm.controls.numeroCama.touched) {
+              <mat-error>Requerido</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select formControlName="idEstadoCama">
+              @for (e of estadosCama(); track e.id) {
+                <mat-option [value]="e.id">{{ e.label }}</mat-option>
+              }
+            </mat-select>
+            @if (camaForm.controls.idEstadoCama.invalid && camaForm.controls.idEstadoCama.touched) {
+              <mat-error>Selecciona un estado</mat-error>
+            }
+          </mat-form-field>
+          <div class="valor-form-actions">
+            <button matButton type="button" (click)="cancelarCama()">Cancelar</button>
+            <button matButton="filled" type="submit" [disabled]="guardandoCama()">
+              <mat-icon>save</mat-icon>
+              {{ editandoCama() !== null ? 'Guardar cambios' : 'Agregar' }}
+            </button>
+          </div>
+        </form>
+      } @else {
+        <button matButton type="button" (click)="nuevaCama()">
+          <mat-icon>add</mat-icon>
+          Agregar cama
+        </button>
+      }
+
+      <div class="roles-lista">
+        @for (c of camas(); track c.idCama) {
+          <div class="rol-chip">
+            <span>Cama {{ c.numeroCama }} · {{ estadoCamaLabel(c.idEstadoCama) }}</span>
+            <button matIconButton type="button" [matTooltip]="'Editar'" (click)="editarCama(c)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button matIconButton type="button" [matTooltip]="'Quitar'" (click)="eliminarCama(c)">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+        @if (camas().length === 0) {
+          <p class="sin-roles">Esta habitación no tiene camas todavía.</p>
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -17,6 +17,7 @@ import { PolizasDirectorioService } from '../../service/polizas-directorio.servi
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { ComprobantesService } from '../../service/comprobantes.service';
 import { ConveniosService } from '../../service/convenios.service';
+import { UsuariosService } from '../../service/usuarios.service';
 import { esImagenComprobante as esUrlDeImagen } from '../comprobante-descripcion.util';
 
 @Component({
@@ -42,6 +43,7 @@ export class FacturaFormulario {
   private pacientesService = inject(PacientesService);
   private polizasService = inject(PolizasDirectorioService);
   private comprobantesService = inject(ComprobantesService);
+  private usuariosService = inject(UsuariosService);
   private snackBar = inject(MatSnackBar);
 
   // GET /api/convenios ya existe. Si por alguna razón no hay convenios
@@ -52,13 +54,17 @@ export class FacturaFormulario {
 
   pacientes = this.pacientesService.directorio;
   polizas = this.polizasService.listar;
-  tiposItem = TIPOS_ITEM_FACTURA;
 
   // ESTADO_FACTURA es el código real que ya usa el backend (resuelve
-  // "PAGADA" al aprobar un pago). FORMA_PAGO todavía no está confirmado con
-  // el backend: se intenta igual y, si no existe en la base, se cae a la
-  // lista de ejemplo.
+  // "PAGADA" al aprobar un pago). Los demás todavía no están confirmados
+  // con el backend: se intentan igual y, si no existen en la base, se cae
+  // a la lista de ejemplo.
   private catalogos = inject(CatalogosService);
+  private tiposItemApi = this.catalogos.obtener('TIPO_ITEM_FACTURA');
+  tiposItem = computed(() => {
+    const api = this.tiposItemApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : TIPOS_ITEM_FACTURA;
+  });
   private estadosFacturaApi = this.catalogos.obtener('ESTADO_FACTURA');
   estadosFactura = computed(() => {
     const api = this.estadosFacturaApi();
@@ -148,22 +154,58 @@ export class FacturaFormulario {
 
     this.detalles.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.recalcularSubtotal());
 
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (idParam && idParam !== 'nueva') {
-      // Edición: se trae la factura (con sus pagos) del backend; sirve
-      // también al recargar la página.
-      this.facturasService.obtenerPorId(Number(idParam)).subscribe({
-        next: (registro) => this.cargar(registro),
-        error: (err: Error) => this.errorMsg.set(err.message),
-      });
-      return;
-    }
+    // Angular reutiliza esta misma instancia del componente al navegar entre
+    // dos facturas distintas sin salir de esta ruta (p. ej. desde las
+    // alertas del header, que llevan de una factura a otra con
+    // [routerLink]="['/home/facturacion', idFactura]"): leer el id solo del
+    // snapshot (como estaba antes) hacía que el formulario se quedara
+    // mostrando la factura vieja. Suscribirse a paramMap sí reacciona cuando
+    // cambia.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const idParam = params.get('id');
+      this.resetFormulario();
+      if (idParam && idParam !== 'nueva') {
+        // Edición: se trae la factura (con sus pagos) del backend; sirve
+        // también al recargar la página.
+        this.facturasService.obtenerPorId(Number(idParam)).subscribe({
+          next: (registro) => this.cargar(registro),
+          error: (err: Error) => this.errorMsg.set(err.message),
+        });
+        return;
+      }
 
-    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      this.esDigefact.set(params.get('tipo') === 'digefact');
+      this.esDigefact.set(this.route.snapshot.queryParamMap.get('tipo') === 'digefact');
+      this.agregarDetalle();
     });
+  }
 
-    this.agregarDetalle();
+  // Deja el formulario como recién creado antes de cargar una factura
+  // distinta (o una nueva): si no se limpia, lo de la factura anterior se
+  // queda mezclado con lo nuevo (líneas de detalle duplicadas, comprobante
+  // de la otra factura, etc.).
+  private resetFormulario(): void {
+    this.idFactura.set(0);
+    this.registro.set(undefined);
+    this.esDigefact.set(false);
+    this.cabecera.reset({
+      idPaciente: null,
+      idPoliza: null,
+      descuento: 0,
+      idEstadoFactura: 1,
+      numeroAutorizacionFel: '',
+      fechaCertificacionFel: '',
+      idConvenio: null,
+    });
+    while (this.detalles.length) {
+      this.detalles.removeAt(0);
+    }
+    this.descuentoHeader.set(0);
+    this.comprobanteUrl.set(null);
+    this.comprobanteNombreTemporal.set(null);
+    this.errorComprobante.set('');
+    this.errorMsg.set('');
+    this.errorPago.set('');
+    this.pagoForm.reset({ monto: 0, idFormaPago: null, referenciaPago: '' });
   }
 
   private crearDetalleGroup(d?: FacturaDetalle) {
@@ -253,6 +295,16 @@ export class FacturaFormulario {
 
   formaPagoLabel(idFormaPago: number): string {
     return this.formasPago().find((f) => f.id === idFormaPago)?.label ?? '—';
+  }
+
+  // Igual que en Medicamentos/Inventario: el backend tiene el campo pero
+  // todavía no lo llena (ver SOLICITUD_ENDPOINTS_ELIMINADOS.md punto 5), así
+  // que esto muestra "—" hasta que eso se arregle del lado del backend.
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
   formatMonto(monto: number): string {

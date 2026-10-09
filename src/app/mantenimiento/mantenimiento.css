@@ -106,6 +106,38 @@
   opacity: 0.55;
 }
 
+.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.tab.active {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
 .item-icon {
   display: flex;
   align-items: center;
@@ -216,4 +248,126 @@
 .badge.inactivo {
   background: rgba(120, 144, 156, 0.15);
   color: var(--c-text-muted);
+}
+
+/* Código de empleado: se destaca más que el resto de los metadatos porque
+   es el dato que la persona necesita para iniciar sesión. */
+.codigo-empleado {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c-accent) 16%, transparent);
+  color: var(--c-accent);
+  font-weight: 700;
+  width: fit-content;
+}
+
+.codigo-empleado mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.codigo-empleado-texto {
+  font-size: 12.5px;
+}
+
+.codigo-empleado-valor {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Panel de sub-elementos dentro de un formulario (roles de un usuario,
+   permisos de un rol, camas de una habitación...): chips con una acción
+   para quitar/editar, más un formulario inline para agregar uno nuevo. */
+.roles-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.roles-panel h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.roles-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rol-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: var(--c-bg);
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.rol-chip button {
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+}
+
+.rol-chip mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.sin-roles {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-text-soft);
+}
+
+.permisos-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-text-soft);
+}
+
+.asignar-rol {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--c-border);
+}
+
+.asignar-rol mat-form-field {
+  flex: 1;
+}
+
+.asignar-rol button {
+  margin-top: 4px;
+}
+
+/* Formulario inline corto (agregar/editar un sub-elemento sin abrir popup). */
+.valor-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 4px 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.valor-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }

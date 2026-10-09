@@ -4,7 +4,7 @@
 </div>
 
 <div class="category-grid">
-  @for (section of sections; track section.slug) {
+  @for (section of sections(); track section.slug) {
     <a
       class="category-card"
       [routerLink]="section.route || ['/home/modulo', section.slug]"

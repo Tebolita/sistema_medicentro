@@ -194,6 +194,43 @@
   border-color: rgba(198, 40, 40, 0.35);
 }
 
+.item-card.inactivo {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.tab.active {
+  color: var(--c-accent);
+  border-bottom-color: var(--c-accent);
+}
+
 .item-icon {
   display: flex;
   align-items: center;
@@ -282,6 +319,34 @@
   background: var(--c-accent);
   color: #fff;
   transform: scale(1.08);
+}
+
+.item-delete {
+  position: absolute;
+  bottom: 8px;
+  right: 52px;
+  background: rgba(198, 40, 40, 0.1);
+  color: #c62828;
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.item-delete:hover {
+  background: #c62828;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.item-card.inactivo .item-delete {
+  right: 8px;
+  background: rgba(0, 131, 143, 0.12);
+  color: var(--c-accent);
+}
+
+.item-card.inactivo .item-delete:hover {
+  background: var(--c-accent);
+  color: #fff;
 }
 
 .empty-state {

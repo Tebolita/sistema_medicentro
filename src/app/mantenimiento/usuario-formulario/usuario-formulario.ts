@@ -1,5 +1,7 @@
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -41,6 +43,7 @@ export class UsuarioFormulario {
   private router = inject(Router);
   private usuariosService = inject(UsuariosService);
   private rolesService = inject(RolesService);
+  private snackBar = inject(MatSnackBar);
 
   empleadosService = inject(EmpleadosService);
   empleados = this.empleadosService.listar;
@@ -80,7 +83,20 @@ export class UsuarioFormulario {
     return this.roles().filter((r) => !asignados.has(r.idRol));
   });
 
+  // --- Resetear contraseña (solo en edición; es el admin reseteando la de
+  // otro usuario, no el propio usuario cambiando la suya — eso es "Mi
+  // cuenta"). El backend no pide ni verifica la contraseña actual. ---
+  resetForm = this.fb.nonNullable.group({
+    contrasenaNueva: ['', [Validators.required, Validators.minLength(6)]],
+    repetirContrasenaNueva: ['', Validators.required],
+    requiereCambioPassword: [true],
+  });
+  guardandoReset = signal(false);
+  errorReset = signal('');
+
   constructor() {
+    this.resetForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.validarCoincidenciaReset());
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam && idParam !== 'nuevo') {
       this.form.controls.contrasena.clearValidators();
@@ -96,6 +112,12 @@ export class UsuarioFormulario {
 
     afterNextRender(() => {
       this.empleadosService.cargar();
+      // RolesService ya es reactivo (rolesDisponibles se recalcula solo
+      // cuando cambia su lista), pero si este singleton se cargó UNA vez al
+      // arrancar la app (p. ej. para el menú) y luego se crean roles nuevos,
+      // acá se refresca para no depender de que esa carga inicial siga
+      // vigente — mismo patrón que en convenios-lista/aseguradoras.
+      this.rolesService.cargar();
     });
   }
 
@@ -184,6 +206,41 @@ export class UsuarioFormulario {
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);
+      },
+    });
+  }
+
+  private validarCoincidenciaReset(): void {
+    const { contrasenaNueva, repetirContrasenaNueva } = this.resetForm.getRawValue();
+    const control = this.resetForm.controls.repetirContrasenaNueva;
+    const noCoinciden = !!repetirContrasenaNueva && contrasenaNueva !== repetirContrasenaNueva;
+
+    const { noCoinciden: _ignorado, ...otrosErrores } = control.errors ?? {};
+    control.setErrors(noCoinciden ? { ...otrosErrores, noCoinciden: true } : Object.keys(otrosErrores).length ? otrosErrores : null);
+  }
+
+  resetearContrasena(): void {
+    this.validarCoincidenciaReset();
+    this.resetForm.markAllAsTouched();
+    if (this.resetForm.invalid) {
+      return;
+    }
+    const v = this.resetForm.getRawValue();
+    if (!confirm('¿Resetear la contraseña de este usuario? La contraseña anterior deja de funcionar de inmediato.')) {
+      return;
+    }
+
+    this.guardandoReset.set(true);
+    this.errorReset.set('');
+    this.usuariosService.cambiarContrasena(this.idUsuario(), v.contrasenaNueva, v.requiereCambioPassword).subscribe({
+      next: () => {
+        this.guardandoReset.set(false);
+        this.resetForm.reset({ contrasenaNueva: '', repetirContrasenaNueva: '', requiereCambioPassword: true });
+        this.snackBar.open('Contraseña reseteada correctamente', 'Cerrar', { duration: 4000 });
+      },
+      error: (err: Error) => {
+        this.errorReset.set(err.message);
+        this.guardandoReset.set(false);
       },
     });
   }

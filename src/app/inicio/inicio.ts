@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MENU_SECTIONS } from '../shared/menu-data';
+import { PermisosMenuService } from '../service/permisos-menu.service';
 
 @Component({
   selector: 'app-inicio',
@@ -10,5 +11,12 @@ import { MENU_SECTIONS } from '../shared/menu-data';
   styleUrl: './inicio.css',
 })
 export class Inicio {
-  sections = MENU_SECTIONS;
+  private permisosMenu = inject(PermisosMenuService);
+
+  // Mismo filtro que el menú lateral (PermisosMenuService): null significa
+  // "mostrar todas" (sin permisos configurados todavía o mientras cargan).
+  sections = computed(() => {
+    const permitidos = this.permisosMenu.modulosPermitidos();
+    return permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : MENU_SECTIONS;
+  });
 }

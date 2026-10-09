@@ -45,10 +45,23 @@
   line-height: 1.5;
 }
 
+.group-title {
+  margin: 4px 0 -6px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-text-soft);
+}
+
 .module-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
+}
+
+.module-grid + .group-title {
+  margin-top: 10px;
 }
 
 .module-card {

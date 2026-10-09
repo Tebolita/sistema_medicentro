@@ -1,0 +1,96 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a [routerLink]="['/home/modulo','mantenimiento']" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Mantenimiento
+      </a>
+      <h1>Tipos de consentimiento</h1>
+      <p>Plantillas de consentimiento informado (compromisos de pago, procedimientos...).</p>
+    </div>
+    <a matButton="filled" routerLink="/home/mantenimiento/tipos-consentimiento/nuevo">
+      <mat-icon>add</mat-icon>
+      Nuevo tipo
+    </a>
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activos'" (click)="verActivos()">
+      <mat-icon>description</mat-icon>
+      Activos
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminados'" (click)="verEliminados()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminados
+    </button>
+  </div>
+
+  <div class="search-bar">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar por nombre o código..."
+      [ngModel]="buscar()"
+      (ngModelChange)="buscar.set($event)"
+    />
+    @if (buscar().trim()) {
+      <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+  </div>
+
+  @if (errorCarga() || errorAccion()) {
+    <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
+  }
+
+  <div class="item-grid">
+    @for (t of tipos(); track t.idTipoConsentimiento) {
+      <a
+        class="item-card"
+        [class.inactivo]="vista() === 'eliminados'"
+        [routerLink]="vista() === 'activos' ? ['/home/mantenimiento/tipos-consentimiento', t.idTipoConsentimiento] : null"
+      >
+        <div class="item-icon"><mat-icon>description</mat-icon></div>
+        <div class="item-info">
+          <h2>{{ t.nombre }}</h2>
+          <span class="item-meta">{{ t.codigo }}</span>
+        </div>
+        @if (vista() === 'activos') {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Dar de baja'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(t.idTipoConsentimiento, t.nombre)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button
+            matIconButton
+            type="button"
+            class="item-delete"
+            [matTooltip]="'Reactivar'"
+            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(t.idTipoConsentimiento, t.nombre)"
+          >
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
+      </a>
+    }
+
+    @if (tipos().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>description</mat-icon>
+        <p>
+          @if (vista() === 'activos') {
+            No se encontraron tipos de consentimiento{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay tipos de consentimiento eliminados{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
+      </div>
+    }
+  </div>
+</div>

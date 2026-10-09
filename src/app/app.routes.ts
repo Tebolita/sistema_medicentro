@@ -42,6 +42,26 @@ import { UsuariosLista } from './mantenimiento/usuarios-lista/usuarios-lista';
 import { UsuarioFormulario } from './mantenimiento/usuario-formulario/usuario-formulario';
 import { RolesLista } from './mantenimiento/roles-lista/roles-lista';
 import { RolFormulario } from './mantenimiento/rol-formulario/rol-formulario';
+import { PuestosLista } from './mantenimiento/puestos-lista/puestos-lista';
+import { PuestoFormulario } from './mantenimiento/puesto-formulario/puesto-formulario';
+import { EspecialidadesLista } from './mantenimiento/especialidades-lista/especialidades-lista';
+import { EspecialidadFormulario } from './mantenimiento/especialidad-formulario/especialidad-formulario';
+import { EmpleadosLista } from './mantenimiento/empleados-lista/empleados-lista';
+import { EmpleadoFormulario } from './mantenimiento/empleado-formulario/empleado-formulario';
+import { PermisosLista } from './mantenimiento/permisos-lista/permisos-lista';
+import { PermisoFormulario } from './mantenimiento/permiso-formulario/permiso-formulario';
+import { AseguradorasLista } from './mantenimiento/aseguradoras-lista/aseguradoras-lista';
+import { AseguradoraFormulario } from './mantenimiento/aseguradora-formulario/aseguradora-formulario';
+import { SalasLista } from './mantenimiento/salas-lista/salas-lista';
+import { SalaFormulario } from './mantenimiento/sala-formulario/sala-formulario';
+import { HabitacionesLista } from './mantenimiento/habitaciones-lista/habitaciones-lista';
+import { HabitacionFormulario } from './mantenimiento/habitacion-formulario/habitacion-formulario';
+import { TiposConsentimientoLista } from './mantenimiento/tipos-consentimiento-lista/tipos-consentimiento-lista';
+import { TipoConsentimientoFormulario } from './mantenimiento/tipo-consentimiento-formulario/tipo-consentimiento-formulario';
+import { TiposExamenLista } from './mantenimiento/tipos-examen-lista/tipos-examen-lista';
+import { TipoExamenFormulario } from './mantenimiento/tipo-examen-formulario/tipo-examen-formulario';
+import { MiCuenta } from './cuenta/mi-cuenta/mi-cuenta';
+import { permisosGuard } from './service/permisos.guard';
 
 export const routes: Routes = [
 
@@ -58,9 +78,11 @@ export const routes: Routes = [
         component: Home,
 
         canActivate: [],
+        canActivateChild: [permisosGuard],
 
         children: [
             {path: 'inicio',component: Inicio,},
+            {path: 'cuenta',component: MiCuenta,},
             {path: 'modulo/:slug',component: Modulo,},
             {path: 'pacientes',component: PacientesLista,},
             {path: 'pacientes/nuevo',component: PacienteFormulario,},
@@ -117,6 +139,33 @@ export const routes: Routes = [
             {path: 'mantenimiento/roles',component: RolesLista,},
             {path: 'mantenimiento/roles/nuevo',component: RolFormulario,},
             {path: 'mantenimiento/roles/:id',component: RolFormulario,},
+            {path: 'mantenimiento/puestos',component: PuestosLista,},
+            {path: 'mantenimiento/puestos/nuevo',component: PuestoFormulario,},
+            {path: 'mantenimiento/puestos/:id',component: PuestoFormulario,},
+            {path: 'mantenimiento/especialidades',component: EspecialidadesLista,},
+            {path: 'mantenimiento/especialidades/nueva',component: EspecialidadFormulario,},
+            {path: 'mantenimiento/especialidades/:id',component: EspecialidadFormulario,},
+            {path: 'mantenimiento/empleados',component: EmpleadosLista,},
+            {path: 'mantenimiento/empleados/nuevo',component: EmpleadoFormulario,},
+            {path: 'mantenimiento/empleados/:id',component: EmpleadoFormulario,},
+            {path: 'mantenimiento/permisos',component: PermisosLista,},
+            {path: 'mantenimiento/permisos/nuevo',component: PermisoFormulario,},
+            {path: 'mantenimiento/permisos/:id',component: PermisoFormulario,},
+            {path: 'mantenimiento/aseguradoras',component: AseguradorasLista,},
+            {path: 'mantenimiento/aseguradoras/nueva',component: AseguradoraFormulario,},
+            {path: 'mantenimiento/aseguradoras/:id',component: AseguradoraFormulario,},
+            {path: 'mantenimiento/salas',component: SalasLista,},
+            {path: 'mantenimiento/salas/nueva',component: SalaFormulario,},
+            {path: 'mantenimiento/salas/:id',component: SalaFormulario,},
+            {path: 'mantenimiento/habitaciones',component: HabitacionesLista,},
+            {path: 'mantenimiento/habitaciones/nueva',component: HabitacionFormulario,},
+            {path: 'mantenimiento/habitaciones/:id',component: HabitacionFormulario,},
+            {path: 'mantenimiento/tipos-consentimiento',component: TiposConsentimientoLista,},
+            {path: 'mantenimiento/tipos-consentimiento/nuevo',component: TipoConsentimientoFormulario,},
+            {path: 'mantenimiento/tipos-consentimiento/:id',component: TipoConsentimientoFormulario,},
+            {path: 'mantenimiento/tipos-examen',component: TiposExamenLista,},
+            {path: 'mantenimiento/tipos-examen/nuevo',component: TipoExamenFormulario,},
+            {path: 'mantenimiento/tipos-examen/:id',component: TipoExamenFormulario,},
         ],
     }
 

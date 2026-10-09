@@ -45,7 +45,13 @@ export class ConveniosLista {
     return this.aseguradorasService.listar().find((a) => a.idAseguradora === idAseguradora)?.nombre ?? '—';
   }
 
-  formatFecha(fecha: string): string {
+  formatFecha(fecha: string | null | undefined): string {
+    // Defensivo: no debería faltar (fechaInicio es obligatoria en el
+    // backend), pero si llegara null/undefined no tiene sentido tronar la
+    // pantalla completa por una fecha que no se puede mostrar.
+    if (!fecha) {
+      return '—';
+    }
     // fechaInicio/fechaFin son DateOnly ("yyyy-MM-dd"): si se arman con
     // `new Date('yyyy-MM-dd')` se interpretan en UTC y en husos horarios
     // negativos (como Guatemala) se corren un día hacia atrás. Se arman en

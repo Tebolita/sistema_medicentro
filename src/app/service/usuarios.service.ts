@@ -123,6 +123,17 @@ export class UsuariosService {
     );
   }
 
+  // PUT /api/usuarios/{id}/contrasena real: CambiarContrasenaDto es
+  // { nuevaContrasena, requiereCambioPassword? } — el backend NO pide ni
+  // verifica la contraseña actual (quedó como un reset, no como "cambiar
+  // mi propia contraseña verificando la anterior"; ver TABLAS_PENDIENTES_API.md
+  // si se quiere pedir esa verificación más adelante).
+  cambiarContrasena(id: number, nuevaContrasena: string, requiereCambioPassword?: boolean): Observable<unknown> {
+    return this.http
+      .put<ApiResponse<unknown>>(`${this.apiUrl}/${id}/contrasena`, { nuevaContrasena, requiereCambioPassword })
+      .pipe(catchError(this.errorService.handleError));
+  }
+
   listarRoles(idUsuario: number): Observable<UsuarioRol[]> {
     return this.http
       .get<ApiResponse<UsuarioRol[]>>(`${this.apiUrl}/${idUsuario}/roles`)

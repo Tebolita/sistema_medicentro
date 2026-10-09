@@ -269,13 +269,22 @@
   transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.section-body > .nav-list {
+.section-body > .section-groups {
   overflow: hidden;
   min-height: 0;
 }
 
 .section.expanded .section-body {
   grid-template-rows: 1fr;
+}
+
+.nav-group-title {
+  margin: 6px 0 0 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-text-soft);
 }
 
 .nav-list {

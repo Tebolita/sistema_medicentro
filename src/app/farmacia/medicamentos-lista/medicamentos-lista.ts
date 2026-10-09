@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MedicamentosService } from '../../service/medicamentos.service';
 import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
+import { UsuariosService } from '../../service/usuarios.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -18,6 +19,7 @@ type Vista = 'activos' | 'eliminados';
 export class MedicamentosLista {
   private medicamentosService = inject(MedicamentosService);
   private inventarioService = inject(InventarioFarmaciaService);
+  private usuariosService = inject(UsuariosService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -88,6 +90,17 @@ export class MedicamentosLista {
     this.medicamentosService.eliminar(id).subscribe({
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // El backend expone "idUsuarioCreacion"/"idUsuarioModificacion" en el
+  // medicamento, pero todavía no los llena con el usuario real que hizo la
+  // acción (ver SOLICITUD_ENDPOINTS_ELIMINADOS.md punto 5): hasta que eso se
+  // arregle del lado del backend, esto va a mostrar "—" casi siempre.
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
   reactivar(id: number, nombre: string): void {

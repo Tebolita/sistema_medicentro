@@ -1,0 +1,38 @@
+<h2 mat-dialog-title>Nuevo catálogo</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Código</mat-label>
+      <input matInput formControlName="codigo" placeholder="Ej. TIPO_DESCUENTO" />
+      @if (form.controls.codigo.errors?.['required'] && form.controls.codigo.touched) {
+        <mat-error>Requerido</mat-error>
+      } @else if (form.controls.codigo.errors?.['pattern']) {
+        <mat-error>Solo letras, números y guion bajo</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Nombre</mat-label>
+      <input matInput formControlName="nombre" placeholder="Ej. Tipo de descuento" />
+      @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+        <mat-error>Requerido</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Descripción (opcional)</mat-label>
+      <input matInput formControlName="descripcion" />
+    </mat-form-field>
+
+    @if (error()) {
+      <p class="form-error full-width">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cerrar()">Cancelar</button>
+    <button matButton="filled" type="submit" [disabled]="guardando()">
+      <mat-icon>save</mat-icon>
+      Crear catálogo
+    </button>
+  </mat-dialog-actions>
+</form>

@@ -75,6 +75,10 @@ export class PagosLista {
     return lista.find((f) => f.id === idFormaPago)?.label ?? '—';
   }
 
+  estadoPagoLabel(idEstadoPago: number): string {
+    return this.facturasService.estadoPagoLabel(idEstadoPago);
+  }
+
   formatFecha(iso: string): string {
     return new Date(iso).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }

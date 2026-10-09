@@ -1,0 +1,38 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/puestos" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Puestos
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo puesto' : 'Editar puesto' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej. Enfermero/a" />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Descripción (opcional)</mat-label>
+        <input matInput formControlName="descripcion" />
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/puestos">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

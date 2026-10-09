@@ -8,131 +8,96 @@
       <h1>Catálogos del sistema</h1>
       <p>Estados, formas de pago, tipos de movimiento, categorías... usados en todos los módulos.</p>
     </div>
-    <button matButton="filled" type="button" (click)="abrirFormTipo()">
+    <button matButton="filled" type="button" (click)="abrirNuevoCatalogo()">
       <mat-icon>add</mat-icon>
       Nuevo catálogo
     </button>
   </div>
 
-  <div class="catalogo-selector">
-    <mat-form-field appearance="outline" class="selector-field">
-      <mat-label>Catálogo</mat-label>
-      <mat-select [value]="tipoSeleccionado()" (selectionChange)="seleccionarTipo($event.value)">
-        @for (t of tiposConocidos; track t.codigo) {
-          <mat-option [value]="t.codigo">{{ t.nombre }} ({{ t.codigo }})</mat-option>
-        }
-      </mat-select>
-      <mat-hint>Si el catálogo que buscas no aparece, créalo con "Nuevo catálogo" o escribe su código.</mat-hint>
-    </mat-form-field>
+  @if (errorAccion()) {
+    <p class="carga-error">{{ errorAccion() }}</p>
+  }
 
-    <mat-form-field appearance="outline">
-      <mat-label>...o escribe el código directo</mat-label>
+  @if (!tipoSeleccionado()) {
+    <div class="search-bar">
+      <mat-icon>search</mat-icon>
       <input
-        matInput
-        placeholder="Ej. ESTADO_FACTURA"
-        [value]="tipoSeleccionado() || ''"
-        (change)="seleccionarTipoDesdeInput($event)"
+        type="text"
+        placeholder="Buscar catálogo por nombre o código..."
+        [value]="buscar()"
+        (input)="buscar.set($any($event.target).value)"
       />
-    </mat-form-field>
-  </div>
-
-  @if (mostrandoFormTipo()) {
-    <form [formGroup]="formTipo" (ngSubmit)="guardarTipo()" class="form-panel">
-      <h2>Nuevo catálogo</h2>
-      <div class="form-grid">
-        <mat-form-field appearance="outline">
-          <mat-label>Código</mat-label>
-          <input matInput formControlName="codigo" placeholder="Ej. TIPO_DESCUENTO" />
-          @if (formTipo.controls.codigo.invalid && formTipo.controls.codigo.touched) {
-            <mat-error>Solo letras, números y guion bajo</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Nombre</mat-label>
-          <input matInput formControlName="nombre" placeholder="Ej. Tipo de descuento" />
-          @if (formTipo.controls.nombre.invalid && formTipo.controls.nombre.touched) {
-            <mat-error>Requerido</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Descripción (opcional)</mat-label>
-          <input matInput formControlName="descripcion" />
-        </mat-form-field>
-      </div>
-      @if (errorTipo()) {
-        <p class="form-error">{{ errorTipo() }}</p>
-      }
-      <div class="form-actions">
-        <button matButton type="button" (click)="cancelarTipo()">Cancelar</button>
-        <button matButton="filled" type="submit" [disabled]="guardandoTipo()">
-          <mat-icon>save</mat-icon>
-          Crear catálogo
+      @if (buscar().trim()) {
+        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+          <mat-icon>close</mat-icon>
         </button>
+      }
+    </div>
+
+    <div class="catalogo-grid">
+      @for (t of catalogosFiltrados(); track t.codigo) {
+        <button type="button" class="catalogo-card" (click)="seleccionarTipo(t.codigo)">
+          <div class="catalogo-card-icon" [style.background]="colorDe(t.codigo)">
+            <mat-icon>settings</mat-icon>
+          </div>
+          <div class="catalogo-card-info">
+            <span class="catalogo-card-nombre">{{ t.nombre }}</span>
+            <span class="catalogo-card-codigo">{{ t.codigo }}</span>
+          </div>
+          <mat-icon class="catalogo-card-chevron">chevron_right</mat-icon>
+        </button>
+      }
+    </div>
+
+    @if (catalogosFiltrados().length === 0) {
+      <div class="empty-state">
+        <mat-icon>search_off</mat-icon>
+        <p>No hay catálogos para "{{ buscar() }}".</p>
       </div>
-    </form>
+    }
   }
 
   @if (tipoSeleccionado(); as codigo) {
     <div class="valores-panel">
+      <button type="button" class="link-button volver-catalogos" (click)="volverACatalogos()">
+        <mat-icon>arrow_back</mat-icon>
+        Todos los catálogos
+      </button>
+
       <div class="valores-header">
-        <h2>Valores de {{ codigo }}</h2>
-        <button matButton type="button" (click)="nuevoValor()">
+        <div class="valores-titulo">
+          @if (catalogoActual(); as actual) {
+            <div class="valores-icon">
+              <mat-icon>{{ actual.icono }}</mat-icon>
+            </div>
+            <div>
+              <h2>{{ actual.nombre }}</h2>
+              <span class="valores-codigo">{{ actual.codigo }}</span>
+            </div>
+          }
+        </div>
+        <button matButton="filled" type="button" (click)="nuevoValor()">
           <mat-icon>add</mat-icon>
           Agregar valor
         </button>
       </div>
 
-      @if (mostrandoFormValor()) {
-        <form [formGroup]="formValor" (ngSubmit)="guardarValor()" class="valor-form">
-          <mat-form-field appearance="outline">
-            <mat-label>Código</mat-label>
-            <input matInput formControlName="codigo" placeholder="Ej. PENDIENTE" />
-            @if (formValor.controls.codigo.invalid && formValor.controls.codigo.touched) {
-              <mat-error>Solo letras, números y guion bajo</mat-error>
-            }
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Nombre</mat-label>
-            <input matInput formControlName="nombre" placeholder="Ej. Pendiente" />
-            @if (formValor.controls.nombre.invalid && formValor.controls.nombre.touched) {
-              <mat-error>Requerido</mat-error>
-            }
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Orden</mat-label>
-            <input matInput type="number" min="1" formControlName="orden" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Descripción (opcional)</mat-label>
-            <input matInput formControlName="descripcion" />
-          </mat-form-field>
-          @if (errorValor()) {
-            <p class="form-error full-width">{{ errorValor() }}</p>
-          }
-          <div class="valor-form-actions">
-            <button matButton type="button" (click)="cancelarValor()">Cancelar</button>
-            <button matButton="filled" type="submit" [disabled]="guardandoValor()">
-              <mat-icon>save</mat-icon>
-              {{ editandoValor() !== null ? 'Guardar cambios' : 'Agregar' }}
-            </button>
-          </div>
-        </form>
-      }
-
-      <div class="valores-tabla">
+      <div class="valor-grid">
         @for (v of valores(); track v.id) {
-          <div class="valor-row">
+          <div class="valor-card">
             <span class="valor-orden">{{ v.orden }}</span>
             <div class="valor-info">
               <span class="valor-nombre">{{ v.nombre }}</span>
               <span class="valor-codigo">{{ v.codigo }}</span>
             </div>
-            <button matIconButton type="button" [matTooltip]="'Editar'" (click)="editarValor(v.id)">
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button matIconButton type="button" [matTooltip]="'Dar de baja'" (click)="eliminarValor(v.id, v.nombre)">
-              <mat-icon>delete</mat-icon>
-            </button>
+            <div class="valor-acciones">
+              <button matIconButton type="button" [matTooltip]="'Editar'" (click)="editarValor(v.id)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton type="button" [matTooltip]="'Dar de baja'" (click)="eliminarValor(v.id, v.nombre)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
           </div>
         }
 

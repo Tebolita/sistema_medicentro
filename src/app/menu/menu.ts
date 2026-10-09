@@ -8,7 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MENU_SECTIONS, MenuItem, MenuSection } from '../shared/menu-data';
+import { GrupoDeItems, MENU_SECTIONS, MenuItem, MenuSection, agruparItems } from '../shared/menu-data';
+import { PermisosMenuService } from '../service/permisos-menu.service';
 
 interface MenuSectionState extends MenuSection {
   expanded: boolean;
@@ -31,6 +32,7 @@ interface MenuSectionState extends MenuSection {
 })
 export class Menu {
   private router = inject(Router);
+  private permisosMenu = inject(PermisosMenuService);
 
   collapsed = signal(false);
   collapsedChange = output<boolean>();
@@ -80,22 +82,36 @@ export class Menu {
     section.expanded = !section.expanded;
   }
 
+  // Igual que en el overview del módulo (modulo.ts): si los items de una
+  // sección tienen "grupo" (hoy solo Mantenimiento), se muestran agrupados
+  // con un encabezado dentro del desplegable del menú lateral.
+  grupos(section: MenuSection): GrupoDeItems[] {
+    return agruparItems(section.items);
+  }
+
   searchTerm = signal('');
   isSearching = computed(() => this.searchTerm().trim().length > 0);
 
   inicio: MenuItem = { icon: 'dashboard', label: 'Inicio', route: '/home/inicio' };
 
-  sections: MenuSectionState[] = MENU_SECTIONS.map((section) => ({
-    ...section,
-    expanded: false,
-  }));
+  // Filtrado según los permisos del usuario (PermisosMenuService): null
+  // significa "mostrar todas" (sin permisos configurados todavía o mientras
+  // se cargan). El estado `expanded` se reinicia solo cuando este cómputo
+  // realmente cambia (no en cada render), así toggleSection sigue mutando el
+  // mismo objeto sin que se pierda al expandir/colapsar.
+  sections = computed<MenuSectionState[]>(() => {
+    const permitidos = this.permisosMenu.modulosPermitidos();
+    const base = permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : MENU_SECTIONS;
+    return base.map((section) => ({ ...section, expanded: false }));
+  });
 
   filteredSections = computed(() => {
     const term = this.searchTerm().trim().toLowerCase();
+    const sections = this.sections();
     if (!term) {
-      return this.sections;
+      return sections;
     }
-    return this.sections
+    return sections
       .map((section) => ({
         ...section,
         items: section.items.filter((item) => item.label.toLowerCase().includes(term)),

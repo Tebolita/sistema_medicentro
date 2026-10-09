@@ -1,0 +1,66 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/aseguradoras" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Aseguradoras
+    </a>
+    <h1>{{ esNueva() ? 'Nueva aseguradora' : 'Editar aseguradora' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej. Mediprocesos" />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>NIT (opcional)</mat-label>
+        <input matInput formControlName="nit" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo de entidad (opcional)</mat-label>
+        <mat-select formControlName="idTipoEntidad">
+          <mat-option [value]="null">Sin especificar</mat-option>
+          @for (t of tiposEntidad(); track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Contacto (opcional)</mat-label>
+        <input matInput formControlName="contacto" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Teléfono (opcional)</mat-label>
+        <input matInput formControlName="telefono" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Correo (opcional)</mat-label>
+        <input matInput type="email" formControlName="correo" />
+        @if (form.controls.correo.invalid && form.controls.correo.touched) {
+          <mat-error>Correo no válido</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/aseguradoras">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

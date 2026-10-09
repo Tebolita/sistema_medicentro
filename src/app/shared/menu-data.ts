@@ -3,6 +3,20 @@ export interface MenuItem {
   label: string;
   route?: string;
   queryParams?: Record<string, string>;
+  // Agrupa los items dentro de la pantalla de overview del módulo (ver
+  // Modulo/modulo.ts) y dentro de Catálogos (ver mantenimiento-catalogos.ts).
+  // Hoy solo lo usa "mantenimiento", para separar sus pantallas por el
+  // módulo al que pertenecen. Los items sin grupo se muestran sueltos.
+  //
+  // Para que agregar algo nuevo "se vea bien" sin tener que acordarse de
+  // escribir el nombre exacto de otro módulo (y arriesgarse a un typo que
+  // cree un grupo duplicado), esto va el slug real de un MenuSection de
+  // arriba (p. ej. 'farmacia') — el nombre a mostrar se resuelve con
+  // nombreGrupo(), tomando el título real de ese módulo. Si no hay un
+  // módulo real al que amarrarlo (p. ej. "Seguridad", que no es un módulo
+  // del menú), se puede poner el nombre tal cual: nombreGrupo() lo deja
+  // igual si no encuentra ese slug.
+  grupo?: string;
 }
 
 export interface MenuSection {
@@ -241,11 +255,125 @@ export const MENU_SECTIONS: MenuSection[] = [
     // Sin "route": usa el overview genérico (/home/modulo/mantenimiento),
     // porque acá no hay una pantalla propia, solo enlaces a las 3 de abajo.
     items: [
-      { icon: 'tune', label: 'Catálogos del sistema (General)', route: '/home/mantenimiento/catalogos' },
-      { icon: 'local_shipping', label: 'Proveedores (Farmacia)', route: '/home/mantenimiento/proveedores' },
-      { icon: 'handshake', label: 'Convenios (Facturación y Cobros)', route: '/home/mantenimiento/convenios' },
-      { icon: 'person', label: 'Usuarios (Seguridad)', route: '/home/mantenimiento/usuarios' },
-      { icon: 'badge', label: 'Roles (Seguridad)', route: '/home/mantenimiento/roles' },
+      { icon: 'tune', label: 'Catálogos del sistema', route: '/home/mantenimiento/catalogos', grupo: 'General' },
+      {
+        icon: 'local_shipping',
+        label: 'Proveedores',
+        route: '/home/mantenimiento/proveedores',
+        grupo: 'farmacia',
+      },
+      {
+        icon: 'handshake',
+        label: 'Convenios',
+        route: '/home/mantenimiento/convenios',
+        grupo: 'facturacion-cobros',
+      },
+      { icon: 'person', label: 'Usuarios', route: '/home/mantenimiento/usuarios', grupo: 'Seguridad' },
+      { icon: 'badge', label: 'Roles', route: '/home/mantenimiento/roles', grupo: 'Seguridad' },
+      { icon: 'key', label: 'Permisos', route: '/home/mantenimiento/permisos', grupo: 'Seguridad' },
+      {
+        icon: 'health_and_safety',
+        label: 'Aseguradoras',
+        route: '/home/mantenimiento/aseguradoras',
+        grupo: 'seguros-medicos',
+      },
+      { icon: 'meeting_room', label: 'Salas', route: '/home/mantenimiento/salas', grupo: 'General' },
+      {
+        icon: 'bed',
+        label: 'Habitaciones',
+        route: '/home/mantenimiento/habitaciones',
+        grupo: 'hospitalizacion',
+      },
+      {
+        icon: 'description',
+        label: 'Tipos de consentimiento',
+        route: '/home/mantenimiento/tipos-consentimiento',
+        grupo: 'emergencias',
+      },
+      {
+        icon: 'biotech',
+        label: 'Tipos de examen',
+        route: '/home/mantenimiento/tipos-examen',
+        grupo: 'laboratorio-diagnostico',
+      },
+      { icon: 'badge', label: 'Empleados', route: '/home/mantenimiento/empleados', grupo: 'Recursos Humanos' },
+      { icon: 'work', label: 'Puestos', route: '/home/mantenimiento/puestos', grupo: 'Recursos Humanos' },
+      {
+        icon: 'medical_services',
+        label: 'Especialidades',
+        route: '/home/mantenimiento/especialidades',
+        grupo: 'Recursos Humanos',
+      },
     ],
   },
 ];
+
+// Código del valor de catálogo MODULO_SISTEMA (scripts/sembrar_catalogos.sql)
+// -> slug de la MenuSection equivalente. Permiso.idModulo apunta a un valor
+// de ese catálogo; esto es lo que permite traducir "el usuario tiene un
+// permiso del módulo FARMACIA" a "puede ver la sección 'farmacia' del menú"
+// sin tener que tocar el backend (ver PermisosMenuService).
+export const CODIGO_MODULO_A_SLUG: Record<string, string> = {
+  RECEPCION: 'recepcion',
+  SEGUROS_MEDICOS: 'seguros-medicos',
+  EXPEDIENTES_CLINICOS: 'expedientes-clinicos',
+  LABORATORIO: 'laboratorio-diagnostico',
+  EMERGENCIAS: 'emergencias',
+  HOSPITALIZACION: 'hospitalizacion',
+  FARMACIA: 'farmacia',
+  FACTURACION_COBROS: 'facturacion-cobros',
+  MANTENIMIENTO: 'mantenimiento',
+};
+
+// Primer segmento de ruta (después de "/home/") -> slug de la MenuSection
+// dueña de esa ruta. Se calcula solo (no a mano) recorriendo section.route y
+// las rutas de todos sus items, para que nunca se desincronice si se agrega
+// o cambia una ruta acá arriba. Lo usa permisosGuard para saber a qué
+// módulo pertenece una URL, aunque el usuario la escriba directo.
+export const RUTA_A_MODULO: Record<string, string> = (() => {
+  const mapa: Record<string, string> = {};
+  for (const section of MENU_SECTIONS) {
+    const rutas = [section.route, ...section.items.map((i) => i.route)].filter((r): r is string => !!r);
+    for (const ruta of rutas) {
+      const segmento = ruta.replace(/^\/home\//, '').split('/')[0];
+      if (segmento && !(segmento in mapa)) {
+        mapa[segmento] = section.slug;
+      }
+    }
+  }
+  return mapa;
+})();
+
+// Nombre a mostrar para un "grupo" de MenuItem o de catálogo (ver el
+// comentario en MenuItem.grupo): si coincide con el slug de un módulo real,
+// usa su título (así nunca se desincroniza si ese título cambia); si no
+// coincide con ninguno, se asume que ya es el nombre a mostrar tal cual
+// (p. ej. "General", "Seguridad", que no son módulos del menú).
+export function nombreGrupo(grupo: string): string {
+  return MENU_SECTIONS.find((s) => s.slug === grupo)?.title ?? grupo;
+}
+
+export interface GrupoDeItems {
+  nombre: string | null;
+  items: MenuItem[];
+}
+
+// Agrupa una lista de MenuItem por su "grupo" (MenuItem.grupo), preservando
+// el orden en que aparece cada grupo por primera vez. Los que no tienen
+// grupo caen juntos en un bucket con nombre null (se muestran sin
+// encabezado). La usan tanto el menú lateral (menu.ts) como el overview de
+// un módulo (modulo.ts) y Catálogos (catalogos-lista.ts), para que agrupar
+// se vea y se comporte igual en todos lados.
+export function agruparItems(items: MenuItem[]): GrupoDeItems[] {
+  const orden: (string | null)[] = [];
+  const porGrupo = new Map<string | null, MenuItem[]>();
+  for (const item of items) {
+    const clave = item.grupo ?? null;
+    if (!porGrupo.has(clave)) {
+      orden.push(clave);
+      porGrupo.set(clave, []);
+    }
+    porGrupo.get(clave)!.push(item);
+  }
+  return orden.map((clave) => ({ nombre: clave ? nombreGrupo(clave) : null, items: porGrupo.get(clave)! }));
+}

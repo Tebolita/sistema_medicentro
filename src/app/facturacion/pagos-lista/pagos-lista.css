@@ -171,11 +171,23 @@
   height: 13px;
 }
 
-.pago-monto {
+.pago-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   flex-shrink: 0;
+}
+
+.pago-monto {
   font-size: 15px;
   font-weight: 700;
   color: color-mix(in srgb, #2e7d32 var(--c-keep), white);
+}
+
+.pago-estado {
+  font-size: 11px;
+  color: var(--c-text-soft);
 }
 
 .empty-state {

@@ -41,7 +41,7 @@
           <mat-option [value]="null">Sin empleado (cuenta técnica)</mat-option>
           @for (e of empleados(); track e.idEmpleado) {
             <mat-option [value]="e.idEmpleado">
-              {{ e.primerNombre }} {{ e.primerApellido }}
+              {{ e.primerNombre }} {{ e.primerApellido }} — Código {{ e.idEmpleado }}
             </mat-option>
           }
         </mat-select>
@@ -59,6 +59,14 @@
         }
       </mat-form-field>
     </div>
+
+    @if (form.controls.idEmpleado.value) {
+      <span class="codigo-empleado">
+        <mat-icon>badge</mat-icon>
+        <span class="codigo-empleado-texto">Código de empleado para iniciar sesión:</span>
+        <span class="codigo-empleado-valor">{{ form.controls.idEmpleado.value }}</span>
+      </span>
+    }
 
     <mat-checkbox formControlName="requiereCambioPassword">
       Obligar a cambiar la contraseña en el próximo inicio de sesión
@@ -78,6 +86,48 @@
   </form>
 
   @if (!esNuevo()) {
+    <form [formGroup]="resetForm" (ngSubmit)="resetearContrasena()" class="form-panel roles-panel">
+      <h2>Resetear contraseña</h2>
+      <p class="permisos-hint">
+        El usuario deja de poder usar su contraseña anterior de inmediato. No se le pide ni se valida la actual.
+      </p>
+
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Contraseña nueva</mat-label>
+          <input matInput type="password" formControlName="contrasenaNueva" autocomplete="new-password" />
+          @if (resetForm.controls.contrasenaNueva.invalid && resetForm.controls.contrasenaNueva.touched) {
+            <mat-error>Mínimo 6 caracteres</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Repetir contraseña nueva</mat-label>
+          <input matInput type="password" formControlName="repetirContrasenaNueva" autocomplete="new-password" />
+          @if (resetForm.controls.repetirContrasenaNueva.hasError('required') && resetForm.controls.repetirContrasenaNueva.touched) {
+            <mat-error>Requerido</mat-error>
+          } @else if (resetForm.controls.repetirContrasenaNueva.hasError('noCoinciden')) {
+            <mat-error>No coincide con la contraseña nueva</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <mat-checkbox formControlName="requiereCambioPassword">
+        Obligar a cambiar la contraseña en el próximo inicio de sesión
+      </mat-checkbox>
+
+      @if (errorReset()) {
+        <p class="form-error">{{ errorReset() }}</p>
+      }
+
+      <div class="form-actions">
+        <button matButton="filled" type="submit" [disabled]="guardandoReset() || resetForm.invalid">
+          <mat-icon>lock_reset</mat-icon>
+          Resetear contraseña
+        </button>
+      </div>
+    </form>
+
     <div class="form-panel roles-panel">
       <h2>Roles asignados</h2>
 

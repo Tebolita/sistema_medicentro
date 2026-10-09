@@ -1,0 +1,72 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/salas" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Salas
+    </a>
+    <h1>{{ esNueva() ? 'Nueva sala' : 'Editar sala' }}</h1>
+  </div>
+
+  @if (registro(); as r) {
+    <p class="item-meta">
+      Creado por: {{ usuarioLabel(r.idUsuarioCreacion) }}
+      @if (r.idUsuarioModificacion) {
+        · Última modificación por: {{ usuarioLabel(r.idUsuarioModificacion) }}
+      }
+    </p>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej. Consultorio 1" />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo (opcional)</mat-label>
+        <mat-select formControlName="idTipoSala">
+          <mat-option [value]="null">Sin especificar</mat-option>
+          @for (t of tipos(); track t.id) {
+            <mat-option [value]="t.id">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="idEstadoSala">
+          @for (e of estados(); track e.id) {
+            <mat-option [value]="e.id">{{ e.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idEstadoSala.invalid && form.controls.idEstadoSala.touched) {
+          <mat-error>Selecciona un estado</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Capacidad</mat-label>
+        <input matInput type="number" min="1" formControlName="capacidad" />
+        @if (form.controls.capacidad.invalid && form.controls.capacidad.touched) {
+          <mat-error>Debe ser al menos 1</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/salas">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>

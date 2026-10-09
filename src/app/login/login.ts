@@ -10,8 +10,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 
 // servicios
 import { AuthService } from '../service/auth.service';
+import { PermisosMenuService } from '../service/permisos-menu.service';
 import { ApiResponse } from '../models/api-response.model';
-import { LoginRequest } from '../models/auth.model';
+import { LoginRequest, LoginData } from '../models/auth.model';
 import { Router } from '@angular/router';
 
 @Component({
@@ -41,6 +42,7 @@ export class Login {
 
   // injectar permisos en la app
   private authService = inject(AuthService);
+  private permisosMenuService = inject(PermisosMenuService);
   private router = inject(Router);
 
 
@@ -68,21 +70,27 @@ export class Login {
 
 
     this.authService.signIn(payload).subscribe({
-      next: (response: ApiResponse<any>) => {
-        if (response.exito) {
-          // Guardar token y datos del usuario en localStorage o sessionStorage
-          localStorage.setItem('token', response.datos.token);
-          // localStorage.setItem('usuario', JSON.stringify(response.datos.usuario));
+      next: (response: ApiResponse<LoginData>) => {
+        if (!response.exito || !response.datos) {
+          this.errorMsg.set(response.mensaje || 'No se pudo iniciar sesión.');
+          return;
         }
+        // El id de usuario viaja directo en la respuesta (datos.usuario.idUsuario):
+        // no hace falta decodificar el JWT para sacarlo.
         try {
-          const payload = JSON.parse(atob(response.datos.access_token.split('.')[1]));
-          if (payload.sub) localStorage.setItem('id_usuario', String(payload.sub));
+          localStorage.setItem('token', response.datos.token);
+          localStorage.setItem('id_usuario', String(response.datos.usuario.idUsuario));
         } catch {}
+        // Fuerza a recalcular los permisos del menú con el usuario que
+        // ACABA de loguearse: PermisosMenuService es un singleton que puede
+        // haberse construido antes (sin sesión todavía) y quedarse pegado
+        // con esa foto vieja hasta un refresh si no se le avisa.
+        this.permisosMenuService.refrescar();
         this.router.navigate(['/home/inicio']);
       },
       error: (err) => {
         this.errorMsg.set(err.message);
       }
-  }); 
+  });
   }
 }

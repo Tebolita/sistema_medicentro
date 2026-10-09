@@ -1,0 +1,50 @@
+<div class="form-page">
+  <div class="page-header">
+    <a routerLink="/home/mantenimiento/tipos-examen" class="back-link">
+      <mat-icon>arrow_back</mat-icon>
+      Tipos de examen
+    </a>
+    <h1>{{ esNuevo() ? 'Nuevo tipo de examen' : 'Editar tipo de examen' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
+    <div class="form-grid">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="nombre" placeholder="Ej. Hemograma completo" />
+        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Categoría</mat-label>
+        <mat-select formControlName="idCategoriaExamen">
+          @for (c of categorias(); track c.id) {
+            <mat-option [value]="c.id">{{ c.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.idCategoriaExamen.invalid && form.controls.idCategoriaExamen.touched) {
+          <mat-error>Selecciona una categoría</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Descripción (opcional)</mat-label>
+        <input matInput formControlName="descripcion" />
+      </mat-form-field>
+    </div>
+
+    @if (errorMsg()) {
+      <p class="form-error">{{ errorMsg() }}</p>
+    }
+
+    <div class="form-actions">
+      <a matButton routerLink="/home/mantenimiento/tipos-examen">Cancelar</a>
+      <button matButton="filled" type="submit" [disabled]="guardando()">
+        <mat-icon>save</mat-icon>
+        Guardar
+      </button>
+    </div>
+  </form>
+</div>
