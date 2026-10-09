@@ -1,7 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -9,24 +12,34 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { OrdenDetalle, OrdenLaboratorio } from '../../models';
-import { LaboratorioService } from '../laboratorio.service';
-import { CATEGORIAS_EXAMEN, ESTADOS_ORDEN, PRIORIDADES_ORDEN, TIPOS_EXAMEN } from '../laboratorio-catalogos';
-import { MEDICOS } from '../../consultas-externas/consultas-catalogos';
+import {
+  BitacoraItem,
+  LaboratorioService,
+  TipoExamen,
+  OpcionCatalogo,
+  MedicoOpcion,
+  UsuarioOpcion,
+} from '../laboratorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 
-function toIsoDate(value: Date | string | null): string | null {
-  if (!value) {
-    return null;
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
+/**
+ * Toma un Date del datepicker y le añade la HORA ACTUAL.
+ * Devuelve algo como "2026-10-06T17:52:30".
+ */
+function toIsoDateTime(value: Date | string | null): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  const ahora = new Date();
   const y = value.getFullYear();
   const m = String(value.getMonth() + 1).padStart(2, '0');
   const d = String(value.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const hh = String(ahora.getHours()).padStart(2, '0');
+  const mm = String(ahora.getMinutes()).padStart(2, '0');
+  const ss = String(ahora.getSeconds()).padStart(2, '0');
+  return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
 }
 
 function parseIsoDateLocal(iso: string): Date {
@@ -37,6 +50,8 @@ function parseIsoDateLocal(iso: string): Date {
 @Component({
   selector: 'app-orden-formulario',
   imports: [
+    NgClass,
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     MatFormFieldModule,
@@ -46,6 +61,7 @@ function parseIsoDateLocal(iso: string): Date {
     MatDatepickerModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './orden-formulario.html',
@@ -59,60 +75,135 @@ export class OrdenFormulario {
   private pacientesService = inject(PacientesService);
 
   pacientes = this.pacientesService.directorio;
-  medicos = MEDICOS;
-  prioridades = PRIORIDADES_ORDEN;
-  estadosOrden = ESTADOS_ORDEN;
-  categoriasExamen = CATEGORIAS_EXAMEN;
-  todosLosExamenes = TIPOS_EXAMEN;
 
-  idOrden = signal(0);
-  esNueva = computed(() => this.idOrden() === 0);
+  medicosSignal = signal<MedicoOpcion[]>([]);
+  prioridadesSignal = signal<OpcionCatalogo[]>([]);
+  estadosSignal = signal<OpcionCatalogo[]>([]);
+  tiposExamen = signal<TipoExamen[]>([]);
+  usuariosSignal = signal<UsuarioOpcion[]>([]);
 
-  // Filtro de categoría que llega del menú (Electrocardiograma / Rayos X /
-  // Ultrasonido son de categoría "Imagen"; Orden de laboratorio filtra a
-  // categoría "Laboratorio"). null = mostrar todos los exámenes.
-  filtroCategoria = signal<number | null>(null);
-  examenesVisibles = computed(() => {
-    const categoria = this.filtroCategoria();
-    return categoria == null ? this.todosLosExamenes : this.todosLosExamenes.filter((t) => t.idCategoriaExamen === categoria);
+  filtroExamen = signal('');
+
+  examenesFiltrados = computed(() => {
+    const term = this.filtroExamen().trim().toLowerCase();
+    const lista = this.tiposExamen();
+    if (!term) return lista;
+    return lista.filter(
+      (t) =>
+        t.nombre.toLowerCase().includes(term) ||
+        (t.descripcion ?? '').toLowerCase().includes(term),
+    );
   });
 
   examenesSeleccionados = signal<Set<number>>(new Set());
+
+  detallesSeleccionados = computed(() => {
+    const ids = this.examenesSeleccionados();
+    return this.tiposExamen().filter((t) => ids.has(t.idTipoExamen));
+  });
+
+  cargandoTipos = signal(false);
+  idOrden = signal(0);
+  esNueva = computed(() => this.idOrden() === 0);
+
+  guardando = signal(false);
+  errorGuardar = signal<string | null>(null);
   seleccionInvalida = signal(false);
 
-  // idOrdenDetalle original por tipo de examen (solo al editar), para no
-  // perder su identidad si el examen sigue marcado al guardar.
+  // ============================================================
+  // Historial de auditoría
+  // ============================================================
+  historialAbierto = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
+  cargandoHistorial = signal(false);
+
   private detalleIdOriginal = new Map<number, number>();
 
   form = this.fb.nonNullable.group({
     idPaciente: this.fb.control<number | null>(null, Validators.required),
     idMedico: this.fb.control<number | null>(null, Validators.required),
     fecha: this.fb.control<Date | null>(new Date(), Validators.required),
-    idPrioridad: this.fb.control<number | null>(1, Validators.required),
-    idEstadoOrden: [1, Validators.required],
+    idPrioridad: this.fb.control<number | null>(null, Validators.required),
+    idEstadoOrden: this.fb.control<number | null>(null, Validators.required),
     notas: [''],
   });
 
   constructor() {
+    this.laboratorioService.RetornarMedicos().subscribe({
+      next: (m) => {
+        console.log('✅ [OrdenFormulario] Médicos cargados:', m.length);
+        this.medicosSignal.set(m);
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error médicos:', err.status),
+    });
+
+    this.laboratorioService.RetornarPrioridades().subscribe({
+      next: (p) => {
+        console.log('✅ [OrdenFormulario] Prioridades cargadas:', p.length);
+        this.prioridadesSignal.set(p);
+        if (this.esNueva() && p.length > 0 && !this.form.controls.idPrioridad.value) {
+          const normal = p.find((x) => x.label.toLowerCase().includes('normal')) ?? p[0];
+          this.form.patchValue({ idPrioridad: normal.id });
+        }
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error prioridades:', err.status),
+    });
+
+    this.laboratorioService.RetornarEstadosOrden().subscribe({
+      next: (e) => {
+        console.log('✅ [OrdenFormulario] Estados cargados:', e.length);
+        this.estadosSignal.set(e);
+        if (this.esNueva() && e.length > 0 && !this.form.controls.idEstadoOrden.value) {
+          const solicitada = e.find((x) => x.label.toLowerCase().includes('solicit')) ?? e[0];
+          this.form.patchValue({ idEstadoOrden: solicitada.id });
+        }
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error estados:', err.status),
+    });
+
+    this.cargandoTipos.set(true);
+    this.laboratorioService.RetornarTiposExamen().subscribe({
+      next: (tipos) => {
+        console.log('✅ [OrdenFormulario] Tipos de examen cargados:', tipos.length);
+        this.tiposExamen.set(tipos);
+        this.cargandoTipos.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenFormulario] Error tipos examen:', err.status);
+        this.cargandoTipos.set(false);
+      },
+    });
+
+    // Cargar usuarios (para el nombre en la bitácora)
+    this.laboratorioService.RetornarUsuarios().subscribe({
+      next: (u) => {
+        console.log('✅ [OrdenFormulario] Usuarios cargados:', u.length);
+        this.usuariosSignal.set(u);
+      },
+      error: (err: HttpErrorResponse) =>
+        console.error('❌ [OrdenFormulario] Error usuarios:', err.status),
+    });
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam && idParam !== 'nueva') {
       const id = Number(idParam);
       const registro = this.laboratorioService.obtener(id);
       if (registro) {
         this.cargar(registro);
+      } else {
+        this.laboratorioService.obtenerDesdeApi(id).subscribe({
+          next: (reg) => this.cargar(reg),
+          error: (err: HttpErrorResponse) =>
+            console.error('No se pudo cargar la orden', err),
+        });
       }
       return;
     }
 
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      const categoriaParam = params.get('categoria');
-      this.filtroCategoria.set(categoriaParam ? Number(categoriaParam) : null);
-
-      const examenParam = params.get('examen');
-      if (examenParam) {
-        this.examenesSeleccionados.set(new Set([Number(examenParam)]));
-      }
-
       const idPacienteParam = params.get('paciente');
       if (idPacienteParam) {
         this.form.patchValue({ idPaciente: Number(idPacienteParam) });
@@ -135,6 +226,14 @@ export class OrdenFormulario {
     }
   }
 
+  estaSeleccionado(idTipoExamen: number): boolean {
+    return this.examenesSeleccionados().has(idTipoExamen);
+  }
+
+  limpiarBusqueda(): void {
+    this.filtroExamen.set('');
+  }
+
   private cargar(registro: { orden: OrdenLaboratorio; detalles: OrdenDetalle[] }): void {
     this.idOrden.set(registro.orden.idOrden);
     this.form.patchValue({
@@ -146,7 +245,9 @@ export class OrdenFormulario {
       notas: registro.orden.notas ?? '',
     });
     this.examenesSeleccionados.set(new Set(registro.detalles.map((d) => d.idTipoExamen)));
-    this.detalleIdOriginal = new Map(registro.detalles.map((d) => [d.idTipoExamen, d.idOrdenDetalle]));
+    this.detalleIdOriginal = new Map(
+      registro.detalles.map((d) => [d.idTipoExamen, d.idOrdenDetalle]),
+    );
   }
 
   guardar(): void {
@@ -167,14 +268,15 @@ export class OrdenFormulario {
         idPaciente: v.idPaciente!,
         idMedico: v.idMedico!,
         idCita: null,
-        fechaOrden: toIsoDate(v.fecha)!,
-        idPrioridad: v.idPrioridad,
-        idEstadoOrden: v.idEstadoOrden,
+        fechaOrden: toIsoDateTime(v.fecha)!,
+        idPrioridad: v.idPrioridad!,
+        idEstadoOrden: v.idEstadoOrden!,
         notas: v.notas || null,
         activo: true,
         fechaCreacion: this.esNueva()
           ? new Date().toISOString()
-          : (this.laboratorioService.obtener(idOrden)?.orden.fechaCreacion ?? new Date().toISOString()),
+          : (this.laboratorioService.obtener(idOrden)?.orden.fechaCreacion ??
+              new Date().toISOString()),
         fechaModificacion: this.esNueva() ? null : new Date().toISOString(),
         idUsuarioCreacion: null,
         idUsuarioModificacion: null,
@@ -188,7 +290,178 @@ export class OrdenFormulario {
       })),
     };
 
-    this.laboratorioService.guardar(registro);
-    this.router.navigate(['/home/laboratorio']);
+    this.guardando.set(true);
+    this.errorGuardar.set(null);
+
+    this.laboratorioService.guardar(registro).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.router.navigate(['/home/laboratorio']);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.guardando.set(false);
+        this.errorGuardar.set('No se pudo guardar la orden. Intenta de nuevo.');
+        console.error('Error al guardar la orden', err);
+      },
+    });
+  }
+
+  // ============================================================
+  // HISTORIAL DE AUDITORÍA
+  // ============================================================
+
+  abrirHistorial(): void {
+    const id = this.idOrden();
+    if (id === 0) return;
+
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.laboratorioService
+      .RetornarBitacoraPorRegistro('ordenes_laboratorio', id)
+      .subscribe({
+        next: (items) => {
+          this.bitacoraSignal.set(items);
+          this.cargandoHistorial.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          console.error('❌ Error al cargar bitácora:', err.status);
+          this.cargandoHistorial.set(false);
+        },
+      });
+  }
+
+  cerrarHistorial(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  /** Traduce el id_tipo_accion a texto legible. */
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  /** Clase CSS según el tipo de acción. */
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  /** Icono Material según el tipo de acción. */
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  /** Traduce el id de usuario a nombre. */
+  usuarioLabel(idUsuario: number | null): string {
+    if (idUsuario == null) return 'Sistema';
+    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
+    return u?.nombre ?? `Usuario ${idUsuario}`;
+  }
+
+  /** Formatea la fecha en hora local (bitácora). */
+ formatFechaHora(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';  // ← AGREGAR ESTA LÍNEA
+    const fecha = new Date(isoConZona);                        // ← CAMBIAR esto
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  /** Devuelve la lista de campos que cambiaron entre valoresAnteriores y valoresNuevos. */
+  camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
+    try {
+      const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
+      const despues = item.valoresNuevos ? JSON.parse(item.valoresNuevos) : {};
+
+      const camposIgnorados = new Set([
+        'IdUsuarioModificacion',
+        'FechaModificacion',
+        'IdUsuarioCreacion',
+      ]);
+
+      const idRegistroReal = this.idOrden();
+
+      const cambios: Array<{ campo: string; antes: string; despues: string }> = [];
+      const claves = new Set([...Object.keys(antes), ...Object.keys(despues)]);
+
+      for (const k of claves) {
+        if (camposIgnorados.has(k)) continue;
+
+        let a = antes[k];
+        let d = despues[k];
+
+        // Parche: el backend guarda mal el IdOrden. Usamos el ID real.
+        if (k === 'IdOrden' && idRegistroReal != null) {
+          a = idRegistroReal;
+          d = idRegistroReal;
+        }
+
+        if (JSON.stringify(a) === JSON.stringify(d)) continue;
+
+        cambios.push({
+          campo: this.formatearNombreCampo(k),
+          antes: this.formatearValor(a, k),
+          despues: this.formatearValor(d, k),
+        });
+      }
+
+      cambios.sort((x, y) => {
+        if (x.campo.toLowerCase().includes('id orden')) return -1;
+        if (y.campo.toLowerCase().includes('id orden')) return 1;
+        return x.campo.localeCompare(y.campo);
+      });
+
+      return cambios;
+    } catch {
+      return [];
+    }
+  }
+
+  private formatearNombreCampo(campo: string): string {
+    return campo
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (c) => c.toUpperCase())
+      .trim();
+  }
+
+   private formatearValor(valor: any, nombreCampo: string = ''): string {
+    if (valor === null || valor === undefined) return '—';
+
+    if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
+      const fecha = new Date(valor);  // ← SIN la Z (correcto, ya está en local)
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toLocaleString('es-GT', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+    }
+
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    return String(valor);
+  }
+
+  private esCampoFecha(nombreCampo: string): boolean {
+    return /fecha|fechahora|creacion|modificacion/i.test(nombreCampo);
   }
 }

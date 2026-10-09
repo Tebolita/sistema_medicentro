@@ -4,10 +4,16 @@
       <h1>Hoja de compromiso de pago</h1>
       <p>Compromisos de pago firmados por el familiar responsable en casos de emergencia.</p>
     </div>
-    <a matButton="filled" routerLink="/home/emergencias/compromisos/nuevo" class="new-btn">
-      <mat-icon>handshake</mat-icon>
-      Nuevo compromiso
-    </a>
+    <div class="header-actions">
+      <button matButton type="button" class="history-btn" (click)="abrirHistorialGeneral()">
+        <mat-icon>history</mat-icon>
+        Historial general
+      </button>
+      <a matButton="filled" routerLink="/home/emergencias/compromisos/nuevo" class="new-btn">
+        <mat-icon>handshake</mat-icon>
+        Nuevo compromiso
+      </a>
+    </div>
   </div>
 
   <div class="search-bar">
@@ -31,12 +37,23 @@
         <div class="patient-avatar">{{ iniciales(c.consentimiento.idPaciente) }}</div>
         <div class="compromiso-info">
           <h2>{{ nombrePaciente(c.consentimiento.idPaciente) }}</h2>
-          <span class="compromiso-meta"><mat-icon>person</mat-icon>Responsable: {{ c.nombreResponsable }} ({{ parentescoLabel(c.idParentescoResponsable) }})</span>
-          <span class="compromiso-meta"><mat-icon>call</mat-icon>{{ c.telefonoResponsable }}</span>
-          <span class="compromiso-meta"><mat-icon>event</mat-icon>{{ formatFecha(c.consentimiento.fechaFirma) }} · {{ medicoLabel(c.consentimiento.idMedicoResponsable) }}</span>
+          <span class="compromiso-meta">
+            <mat-icon>person</mat-icon>
+            Responsable: {{ c.nombreResponsable }} ({{ parentescoLabel(c.idParentescoResponsable) }})
+          </span>
+          <span class="compromiso-meta">
+            <mat-icon>call</mat-icon>{{ c.telefonoResponsable }}
+          </span>
+          <span class="compromiso-meta">
+            <mat-icon>event</mat-icon>
+            {{ formatFecha(c.consentimiento.fechaFirma) }} · {{ medicoLabel(c.consentimiento.idMedicoResponsable) }}
+          </span>
         </div>
         <div class="compromiso-actions">
-          <span class="status-badge" [class]="estadoClase(c.consentimiento.idEstadoConsentimiento)">
+          <span
+            class="status-badge"
+            [ngClass]="estadoClase(c.consentimiento.idEstadoConsentimiento)"
+          >
             {{ estadoLabel(c.consentimiento.idEstadoConsentimiento) }}
           </span>
           <button
@@ -58,4 +75,61 @@
       </div>
     }
   </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Historial general de Compromisos
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (historialAbierto()) {
+    <div class="modal-overlay" (click)="cerrarHistorialGeneral()">
+      <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">history</mat-icon>
+            <div>
+              <h2>Historial de Compromisos de Pago</h2>
+              <p class="modal-subtitle">Todos los cambios registrados en el módulo.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cerrarHistorialGeneral()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (cargandoHistorial()) {
+            <p class="historial-estado">Cargando historial...</p>
+          } @else if (bitacoraSignal().length === 0) {
+            <p class="historial-estado">No hay cambios registrados.</p>
+          } @else {
+            <div class="historial-lista">
+              @for (item of bitacoraSignal(); track item.idBitacora) {
+                <div class="historial-item">
+                  <div class="historial-item-header">
+                    <div class="historial-item-left">
+                      <span class="historial-tabla-badge">
+                        <mat-icon>{{ tablaIcono(item.tablaAfectada) }}</mat-icon>
+                        {{ tablaLabel(item.tablaAfectada) }} #{{ item.idRegistroAfectado }}
+                      </span>
+                      <span class="historial-badge" [ngClass]="accionClase(item.idTipoAccion)">
+                        <mat-icon>{{ accionIcono(item.idTipoAccion) }}</mat-icon>
+                        {{ accionLabel(item.idTipoAccion) }}
+                      </span>
+                    </div>
+                    <span class="historial-meta">
+                      {{ usuarioLabel(item.idUsuario) }} · {{ formatFechaHoraUTC(item.fechaHora) }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-actions">
+          <button matButton="filled" type="button" (click)="cerrarHistorialGeneral()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

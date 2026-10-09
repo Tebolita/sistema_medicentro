@@ -82,7 +82,7 @@
 
 .compromiso-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 16px;
 }
 
@@ -101,6 +101,7 @@
     transform 0.18s ease,
     box-shadow 0.18s ease,
     border-color 0.18s ease;
+  overflow: hidden;           /* ← agregar */
 }
 
 .compromiso-card:hover {
@@ -129,6 +130,7 @@
   gap: 3px;
   min-width: 0;
   flex: 1 1 auto;
+  overflow: hidden;           /* ← agregar */
 }
 
 .compromiso-info h2 {
@@ -203,4 +205,291 @@
   font-size: 40px;
   width: 40px;
   height: 40px;
+}
+/* =========================================================================
+   Header actions (Historial + Nuevo compromiso)
+   ========================================================================= */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  border: 1px solid rgba(198, 40, 40, 0.3);
+  border-radius: 999px;
+  padding: 0 18px;
+  height: 40px;
+  background: #fff;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.history-btn:hover {
+  background: rgba(198, 40, 40, 0.06);
+  box-shadow: 0 2px 6px rgba(198, 40, 40, 0.15);
+}
+
+.history-btn mat-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* =========================================================================
+   MODAL: Historial general
+   ========================================================================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  animation: modalFadeIn 0.18s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.18),
+    0 8px 16px rgba(0, 0, 0, 0.08);
+  animation: modalSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-card-historial {
+  max-width: 780px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-title-wrap {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.modal-icon {
+  font-size: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  background: rgba(198, 40, 40, 0.1);
+  border-radius: 10px;
+  padding: 8px;
+  box-sizing: content-box;
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+}
+
+.modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #888;
+  line-height: 1.35;
+}
+
+.modal-header button[matIconButton] {
+  color: #888;
+  flex-shrink: 0;
+}
+
+.modal-header button[matIconButton]:hover {
+  color: #c62828;
+  background-color: rgba(198, 40, 40, 0.08);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px;
+}
+
+.historial-estado {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.historial-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.historial-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fafafa;
+  border: 1px solid #ececec;
+}
+
+.historial-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.historial-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.historial-tabla-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(198, 40, 40, 0.1);
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.historial-tabla-badge mat-icon {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.historial-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.historial-badge mat-icon {
+  font-size: 13px !important;
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.historial-badge.accion-crear {
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+}
+
+.historial-badge.accion-modificar {
+  background: rgba(13, 106, 143, 0.12);
+  color: #0d6a8f;
+}
+
+.historial-badge.accion-eliminar {
+  background: rgba(198, 40, 40, 0.12);
+  color: #c62828;
+}
+
+.historial-badge.accion-default {
+  background: rgba(120, 120, 120, 0.12);
+  color: #555;
+}
+
+.historial-meta {
+  font-size: 12px;
+  color: #888;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #f0f0f0;
+  margin-top: auto;
+}
+
+.modal-actions button[matButton="filled"] {
+  background-color: #c62828 !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  padding: 0 22px !important;
+  height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.modal-actions button[matButton="filled"]:hover:not([disabled]) {
+  background-color: #a01c1c !important;
+  box-shadow: 0 2px 6px rgba(198, 40, 40, 0.35) !important;
+}
+
+@media (max-width: 600px) {
+  .modal-card-historial {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .modal-header h2 {
+    font-size: 15.5px;
+  }
 }

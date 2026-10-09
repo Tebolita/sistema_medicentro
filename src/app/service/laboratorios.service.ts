@@ -4,50 +4,15 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Observable, map, tap } from 'rxjs';
 import { OrdenDetalle, OrdenLaboratorio } from '../models';
 
+// Registro compuesto: una orden con los exámenes solicitados en ella.
 export interface OrdenCompleta {
   orden: OrdenLaboratorio;
   detalles: OrdenDetalle[];
 }
 
-export interface TipoExamen {
-  idTipoExamen: number;
-  nombre: string;
-  idCategoriaExamen: number;
-  descripcion: string | null;
-  activo: boolean;
-  fechaCreacion: string;
-  fechaModificacion: string | null;
-}
-
-export interface OpcionCatalogo {
-  id: number;
-  label: string;
-}
-
-export interface MedicoOpcion {
-  id: number;
-  nombre: string;
-  especialidad: string;
-}
-
-export interface BitacoraItem {
-  idBitacora: number;
-  idUsuario: number | null;
-  idTipoAccion: number;
-  tablaAfectada: string;
-  idRegistroAfectado: number | null;
-  valoresAnteriores: string | null;
-  valoresNuevos: string | null;
-  ipOrigen: string | null;
-  fechaHora: string;
-  activo: boolean;
-}
-
-export interface UsuarioOpcion {
-  id: number;
-  nombre: string;
-}
-
+// El backend puede devolver dos formas distintas:
+//   1. Plana:   { idOrden: 1, activo: true, detalles: [...] }
+//   2. Anidada: { orden: { idOrden: 1, activo: true }, detalles: [...] }
 type OrdenApi =
   | (OrdenLaboratorio & { detalles: OrdenDetalle[] })
   | { orden: OrdenLaboratorio; detalles: OrdenDetalle[] };
@@ -62,11 +27,6 @@ interface ApiResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class LaboratorioService {
   private apiUrl = 'https://localhost:7086/api/laboratorio';
-  private apiUrlTiposExamen = 'https://localhost:7086/api/tipos-examen';
-  private apiUrlMedicos = 'https://localhost:7086/api/empleados/medicos';
-  private apiUrlCatalogos = 'https://localhost:7086/api/catalogos';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
-  private apiUrlUsuarios = 'https://localhost:7086/api/Usuarios';
 
   private registros = signal<OrdenCompleta[]>([]);
   private esNavegador: boolean;
@@ -81,29 +41,53 @@ export class LaboratorioService {
     }
   }
 
+  /**
+   * Extrae y limpia el token del localStorage. Devuelve SOLO un JWT válido o null.
+   */
   private obtenerToken(): string | null {
     if (!this.esNavegador) return null;
+
     const posibles = ['access_token', 'token', 'accessToken', 'jwt'];
+    let token: string | null = null;
+
     for (const key of posibles) {
       const valor = localStorage.getItem(key);
       if (!valor) continue;
+
       let limpio: any = valor.trim();
+
+      // Si viene como string serializado ("\"eyJ...\""), parsearlo.
       if (typeof limpio === 'string' && limpio.startsWith('"') && limpio.endsWith('"')) {
-        try { limpio = JSON.parse(limpio); } catch { /* ignorar */ }
+        try {
+          limpio = JSON.parse(limpio);
+        } catch { /* ignorar */ }
       }
+
+      // Si es objeto, extraer token interno.
       if (typeof limpio === 'object' && limpio !== null) {
         limpio = limpio.token || limpio.access_token || limpio.accessToken || '';
       }
+
       limpio = String(limpio).trim();
+
+      // Quitar "Bearer " si sobra.
       if (limpio.toLowerCase().startsWith('bearer ')) {
         limpio = limpio.slice(7).trim();
       }
+
+      // Validar que sea un JWT real: 3 partes separadas por puntos.
       if (limpio.split('.').length === 3 && limpio.length > 40) {
-        return limpio;
+        token = limpio;
+        break;
       }
     }
-    console.error('❌ [LaboratorioService] No se encontró un JWT válido en localStorage');
-    return null;
+
+    if (!token) {
+      console.error('❌ [LaboratorioService] No se encontró un JWT válido en localStorage');
+      console.log('   Claves disponibles:', Object.keys(localStorage));
+    }
+
+    return token;
   }
 
   private getHeaders(): HttpHeaders {
@@ -111,10 +95,12 @@ export class LaboratorioService {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     });
+
     const token = this.obtenerToken();
     if (token) {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
+
     return headers;
   }
 
@@ -136,7 +122,13 @@ export class LaboratorioService {
     });
   }
 
+  /**
+   * Convierte un elemento de la respuesta del backend a `OrdenCompleta`.
+   * Detecta automáticamente si viene en forma anidada (con `orden` adentro)
+   * o en forma plana (sin envoltorio).
+   */
   private aPlano(apiOrden: any): OrdenCompleta {
+    // Caso 1: el backend ya devuelve { orden: {...}, detalles: [...] }
     if (
       apiOrden?.orden &&
       typeof apiOrden.orden === 'object' &&
@@ -147,6 +139,8 @@ export class LaboratorioService {
         detalles: apiOrden.detalles ?? [],
       };
     }
+
+    // Caso 2: forma plana (fallback)
     const { detalles, ...orden } = apiOrden ?? {};
     return { orden: orden as OrdenLaboratorio, detalles: detalles ?? [] };
   }
@@ -237,134 +231,5 @@ export class LaboratorioService {
       error: (err: HttpErrorResponse) =>
         console.error('❌ [LaboratorioService] No se pudo eliminar:', err.status),
     });
-  }
-
-  // =============================================================
-  // TIPOS DE EXAMEN
-  // =============================================================
-
-  RetornarTiposExamen(): Observable<TipoExamen[]> {
-    return this.http.get<ApiResponse<TipoExamen[]>>(this.apiUrlTiposExamen, {
-      headers: this.getHeaders(),
-    }).pipe(
-      map((resp) => (resp.datos ?? []).filter((t) => t.activo !== false)),
-      tap((tipos) => {
-        console.log('🔍 [LaboratorioService] Tipos de examen cargados:', tipos.length);
-      }),
-    );
-  }
-
-  // =============================================================
-  // MÉDICOS
-  // =============================================================
-
-  RetornarMedicos(): Observable<MedicoOpcion[]> {
-    return this.http.get<ApiResponse<any[]>>(this.apiUrlMedicos, {
-      headers: this.getHeaders(),
-    }).pipe(
-      map((resp) =>
-        (resp.datos ?? []).map((m: any) => ({
-          id: m.idEmpleado ?? m.id_empleado,
-          nombre:
-            m.nombreCompleto ??
-            m.nombre_completo ??
-            [m.primerNombre ?? m.primer_nombre, m.primerApellido ?? m.primer_apellido]
-              .filter(Boolean)
-              .join(' '),
-          especialidad: m.especialidad?.nombre ?? m.especialidad ?? '',
-        })),
-      ),
-      tap((medicos) =>
-        console.log('🔍 [LaboratorioService] Médicos cargados:', medicos.length),
-      ),
-    );
-  }
-
-  // =============================================================
-  // CATÁLOGOS GENÉRICOS (prioridad, estado, etc.)
-  // =============================================================
-
-  private retornarCatalogo(codigoTipo: string): Observable<OpcionCatalogo[]> {
-    return this.http.get<ApiResponse<any[]>>(
-      `${this.apiUrlCatalogos}/${codigoTipo}`,
-      { headers: this.getHeaders() },
-    ).pipe(
-      map((resp) =>
-        (resp.datos ?? []).map((c: any) => ({
-          id: c.id ?? c.idValorCatalogo ?? c.id_valor_catalogo,
-          label: c.nombre,
-        })),
-      ),
-    );
-  }
-
-  RetornarPrioridades(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('PRIORIDAD_ORDEN').pipe(
-      tap((items) =>
-        console.log('🔍 [LaboratorioService] Prioridades cargadas:', items.length, items),
-      ),
-    );
-  }
-
-  RetornarEstadosOrden(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('ESTADO_ORDEN_LABORATORIO').pipe(
-      tap((items) =>
-        console.log('🔍 [LaboratorioService] Estados cargados:', items.length, items),
-      ),
-    );
-  }
-
-  // =============================================================
-  // BITÁCORA DE AUDITORÍA
-  // =============================================================
-
-  RetornarBitacoraPorRegistro(
-    tablaAfectada: string,
-    idRegistro: number,
-  ): Observable<BitacoraItem[]> {
-    return this.http.get<ApiResponse<BitacoraItem[]>>(
-      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
-      { headers: this.getHeaders() },
-    ).pipe(
-      map((resp) =>
-        (resp.datos ?? [])
-          .filter((b) => b.idRegistroAfectado === idRegistro)
-          .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
-      ),
-      tap((items) =>
-        console.log(
-          `🔍 [LaboratorioService] Bitácora de ${tablaAfectada}#${idRegistro}:`,
-          items.length,
-        ),
-      ),
-    );
-  }
-
-  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
-    return this.http.get<ApiResponse<BitacoraItem[]>>(
-      `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
-      { headers: this.getHeaders() },
-    ).pipe(
-      map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
-      tap((items) =>
-        console.log(`🔍 [LaboratorioService] Bitácora general de ${tablaAfectada}:`, items.length),
-      ),
-    );
-  }
-
-  RetornarUsuarios(): Observable<UsuarioOpcion[]> {
-    return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios, {
-      headers: this.getHeaders(),
-    }).pipe(
-      map((resp) =>
-        (resp.datos ?? []).map((u: any) => ({
-          id: u.idUsuario ?? u.id_usuario,
-          nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
-        })),
-      ),
-      tap((items) =>
-        console.log('🔍 [LaboratorioService] Usuarios cargados:', items.length),
-      ),
-    );
   }
 }

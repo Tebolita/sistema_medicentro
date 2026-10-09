@@ -9,44 +9,55 @@
 
   <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
     <div class="form-grid">
-      <mat-form-field appearance="outline">
+      <!-- Paciente -->
+      <mat-form-field appearance="outline" class="full-width">
         <mat-label>Paciente</mat-label>
         <mat-select formControlName="idPaciente">
+          <mat-option [value]="pacienteNoRegistrado">
+            Paciente no registrado (walk-in)
+          </mat-option>
           @for (p of pacientes(); track p.idPaciente) {
             <mat-option [value]="p.idPaciente">
               {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
             </mat-option>
           }
-          <mat-option [value]="pacienteNoRegistrado">Paciente no registrado (walk-in)</mat-option>
         </mat-select>
         @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
           <mat-error>Selecciona un paciente</mat-error>
         }
       </mat-form-field>
 
+      <!-- Nombre del paciente (solo si es walk-in) -->
       @if (esWalkIn()) {
-        <mat-form-field appearance="outline">
-          <mat-label>Nombre del paciente</mat-label>
-          <input matInput formControlName="nombrePaciente" placeholder="Nombre completo" />
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nombre del paciente (no registrado)</mat-label>
+          <input matInput formControlName="nombrePaciente" />
           @if (form.controls.nombrePaciente.invalid && form.controls.nombrePaciente.touched) {
-            <mat-error>Requerido</mat-error>
+            <mat-error>Escribe el nombre del paciente</mat-error>
           }
         </mat-form-field>
       }
 
+      <!-- Médico -->
       <mat-form-field appearance="outline">
         <mat-label>Médico asignado</mat-label>
         <mat-select formControlName="idMedico">
-          @for (m of medicos; track m.id) {
-            <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
+          @for (m of medicosSignal(); track m.id + '-' + $index) {
+            <mat-option [value]="m.id">
+              {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+            </mat-option>
+          }
+          @if (medicosSignal().length === 0) {
+            <mat-option disabled>No hay médicos registrados</mat-option>
           }
         </mat-select>
       </mat-form-field>
 
+      <!-- Nivel de triaje -->
       <mat-form-field appearance="outline">
         <mat-label>Nivel de triaje</mat-label>
         <mat-select formControlName="idNivelTriage">
-          @for (n of nivelesTriage; track n.id) {
+          @for (n of nivelesTriageSignal(); track n.id + '-' + $index) {
             <mat-option [value]="n.id">{{ n.label }}</mat-option>
           }
         </mat-select>
@@ -55,30 +66,121 @@
         }
       </mat-form-field>
 
+      <!-- Estado -->
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
         <mat-select formControlName="idEstadoCaso">
-          @for (e of estadosCaso; track e.id) {
+          @for (e of estadosSignal(); track e.id + '-' + $index) {
             <mat-option [value]="e.id">{{ e.label }}</mat-option>
           }
         </mat-select>
+        @if (form.controls.idEstadoCaso.invalid && form.controls.idEstadoCaso.touched) {
+          <mat-error>Selecciona el estado</mat-error>
+        }
       </mat-form-field>
 
+      <!-- Motivo -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Motivo de consulta</mat-label>
-        <textarea matInput formControlName="motivo" rows="2"></textarea>
+        <textarea matInput formControlName="motivo" rows="3"></textarea>
         @if (form.controls.motivo.invalid && form.controls.motivo.touched) {
-          <mat-error>Requerido</mat-error>
+          <mat-error>Escribe el motivo</mat-error>
         }
       </mat-form-field>
     </div>
 
+    @if (errorGuardar()) {
+      <p class="form-error">{{ errorGuardar() }}</p>
+    }
+
     <div class="form-actions">
       <a matButton routerLink="/home/emergencias">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar caso
+        {{ guardando() ? 'Guardando...' : 'Guardar caso' }}
       </button>
     </div>
   </form>
+
+  <!-- Botón de historial (solo si ya existe el caso) -->
+  @if (!esNuevo()) {
+    <div class="historial-btn-wrap">
+      <button matButton type="button" (click)="abrirHistorial()">
+        <mat-icon>history</mat-icon>
+        Ver historial de este caso
+      </button>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Historial del caso
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (historialAbierto()) {
+    <div class="modal-overlay" (click)="cerrarHistorial()">
+      <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">history</mat-icon>
+            <div>
+              <h2>Historial del caso #{{ idCaso() }}</h2>
+              <p class="modal-subtitle">Todos los cambios registrados en este caso.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cerrarHistorial()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (cargandoHistorial()) {
+            <p class="historial-estado">Cargando historial...</p>
+          } @else if (bitacoraSignal().length === 0) {
+            <p class="historial-estado">No hay cambios registrados para este caso.</p>
+          } @else {
+            <div class="historial-lista">
+              @for (item of bitacoraSignal(); track item.idBitacora) {
+                <div class="historial-item">
+                  <div class="historial-item-header">
+                    <span class="historial-badge" [ngClass]="accionClase(item.idTipoAccion)">
+                      <mat-icon>{{ accionIcono(item.idTipoAccion) }}</mat-icon>
+                      {{ accionLabel(item.idTipoAccion) }}
+                    </span>
+                    <span class="historial-meta">
+                      {{ usuarioLabel(item.idUsuario) }} · {{ formatFechaHora(item.fechaHora) }}
+                    </span>
+                  </div>
+
+                  @if (camposCambiados(item).length > 0) {
+                    <table class="historial-cambios">
+                      <thead>
+                        <tr>
+                          <th>Campo</th>
+                          <th>Antes</th>
+                          <th>Después</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (c of camposCambiados(item); track c.campo) {
+                          <tr>
+                            <td class="campo">{{ c.campo }}</td>
+                            <td class="antes">{{ c.antes }}</td>
+                            <td class="despues">{{ c.despues }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="modal-actions">
+          <button matButton="filled" type="button" (click)="cerrarHistorial()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>
