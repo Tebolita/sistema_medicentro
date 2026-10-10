@@ -4,5 +4,10 @@
    que lo hace más alto que "Nombre" en la misma fila; con el gap chico del
    grid compartido, la plantilla de texto quedaba pegada a ese hint. */
 .plantilla-field {
-  margin-top: 10px;
+  margin-top: 20px;
+}
+
+.hint-codigo {
+  font-size: 10px;
+  line-height: 1.3;
 }
