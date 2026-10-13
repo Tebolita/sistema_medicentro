@@ -50,6 +50,7 @@
 
 .back-btn {
   color: #fff;
+  --mat-button-text-label-text-color: #fff;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -68,7 +69,7 @@
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 4px 16px;
+  gap: 14px 16px;
 }
 
 .span-2 {
@@ -143,4 +144,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Auditoría (creado / modificado) legible sobre el encabezado azul */
+.hero-auditoria {
+  margin-top: 6px;
+  --c-text-soft: rgba(255, 255, 255, 0.85);
 }

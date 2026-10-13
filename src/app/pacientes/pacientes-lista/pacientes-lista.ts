@@ -11,8 +11,12 @@ import { MENU_SECTIONS } from '../../shared/menu-data';
 
 import { PacienteService } from '../../service/paciente.service';
 import { CatalogoService } from '../../service/catalogo.service';
+import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { PacienteListado } from '../../models/paciente.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+
+type Vista = 'activos' | 'eliminados';
 
 @Component({
   selector: 'app-pacientes-lista',
@@ -23,6 +27,8 @@ import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
 export class PacientesLista {
   private pacienteService = inject(PacienteService);
   private catalogoService = inject(CatalogoService);
+  private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
 
@@ -39,8 +45,15 @@ export class PacientesLista {
   // enfoca directo el buscador y lo resalta un momento.
   resaltarBusqueda = signal(false);
 
+  // Pestaña activa: pacientes activos o dados de baja.
+  vista = signal<Vista>('activos');
+  cargando = signal(false);
+  errorCarga = signal('');
+
   // Datos reales desde la API (/api/Pacientes y /api/catalogos).
   private lista = signal<PacienteListado[]>([]);
+  private eliminados = signal<PacienteListado[]>([]);
+  private eliminadosCargados = false;
   private tiposDocumento = signal<CatalogoOpcion[]>([]);
   private estadosPaciente = signal<CatalogoOpcion[]>([]);
 
@@ -63,16 +76,14 @@ export class PacientesLista {
   }
 
   // El módulo "Recepción" del menú ahora entra directo a esta pantalla, así
-  // que sus demás opciones (aún no cada una con pantalla propia) se muestran
-  // aquí abajo para no perderlas. "Búsqueda de expediente" se omite: ya está
-  // resuelta por el buscador de arriba, mostrarla también aquí era redundante.
+  // que sus demás opciones se muestran aquí abajo para no perderlas.
   opcionesRecepcion = (MENU_SECTIONS.find((s) => s.slug === 'recepcion')?.items ?? []).filter(
     (item) => item.route !== '/home/pacientes',
   );
 
   pacientes = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.lista();
+    const lista = this.vista() === 'activos' ? this.lista() : this.eliminados();
     if (!term) {
       return lista;
     }
@@ -87,7 +98,7 @@ export class PacientesLista {
 
   // Últimos 5 expedientes, solo cuando hay más de un paciente registrado
   // (con uno solo no aporta nada mostrar un "recientes" aparte de la lista).
-  mostrarRecientes = computed(() => this.lista().length > 1);
+  mostrarRecientes = computed(() => this.vista() === 'activos' && this.lista().length > 1);
 
   recientes = computed(() =>
     [...this.lista()]
@@ -95,10 +106,45 @@ export class PacientesLista {
       .slice(0, 5),
   );
 
+  verActivos(): void {
+    this.vista.set('activos');
+  }
+
+  verEliminados(): void {
+    this.vista.set('eliminados');
+    if (!this.eliminadosCargados) {
+      this.cargarEliminados();
+    }
+  }
+
   private cargarPacientes(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
     this.pacienteService.RetornarPacientes().subscribe({
-      next: (resp) => this.lista.set(resp.datos ?? []),
-      error: (err: Error) => alert('No se pudieron cargar los pacientes: ' + err.message),
+      next: (resp) => {
+        this.lista.set(resp.datos ?? []);
+        this.cargando.set(false);
+      },
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar los pacientes: ' + err.message);
+      },
+    });
+  }
+
+  private cargarEliminados(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
+    this.pacienteService.RetornarPacientesEliminados().subscribe({
+      next: (resp) => {
+        this.eliminados.set(resp.datos ?? []);
+        this.eliminadosCargados = true;
+        this.cargando.set(false);
+      },
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar los pacientes eliminados: ' + err.message);
+      },
     });
   }
 
@@ -111,7 +157,7 @@ export class PacientesLista {
         this.tiposDocumento.set(r.documentos.datos ?? []);
         this.estadosPaciente.set(r.estados.datos ?? []);
       },
-      error: (err: Error) => console.error('Catálogos de pacientes:', err.message),
+      error: (err: Error) => this.notificaciones.error('No se pudieron cargar los catálogos: ' + err.message),
     });
   }
 
@@ -136,13 +182,49 @@ export class PacientesLista {
     return this.estadosPaciente().find((e) => e.id === idEstadoPaciente)?.nombre ?? '—';
   }
 
-  eliminar(id: number, nombre: string): void {
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  formatFecha(iso: string | null): string {
+    if (!iso) {
+      return '—';
+    }
+    return new Date(iso).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  eliminar(p: PacienteListado): void {
+    const nombre = this.nombreCompleto(p);
     if (!confirm(`¿Eliminar al paciente "${nombre}"? Esto no borra su expediente, solo lo marca como inactivo.`)) {
       return;
     }
-    this.pacienteService.EliminarPaciente(id).subscribe({
-      next: () => this.lista.update((l) => l.filter((p) => p.idPaciente !== id)),
-      error: (err: Error) => alert('No se pudo eliminar: ' + err.message),
+    this.pacienteService.EliminarPaciente(p.idPaciente).subscribe({
+      next: () => {
+        this.lista.update((l) => l.filter((x) => x.idPaciente !== p.idPaciente));
+        // Se vuelve a pedir la lista de eliminados la próxima vez que se abra
+        // la pestaña, para traer quién y cuándo lo dio de baja.
+        this.eliminadosCargados = false;
+        this.notificaciones.exito(`Paciente "${nombre}" eliminado correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo eliminar el paciente: ' + err.message),
+    });
+  }
+
+  reactivar(p: PacienteListado): void {
+    const nombre = this.nombreCompleto(p);
+    if (!confirm(`¿Reactivar al paciente "${nombre}"?`)) {
+      return;
+    }
+    this.pacienteService.ReactivarPaciente(p.idPaciente).subscribe({
+      next: () => {
+        this.eliminados.update((l) => l.filter((x) => x.idPaciente !== p.idPaciente));
+        this.cargarPacientes();
+        this.notificaciones.exito(`Paciente "${nombre}" reactivado correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo reactivar el paciente: ' + err.message),
     });
   }
 }

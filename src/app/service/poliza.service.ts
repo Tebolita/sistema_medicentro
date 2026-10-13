@@ -56,4 +56,20 @@ export class PolizaService {
         )
     }
 
+    // GET /api/Polizas/eliminadas
+    // Pólizas dadas de baja (activo = false), misma forma que el listado normal.
+    RetornarPolizasEliminadas(): Observable<ApiResponse<PolizaSeguro[]>> {
+        return this.http.get<ApiResponse<PolizaSeguro[]>>(`${this.apiUrl}/eliminadas`).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
+    // PUT /api/Polizas/{id}/reactivar
+    // Deshace la baja lógica (activo = true).
+    ReactivarPoliza(idPoliza: number): Observable<ApiResponse<object>> {
+        return this.http.put<ApiResponse<object>>(`${this.apiUrl}/${idPoliza}/reactivar`, {}).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
 }

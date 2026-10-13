@@ -13,9 +13,13 @@ import { PolizaService } from '../../service/poliza.service';
 import { AseguradoraService } from '../../service/aseguradora.service';
 import { PacienteService } from '../../service/paciente.service';
 import { CatalogoService } from '../../service/catalogo.service';
+import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { PolizaSeguro, AseguradoraListado } from '../../models/seguro.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+
+type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-polizas-lista',
@@ -28,6 +32,8 @@ export class PolizasLista {
   private aseguradoraService = inject(AseguradoraService);
   private pacienteService = inject(PacienteService);
   private catalogoService = inject(CatalogoService);
+  private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
 
@@ -37,6 +43,11 @@ export class PolizasLista {
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
 
+  // Pestaña activa: pólizas activas o dadas de baja.
+  vista = signal<Vista>('activas');
+  cargando = signal(false);
+  errorCarga = signal('');
+
   // "Copago consulta / hospital" y "Gestión seguro Mi Cope" ya tienen su
   // propia ruta (lista y registro); acá solo queda "Validación Mediprocesos",
   // que enfoca el buscador en vez de repetir la misma vista general.
@@ -44,8 +55,12 @@ export class PolizasLista {
     (item) => item.route !== '/home/polizas' || item.queryParams,
   );
 
-  // Datos reales desde la API (ya no hay datos de ejemplo).
+  // Datos reales desde la API.
   private lista = signal<PolizaSeguro[]>([]);
+  private eliminadas = signal<PolizaSeguro[]>([]);
+  private eliminadasCargadas = false;
+  // Pacientes activos y eliminados: una póliza (sobre todo una eliminada)
+  // puede pertenecer a un paciente dado de baja y aun así debe mostrar su nombre.
   private pacientesApi = signal<PacienteListado[]>([]);
   private aseguradoras = signal<AseguradoraListado[]>([]);
   private ramos = signal<CatalogoOpcion[]>([]);
@@ -68,27 +83,68 @@ export class PolizasLista {
   }
 
   private cargar(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
     forkJoin({
       polizas: this.polizaService.RetornarPolizas(),
       pacientes: this.pacienteService.RetornarPacientes(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
       aseguradoras: this.aseguradoraService.RetornarAseguradoras(),
       ramos: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.RAMO_SEGURO),
       estados: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.ESTADO_POLIZA),
     }).subscribe({
       next: (r) => {
         this.lista.set(r.polizas.datos ?? []);
-        this.pacientesApi.set(r.pacientes.datos ?? []);
+        this.pacientesApi.set([...(r.pacientes.datos ?? []), ...(r.pacientesEliminados.datos ?? [])]);
         this.aseguradoras.set(r.aseguradoras.datos ?? []);
         this.ramos.set(r.ramos.datos ?? []);
         this.estados.set(r.estados.datos ?? []);
+        this.cargando.set(false);
       },
-      error: (err: Error) => alert('No se pudieron cargar las pólizas: ' + err.message),
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar las pólizas: ' + err.message);
+      },
     });
+  }
+
+  private cargarActivas(): void {
+    this.polizaService.RetornarPolizas().subscribe({
+      next: (resp) => this.lista.set(resp.datos ?? []),
+      error: (err: Error) => this.errorCarga.set('No se pudieron cargar las pólizas: ' + err.message),
+    });
+  }
+
+  private cargarEliminadas(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
+    this.polizaService.RetornarPolizasEliminadas().subscribe({
+      next: (resp) => {
+        this.eliminadas.set(resp.datos ?? []);
+        this.eliminadasCargadas = true;
+        this.cargando.set(false);
+      },
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar las pólizas eliminadas: ' + err.message);
+      },
+    });
+  }
+
+  verActivas(): void {
+    this.vista.set('activas');
+  }
+
+  verEliminadas(): void {
+    this.vista.set('eliminadas');
+    if (!this.eliminadasCargadas) {
+      this.cargarEliminadas();
+    }
   }
 
   polizas = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.lista();
+    const lista = this.vista() === 'activas' ? this.lista() : this.eliminadas();
     if (!term) {
       return lista;
     }
@@ -140,13 +196,49 @@ export class PolizasLista {
     return 'Sin copago definido';
   }
 
-  eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Eliminar la póliza de "${paciente}"?`)) {
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  formatFecha(iso: string | null): string {
+    if (!iso) {
+      return '—';
+    }
+    return new Date(iso).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  eliminar(p: PolizaSeguro): void {
+    const paciente = this.nombrePaciente(p.idPaciente);
+    if (!confirm(`¿Eliminar la póliza ${p.numeroPoliza} de "${paciente}"?`)) {
       return;
     }
-    this.polizaService.EliminarPoliza(id).subscribe({
-      next: () => this.lista.update((l) => l.filter((p) => p.idPoliza !== id)),
-      error: (err: Error) => alert('No se pudo eliminar la póliza: ' + err.message),
+    this.polizaService.EliminarPoliza(p.idPoliza).subscribe({
+      next: () => {
+        this.lista.update((l) => l.filter((x) => x.idPoliza !== p.idPoliza));
+        // Se vuelve a pedir la lista de eliminadas la próxima vez que se abra
+        // la pestaña, para traer quién y cuándo la dio de baja.
+        this.eliminadasCargadas = false;
+        this.notificaciones.exito(`Póliza ${p.numeroPoliza} eliminada correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo eliminar la póliza: ' + err.message),
+    });
+  }
+
+  reactivar(p: PolizaSeguro): void {
+    const paciente = this.nombrePaciente(p.idPaciente);
+    if (!confirm(`¿Reactivar la póliza ${p.numeroPoliza} de "${paciente}"?`)) {
+      return;
+    }
+    this.polizaService.ReactivarPoliza(p.idPoliza).subscribe({
+      next: () => {
+        this.eliminadas.update((l) => l.filter((x) => x.idPoliza !== p.idPoliza));
+        this.cargarActivas();
+        this.notificaciones.exito(`Póliza ${p.numeroPoliza} reactivada correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo reactivar la póliza: ' + err.message),
     });
   }
 }
