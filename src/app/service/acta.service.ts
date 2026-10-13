@@ -58,4 +58,20 @@ export class ActaService {
         )
     }
 
+    // GET /api/Actas/eliminadas
+    // Actas dadas de baja (activo = false), misma forma que el listado normal.
+    RetornarActasEliminadas(): Observable<ApiResponse<Acta[]>> {
+        return this.http.get<ApiResponse<Acta[]>>(`${this.apiUrl}/eliminadas`).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
+    // PUT /api/Actas/{id}/reactivar
+    // Deshace la baja lógica (activo = true).
+    ReactivarActa(idActa: number): Observable<ApiResponse<object>> {
+        return this.http.put<ApiResponse<object>>(`${this.apiUrl}/${idActa}/reactivar`, {}).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
 }

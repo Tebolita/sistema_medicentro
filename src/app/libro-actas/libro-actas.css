@@ -36,7 +36,7 @@
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 4px 16px;
+  gap: 14px 16px;
 }
 
 .full-width {
@@ -131,3 +131,57 @@
   width: 40px;
   height: 40px;
 }
+
+
+/* Pestañas Activas / Eliminadas (mismo estilo que Pacientes y Pólizas). */
+.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.tab.active {
+  color: var(--c-accent-2);
+  border-bottom-color: var(--c-accent-2);
+}
+
+.form-titulo h2 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  color: var(--c-text);
+}
+
+.acta-row.inactivo {
+  opacity: 0.6;
+}
+
+.carga-error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(198, 40, 40, 0.08);
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  font-size: 13px;
+  font-weight: 600;
+} 

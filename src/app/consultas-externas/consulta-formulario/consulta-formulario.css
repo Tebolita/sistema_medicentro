@@ -43,7 +43,7 @@
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 4px 16px;
+  gap: 14px 16px;
 }
 
 .full-width {
@@ -54,4 +54,9 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+
+.auditoria {
+  margin-top: 4px;
 }

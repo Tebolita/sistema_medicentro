@@ -11,6 +11,8 @@ import { CitaService } from '../../service/cita.service';
 import { PacienteService } from '../../service/paciente.service';
 import { EmpleadoService } from '../../service/empleado.service';
 import { CatalogoService } from '../../service/catalogo.service';
+import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { Cita } from '../../models/cita.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
@@ -18,7 +20,9 @@ import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
 
 // La tabla `citas` no tiene columna de tipo de consulta (Primera vez /
 // Reconsulta): el formulario lo guarda al inicio de `notas` con este prefijo.
-const PREFIJO_TIPO = /^Tipo de consulta: ([^.]+)\.\s*/;
+const PREFIJO_TIPO = /^Tipo de consulta: ([^.\n]+)\.?\s*/;
+
+type Vista = 'activas' | 'eliminadas';
 
 // Fila que muestra la lista (misma forma que usaba la pantalla antes).
 interface ConsultaFila {
@@ -29,6 +33,8 @@ interface ConsultaFila {
   idEstadoCita: number;
   idTipoConsulta: number | null; // id del catálogo TIPO_CONSULTA
   motivoConsulta: string | null;
+  fechaModificacion: string | null;
+  idUsuarioModificacion: number | null;
 }
 
 @Component({
@@ -42,12 +48,23 @@ export class ConsultasLista {
   private pacienteService = inject(PacienteService);
   private empleadoService = inject(EmpleadoService);
   private catalogoService = inject(CatalogoService);
+  private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
 
   buscar = signal('');
 
+  // Pestaña activa: consultas activas o dadas de baja.
+  vista = signal<Vista>('activas');
+  cargando = signal(false);
+  errorCarga = signal('');
+
   // Datos reales desde la API (ya no hay datos de ejemplo).
   private lista = signal<ConsultaFila[]>([]);
+  private eliminadas = signal<ConsultaFila[]>([]);
+  private eliminadasCargadas = false;
+  // Pacientes activos y eliminados, para mostrar el nombre aunque el paciente
+  // haya sido dado de baja.
   private pacientesApi = signal<PacienteListado[]>([]);
   private medicos = signal<Medico[]>([]);
   private estados = signal<CatalogoOpcion[]>([]);
@@ -61,9 +78,12 @@ export class ConsultasLista {
   }
 
   private cargar(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
     forkJoin({
       citas: this.citaService.RetornarCitas(),
       pacientes: this.pacienteService.RetornarPacientes(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
       medicos: this.empleadoService.RetornarMedicos(),
       estados: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.ESTADO_CITA),
       tiposConsulta: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.TIPO_CONSULTA),
@@ -71,12 +91,50 @@ export class ConsultasLista {
       next: (r) => {
         this.tiposConsulta.set(r.tiposConsulta.datos ?? []);
         this.lista.set((r.citas.datos ?? []).map((c) => this.aFila(c.cita)));
-        this.pacientesApi.set(r.pacientes.datos ?? []);
+        this.pacientesApi.set([...(r.pacientes.datos ?? []), ...(r.pacientesEliminados.datos ?? [])]);
         this.medicos.set(r.medicos.datos ?? []);
         this.estados.set(r.estados.datos ?? []);
+        this.cargando.set(false);
       },
-      error: (err: Error) => alert('No se pudieron cargar las consultas: ' + err.message),
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar las consultas: ' + err.message);
+      },
     });
+  }
+
+  private cargarActivas(): void {
+    this.citaService.RetornarCitas().subscribe({
+      next: (resp) => this.lista.set((resp.datos ?? []).map((c) => this.aFila(c.cita))),
+      error: (err: Error) => this.errorCarga.set('No se pudieron cargar las consultas: ' + err.message),
+    });
+  }
+
+  private cargarEliminadas(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
+    this.citaService.RetornarCitasEliminadas().subscribe({
+      next: (resp) => {
+        this.eliminadas.set((resp.datos ?? []).map((c) => this.aFila(c.cita)));
+        this.eliminadasCargadas = true;
+        this.cargando.set(false);
+      },
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar las consultas eliminadas: ' + err.message);
+      },
+    });
+  }
+
+  verActivas(): void {
+    this.vista.set('activas');
+  }
+
+  verEliminadas(): void {
+    this.vista.set('eliminadas');
+    if (!this.eliminadasCargadas) {
+      this.cargarEliminadas();
+    }
   }
 
   private aFila(c: Cita): ConsultaFila {
@@ -88,6 +146,8 @@ export class ConsultasLista {
       idEstadoCita: c.idEstadoCita,
       idTipoConsulta: this.idTipoConsultaDesdeNotas(c.notas),
       motivoConsulta: c.motivoConsulta,
+      fechaModificacion: c.fechaModificacion,
+      idUsuarioModificacion: c.idUsuarioModificacion,
     };
   }
 
@@ -100,7 +160,7 @@ export class ConsultasLista {
 
   consultas = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.lista();
+    const lista = this.vista() === 'activas' ? this.lista() : this.eliminadas();
     if (!term) {
       return lista;
     }
@@ -147,23 +207,55 @@ export class ConsultasLista {
     return 'estado-programada';
   }
 
-  formatFechaHora(iso: string): string {
-    const fecha = new Date(iso);
-    return fecha.toLocaleString('es-GT', {
+  formatFechaHora(iso: string | null): string {
+    if (!iso) {
+      return '—';
+    }
+    return new Date(iso).toLocaleString('es-GT', {
       day: '2-digit',
       month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
   }
 
-  eliminar(id: number, paciente: string): void {
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  eliminar(c: ConsultaFila): void {
+    const paciente = this.nombrePaciente(c.idPaciente);
     if (!confirm(`¿Eliminar la consulta de "${paciente}"?`)) {
       return;
     }
-    this.citaService.EliminarCita(id).subscribe({
-      next: () => this.lista.update((l) => l.filter((c) => c.idCita !== id)),
-      error: (err: Error) => alert('No se pudo eliminar la consulta: ' + err.message),
+    this.citaService.EliminarCita(c.idCita).subscribe({
+      next: () => {
+        this.lista.update((l) => l.filter((x) => x.idCita !== c.idCita));
+        // Se vuelve a pedir la lista de eliminadas la próxima vez que se abra
+        // la pestaña, para traer quién y cuándo la dio de baja.
+        this.eliminadasCargadas = false;
+        this.notificaciones.exito(`Consulta de "${paciente}" eliminada correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo eliminar la consulta: ' + err.message),
+    });
+  }
+
+  reactivar(c: ConsultaFila): void {
+    const paciente = this.nombrePaciente(c.idPaciente);
+    if (!confirm(`¿Reactivar la consulta de "${paciente}"?`)) {
+      return;
+    }
+    this.citaService.ReactivarCita(c.idCita).subscribe({
+      next: () => {
+        this.eliminadas.update((l) => l.filter((x) => x.idCita !== c.idCita));
+        this.cargarActivas();
+        this.notificaciones.exito(`Consulta de "${paciente}" reactivada correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo reactivar la consulta: ' + err.message),
     });
   }
 }

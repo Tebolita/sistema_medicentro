@@ -4,14 +4,39 @@
       <h1>Libro de actas</h1>
       <p>Bitácora de ingreso de pacientes a recepción.</p>
     </div>
-    <button matButton="filled" type="button" (click)="toggleFormulario()">
-      <mat-icon>{{ mostrarFormulario() ? 'close' : 'add' }}</mat-icon>
-      {{ mostrarFormulario() ? 'Cancelar' : 'Nueva acta' }}
+    @if (vista() === 'activas') {
+      <button matButton="filled" type="button" (click)="toggleFormulario()">
+        <mat-icon>{{ mostrarFormulario() ? 'close' : 'add' }}</mat-icon>
+        {{ mostrarFormulario() ? 'Cancelar' : 'Nueva acta' }}
+      </button>
+    }
+  </div>
+
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activas'" (click)="verActivas()">
+      <mat-icon>menu_book</mat-icon>
+      Activas
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminadas'" (click)="verEliminadas()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
     </button>
   </div>
 
   @if (mostrarFormulario()) {
     <form [formGroup]="form" (ngSubmit)="registrar()" class="form-panel">
+      <div class="form-titulo">
+        <h2>{{ editando() ? 'Editar acta' : 'Nueva acta' }}</h2>
+        @if (editando()) {
+          <app-auditoria-info
+            [fechaCreacion]="editando()!.fechaCreacion"
+            [idUsuarioCreacion]="editando()!.idUsuarioCreacion"
+            [fechaModificacion]="editando()!.fechaModificacion"
+            [idUsuarioModificacion]="editando()!.idUsuarioModificacion"
+          />
+        }
+      </div>
+
       <div class="form-grid">
         <mat-form-field appearance="outline">
           <mat-label>Paciente</mat-label>
@@ -19,12 +44,13 @@
             @for (p of pacientes(); track p.idPaciente) {
               <mat-option [value]="p.idPaciente">
                 {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+                @if (esPacienteDadoDeBaja(p.idPaciente)) {
+                  (dado de baja)
+                }
               </mat-option>
             }
           </mat-select>
-          @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
-            <mat-error>Selecciona un paciente</mat-error>
-          }
+          <mat-error>{{ error(form.controls.idPaciente) }}</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -34,37 +60,47 @@
               <mat-option [value]="r.id">{{ r.nombre }}</mat-option>
             }
           </mat-select>
-          @if (form.controls.idAtendidoPor.invalid && form.controls.idAtendidoPor.touched) {
-            <mat-error>Selecciona quién atendió</mat-error>
-          }
+          <mat-error>{{ error(form.controls.idAtendidoPor) }}</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Motivo de ingreso</mat-label>
-          <input matInput formControlName="motivoIngreso" placeholder="Ej. Consulta externa, entrega de resultados..." />
-          @if (form.controls.motivoIngreso.invalid && form.controls.motivoIngreso.touched) {
-            <mat-error>Requerido</mat-error>
-          }
+          <input
+            matInput
+            formControlName="motivoIngreso"
+            placeholder="Ej. Consulta externa, entrega de resultados..."
+            [maxlength]="largoMotivo"
+          />
+          <mat-error>{{ error(form.controls.motivoIngreso) }}</mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Observaciones</mat-label>
-          <textarea matInput formControlName="observaciones" rows="2"></textarea>
+          <textarea matInput formControlName="observaciones" rows="2" [maxlength]="largoObservaciones"></textarea>
+          <mat-error>{{ error(form.controls.observaciones) }}</mat-error>
         </mat-form-field>
       </div>
 
       <div class="form-actions">
-        <button matButton="filled" type="submit">
+        <button matButton="filled" type="submit" [disabled]="guardando()">
           <mat-icon>save</mat-icon>
-          Registrar
+          @if (guardando()) {
+            Guardando...
+          } @else {
+            {{ editando() ? 'Guardar cambios' : 'Registrar' }}
+          }
         </button>
       </div>
     </form>
   }
 
+  @if (errorCarga()) {
+    <p class="carga-error">{{ errorCarga() }}</p>
+  }
+
   <div class="actas-list">
     @for (a of actas(); track a.idActa) {
-      <div class="acta-row">
+      <div class="acta-row" [class.inactivo]="vista() === 'eliminadas'">
         <div class="patient-avatar">{{ iniciales(a.idPaciente) }}</div>
         <div class="acta-info">
           <h2>{{ nombrePaciente(a.idPaciente) }}</h2>
@@ -75,22 +111,31 @@
           @if (a.observaciones) {
             <span class="acta-obs">{{ a.observaciones }}</span>
           }
+          @if (vista() === 'eliminadas') {
+            <span class="acta-meta secundario">
+              Dada de baja por {{ usuarioLabel(a.idUsuarioModificacion) }} el {{ formatFechaHora(a.fechaModificacion) }}
+            </span>
+          }
         </div>
-        <button
-          matIconButton
-          type="button"
-          [matTooltip]="'Eliminar acta'"
-          (click)="eliminar(a.idActa, nombrePaciente(a.idPaciente))"
-        >
-          <mat-icon>delete</mat-icon>
-        </button>
+        @if (vista() === 'activas') {
+          <button matIconButton type="button" [matTooltip]="'Editar acta'" (click)="editar(a)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button matIconButton type="button" [matTooltip]="'Eliminar acta'" (click)="eliminar(a)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        } @else {
+          <button matIconButton type="button" [matTooltip]="'Reactivar acta'" (click)="reactivar(a)">
+            <mat-icon>restore</mat-icon>
+          </button>
+        }
       </div>
     }
 
-    @if (actas().length === 0) {
+    @if (actas().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
-        <mat-icon>menu_book</mat-icon>
-        <p>Aún no hay actas registradas.</p>
+        <mat-icon>{{ vista() === 'activas' ? 'menu_book' : 'delete_outline' }}</mat-icon>
+        <p>{{ vista() === 'activas' ? 'Aún no hay actas registradas.' : 'No hay actas eliminadas.' }}</p>
       </div>
     }
   </div>
