@@ -1,5 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, of } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -134,18 +136,22 @@ export class FacturaFormulario {
   errorMsg = signal('');
   errorPago = signal('');
 
-  // Comprobante de pago (foto de recibo/voucher, opcional). No hay tabla
-  // para esto en el backend .NET: la relación factura↔comprobante vive solo
-  // en el nombre del archivo en el servidor Node ("factura-<id>.<ext>", ver
-  // server.ts), nunca se le pide al backend que la guarde.
-  comprobanteUrl = signal<string | null>(null);
+  // Comprobante de pago (foto de recibo/voucher, opcional). El archivo NO se
+  // sube al elegirlo: se guarda localmente (vista previa con un blob: URL) y
+  // solo se sube al servidor Node (server.ts, no al backend .NET) cuando se
+  // confirma "Guardar factura" — así, si cancelas o nunca guardas, no queda
+  // un archivo huérfano en el servidor que no corresponde a ningún dato
+  // persistido. La URL final se guarda en la columna comprobante_url.
+  private comprobanteUrlGuardado = signal<string | null>(null); // persistido (o encontrado por respaldo) al cargar
+  private archivoPendiente = signal<File | null>(null); // elegido, todavía sin subir
+  private previewUrlLocal = signal<string | null>(null); // blob: URL del archivo pendiente, para la vista previa
+  private comprobanteEliminado = signal(false); // se pidió quitar el comprobante existente
+
+  comprobanteUrl = computed(() =>
+    this.previewUrlLocal() ?? (this.comprobanteEliminado() ? null : this.comprobanteUrlGuardado()),
+  );
   subiendoComprobante = signal(false);
   errorComprobante = signal('');
-  // Si se sube un comprobante ANTES de guardar una factura nueva (todavía
-  // sin id), el servidor le pone un nombre al azar; acá se guarda ese nombre
-  // para, una vez el backend asigne el id real, pedirle a `confirmar()` que
-  // lo renombre a "factura-<id>.<ext>".
-  private comprobanteNombreTemporal = signal<string | null>(null);
 
   constructor() {
     this.cabecera.controls.descuento.valueChanges
@@ -200,8 +206,10 @@ export class FacturaFormulario {
       this.detalles.removeAt(0);
     }
     this.descuentoHeader.set(0);
-    this.comprobanteUrl.set(null);
-    this.comprobanteNombreTemporal.set(null);
+    this.comprobanteUrlGuardado.set(null);
+    this.liberarPreviewLocal();
+    this.archivoPendiente.set(null);
+    this.comprobanteEliminado.set(false);
     this.errorComprobante.set('');
     this.errorMsg.set('');
     this.errorPago.set('');
@@ -243,13 +251,27 @@ export class FacturaFormulario {
     this.descuentoHeader.set(registro.factura.descuento);
     registro.detalles.forEach((d) => this.detalles.push(this.crearDetalleGroup(d)));
 
-    // El comprobante (si hay) no viaja en los datos de la factura: se busca
-    // por convención de nombre de archivo en el servidor Node.
-    this.comprobantesService.buscar(registro.factura.idFactura).subscribe((url) => this.comprobanteUrl.set(url));
+    // La URL del comprobante viaja en la factura (columna comprobante_url);
+    // solo se busca por nombre de archivo en el servidor Node como respaldo
+    // para facturas de antes de que existiera esa columna.
+    if (registro.factura.comprobanteUrl) {
+      this.comprobanteUrlGuardado.set(registro.factura.comprobanteUrl);
+    } else {
+      this.comprobantesService
+        .buscar(registro.factura.idFactura)
+        .subscribe((url) => this.comprobanteUrlGuardado.set(url));
+    }
 
     this.pagoForm.patchValue({ monto: this.saldoPendiente() });
   }
 
+  private readonly EXTENSIONES_PERMITIDAS = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+  private readonly TAMANO_MAXIMO_BYTES = 8 * 1024 * 1024;
+
+  // El archivo elegido NO se sube todavía: solo se guarda localmente (con
+  // una vista previa via blob: URL) hasta que se confirme "Guardar factura"
+  // (ver guardar()). Así nunca queda un archivo sin asociar en el servidor
+  // si el usuario cancela o nunca llega a guardar.
   onArchivoSeleccionado(event: Event): void {
     const input = event.target as HTMLInputElement;
     const archivo = input.files?.[0];
@@ -257,33 +279,55 @@ export class FacturaFormulario {
     if (!archivo) {
       return;
     }
-    this.subiendoComprobante.set(true);
+    const extension = archivo.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!this.EXTENSIONES_PERMITIDAS.includes(extension)) {
+      this.errorComprobante.set('Solo se aceptan imágenes (JPG, PNG, WEBP) o PDF.');
+      return;
+    }
+    if (archivo.size > this.TAMANO_MAXIMO_BYTES) {
+      this.errorComprobante.set('El archivo no puede pesar más de 8 MB.');
+      return;
+    }
+
     this.errorComprobante.set('');
-    // Con id (edición) el archivo se guarda como "factura-<id>.<ext>" y
-    // reemplaza al anterior; en una factura nueva todavía no hay id, así
-    // que el servidor le pone un nombre al azar.
-    this.comprobantesService.subir(archivo, this.esNueva() ? undefined : this.idFactura()).subscribe({
-      next: (url) => {
-        // Reemplaza el comprobante anterior, si había uno. En factura nueva
-        // (sin id todavía) el archivo queda con nombre al azar; se guarda
-        // para renombrarlo en cuanto se cree la factura (ver guardar()).
-        this.comprobanteUrl.set(url);
-        this.comprobanteNombreTemporal.set(this.esNueva() ? this.comprobantesService.nombreDesdeUrl(url) : null);
-        this.subiendoComprobante.set(false);
-      },
-      error: (err: Error) => {
-        this.errorComprobante.set(err.message);
-        this.subiendoComprobante.set(false);
-      },
-    });
+    this.comprobanteEliminado.set(false);
+    this.liberarPreviewLocal();
+    this.archivoPendiente.set(archivo);
+    this.previewUrlLocal.set(URL.createObjectURL(archivo));
   }
 
   quitarComprobante(): void {
-    this.comprobanteUrl.set(null);
-    this.comprobanteNombreTemporal.set(null);
+    const habiaComprobanteGuardado = !this.archivoPendiente() && !!this.comprobanteUrlGuardado();
+    this.liberarPreviewLocal();
+    this.archivoPendiente.set(null);
+    this.comprobanteEliminado.set(true);
+
+    if (habiaComprobanteGuardado) {
+      // Se borra de una vez del servidor (no se espera a "Guardar factura"):
+      // si no, el archivo se queda huérfano y la búsqueda de respaldo
+      // (buscar() en cargar()) lo sigue encontrando aunque comprobante_url
+      // ya esté en NULL. Best effort: si falla, igual queda marcado como
+      // quitado localmente y comprobante_url se limpia al guardar.
+      this.comprobantesService.eliminar(this.idFactura()).subscribe({
+        next: () => this.comprobanteUrlGuardado.set(null),
+        error: () => {},
+      });
+    }
+  }
+
+  private liberarPreviewLocal(): void {
+    const actual = this.previewUrlLocal();
+    if (actual) {
+      URL.revokeObjectURL(actual);
+    }
+    this.previewUrlLocal.set(null);
   }
 
   esImagenComprobante(): boolean {
+    const archivo = this.archivoPendiente();
+    if (archivo) {
+      return archivo.type.startsWith('image/');
+    }
     const url = this.comprobanteUrl();
     return url ? esUrlDeImagen(url) : false;
   }
@@ -322,6 +366,37 @@ export class FacturaFormulario {
       return;
     }
 
+    this.guardando.set(true);
+    this.errorMsg.set('');
+    this.errorComprobante.set('');
+
+    // El archivo (si se eligió uno nuevo) recién se sube acá, al confirmar
+    // guardar — ver onArchivoSeleccionado(). Con id conocido (edición) el
+    // servidor ya lo nombra "factura-<id>.<ext>" de una vez; en una factura
+    // nueva (sin id todavía) le pone un nombre al azar que se renombra más
+    // abajo una vez el backend asigna el id real.
+    const idParaNombre = this.esNueva() ? undefined : this.idFactura();
+    this.resolverComprobanteUrl(idParaNombre).subscribe({
+      next: (comprobanteUrl) => this.guardarFactura(comprobanteUrl),
+      error: (err: Error) => {
+        this.errorComprobante.set(err.message);
+        this.guardando.set(false);
+      },
+    });
+  }
+
+  private resolverComprobanteUrl(idParaNombre: number | undefined): Observable<string | null> {
+    const archivo = this.archivoPendiente();
+    if (!archivo) {
+      return of(this.comprobanteEliminado() ? null : this.comprobanteUrlGuardado());
+    }
+    this.subiendoComprobante.set(true);
+    return this.comprobantesService
+      .subir(archivo, idParaNombre)
+      .pipe(finalize(() => this.subiendoComprobante.set(false)));
+  }
+
+  private guardarFactura(comprobanteUrl: string | null): void {
     const cab = this.cabecera.getRawValue();
     const original = this.registro()?.factura;
 
@@ -340,6 +415,7 @@ export class FacturaFormulario {
       idConvenio: cab.idConvenio,
       // Solo las facturas Digefact (copago de seguro) van ligadas a una póliza.
       idPoliza: this.esDigefact() ? cab.idPoliza : null,
+      comprobanteUrl,
       // idFacturaDetalle 0 = línea nueva; el backend da de baja las que no vengan.
       detalles: this.detalles.getRawValue().map((d) => ({
         idFacturaDetalle: d.id,
@@ -354,8 +430,7 @@ export class FacturaFormulario {
       })),
     };
 
-    this.guardando.set(true);
-    this.errorMsg.set('');
+    const esNuevaConComprobante = this.esNueva() && !!comprobanteUrl;
     const peticion = this.esNueva()
       ? this.facturasService.crear(factura)
       : this.facturasService.actualizar(this.idFactura(), factura);
@@ -363,14 +438,40 @@ export class FacturaFormulario {
       next: (guardada) => {
         this.guardando.set(false);
         this.notificaciones.exito('Factura guardada correctamente');
-        const nombreTemporal = this.comprobanteNombreTemporal();
-        if (nombreTemporal) {
+        if (esNuevaConComprobante) {
           // El archivo se subió con nombre al azar (factura todavía sin id);
           // ahora que ya existe el id real, se renombra a "factura-<id>.ext"
           // para que quede con el mismo formato estable que usan las
-          // ediciones. Es "best effort": si falla, la factura ya se guardó
-          // bien y el comprobante solo quedaría sin asociar por nombre.
+          // ediciones. La URL cambia con el renombrado, así que hay que
+          // volver a guardar la factura con la URL final; todo esto es "best
+          // effort": si falla, la factura ya se guardó bien y el comprobante
+          // solo quedaría con la URL temporal.
+          const nombreTemporal = this.comprobantesService.nombreDesdeUrl(comprobanteUrl!);
           this.comprobantesService.confirmar(nombreTemporal, guardada.factura.idFactura).subscribe({
+            next: (urlFinal) => {
+              // Importante: reenviar los detalles con los id reales que
+              // acaba de devolver el backend, NO los de `factura` (que
+              // llevan idFacturaDetalle 0 por ser recién creados) — si no,
+              // EditarAsync los interpreta como líneas nuevas, da de baja
+              // las que sí existen y crea duplicados.
+              this.facturasService
+                .actualizar(guardada.factura.idFactura, {
+                  ...factura,
+                  comprobanteUrl: urlFinal,
+                  detalles: guardada.detalles.map((d) => ({
+                    idFacturaDetalle: d.idFacturaDetalle,
+                    idTipoItem: d.idTipoItem,
+                    idCita: d.idCita,
+                    idTratamiento: d.idTratamiento,
+                    idMedicamento: d.idMedicamento,
+                    descripcion: d.descripcion,
+                    cantidad: d.cantidad,
+                    precioUnitario: d.precioUnitario,
+                    descuento: d.descuento,
+                  })),
+                })
+                .subscribe({ error: () => {} });
+            },
             error: () => {},
           });
         }

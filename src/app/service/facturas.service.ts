@@ -28,6 +28,7 @@ export interface FacturaInput {
   fechaCertificacionFel: string | null;
   idConvenio: number | null;
   idPoliza: number | null;
+  comprobanteUrl: string | null;
   detalles: {
     idFacturaDetalle: number;
     idTipoItem: number;

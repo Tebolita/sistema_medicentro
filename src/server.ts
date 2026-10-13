@@ -10,6 +10,17 @@ import { existsSync, mkdirSync, readdirSync, renameSync, unlinkSync } from 'node
 import { extname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
+// Una excepción no atrapada en cualquier parte de este proceso (p. ej. dentro
+// de un callback interno de multer/busboy) mata todo el servidor sin avisar
+// por qué. Esto al menos deja el error real en consola antes de que el
+// proceso muera, en vez de que simplemente "se detenga" sin explicación.
+process.on('uncaughtException', (err) => {
+  console.error('=== EXCEPCIÓN NO ATRAPADA (el proceso va a morir) ===', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('=== PROMESA RECHAZADA SIN MANEJAR ===', reason);
+});
+
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
@@ -17,13 +28,15 @@ const angularApp = new AngularNodeAppEngine();
 
 /**
  * Comprobantes de pago (recibos/vouchers) que se suben desde el formulario
- * de factura. Se guardan en `public/uploads/comprobantes`, resuelto desde
- * el directorio donde se ejecuta el proceso (la raíz del proyecto tanto en
- * `ng serve` como al correr el server compilado), y se sirven aparte con su
- * propio `express.static` para no depender de que ese archivo ya estuviera
- * copiado en `dist/.../browser` al momento del build.
+ * de factura. Se guardan en `uploads-comprobantes/` (NO dentro de `public/`:
+ * Vite vigila esa carpeta como directorio público y fuerza una recarga
+ * completa del navegador cada vez que algo cambia ahí adentro, lo que
+ * causaba que la página se recargara justo al guardar una factura con
+ * comprobante), resuelto desde el directorio donde se ejecuta el proceso (la
+ * raíz del proyecto tanto en `ng serve` como al correr el server
+ * compilado), y se sirven aparte con su propio `express.static`.
  */
-const uploadsDir = join(process.cwd(), 'public', 'uploads', 'comprobantes');
+const uploadsDir = join(process.cwd(), 'uploads-comprobantes');
 if (!existsSync(uploadsDir)) {
   mkdirSync(uploadsDir, { recursive: true });
 }
@@ -47,12 +60,10 @@ function nombreBase(req: express.Request): string | null {
 }
 
 // Busca en la carpeta un archivo "<base>.<ext>" (cualquiera de las
-// extensiones permitidas). No hay tabla en el backend .NET para el
-// comprobante de una factura (ver comprobante-descripcion.util.ts en el
-// frontend, que antes empalmaba la URL en la descripción); en vez de pedirle
-// al backend que la guarde, la relación factura↔comprobante vive solo en el
-// nombre del archivo ("factura-<id>.<ext>"), así que para saber si una
-// factura tiene comprobante basta con mirar la carpeta.
+// extensiones permitidas). La URL ya se guarda en la columna comprobante_url
+// del backend .NET; esto solo sirve de respaldo para facturas de antes de
+// que existiera esa columna, donde la única pista es el nombre del archivo
+// ("factura-<id>.<ext>").
 function buscarArchivoPorBase(base: string): string | null {
   try {
     return readdirSync(uploadsDir).find((nombre) => nombre.startsWith(`${base}.`)) ?? null;
@@ -143,6 +154,32 @@ app.get('/api/uploads/comprobante/:idFactura', (req, res) => {
     mensaje: '',
     datos: { url: nombre ? `/uploads/comprobantes/${nombre}?v=${Date.now()}` : null },
   });
+});
+
+/**
+ * Borra el comprobante de una factura de la carpeta (si existe). Se usa al
+ * hacer click en "Quitar" sobre un comprobante ya guardado: sin esto, el
+ * archivo se quedaba huérfano en el servidor y seguía apareciendo por la
+ * búsqueda de respaldo (buscarArchivoPorBase) aunque comprobante_url ya
+ * estuviera en NULL en la base de datos.
+ */
+app.delete('/api/uploads/comprobante/:idFactura', (req, res) => {
+  const { idFactura } = req.params;
+  if (!/^\d+$/.test(idFactura)) {
+    res.status(400).json({ exito: false, mensaje: 'Id de factura inválido.', datos: null });
+    return;
+  }
+  const nombre = buscarArchivoPorBase(`factura-${idFactura}`);
+  if (nombre) {
+    try {
+      unlinkSync(join(uploadsDir, nombre));
+    } catch (err) {
+      console.warn(`No se pudo borrar el comprobante "${nombre}":`, err);
+      res.status(500).json({ exito: false, mensaje: 'No se pudo borrar el comprobante.', datos: null });
+      return;
+    }
+  }
+  res.json({ exito: true, mensaje: 'Comprobante borrado correctamente', datos: null });
 });
 
 // Nombre temporal que `filename()` le pone a un comprobante subido antes de

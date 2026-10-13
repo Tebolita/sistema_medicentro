@@ -266,6 +266,12 @@
   background: var(--c-bg);
 }
 
+.comprobante-imagen-link {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
+
 .comprobante-preview img {
   width: 100%;
   max-height: 260px;

@@ -267,7 +267,9 @@
     @if (comprobanteUrl(); as url) {
       <div class="comprobante-preview">
         @if (esImagenComprobante()) {
-          <img [src]="url" alt="Comprobante de pago" />
+          <a [href]="url" target="_blank" rel="noopener" class="comprobante-imagen-link">
+            <img [src]="url" alt="Comprobante de pago" />
+          </a>
         } @else {
           <a [href]="url" target="_blank" rel="noopener" class="comprobante-pdf">
             <mat-icon>picture_as_pdf</mat-icon>

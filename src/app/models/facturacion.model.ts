@@ -17,6 +17,7 @@ export interface Factura {
   fechaCertificacionFel: string | null;
   idConvenio: number | null;
   idPoliza: number | null; // agregado en Módulo 12.1 (pólizas de seguro)
+  comprobanteUrl: string | null;
   activo: boolean;
   fechaCreacion: string;
   fechaModificacion: string | null;

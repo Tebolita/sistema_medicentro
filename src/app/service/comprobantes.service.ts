@@ -51,10 +51,9 @@ export class ComprobantesService {
     );
   }
 
-  // No hay columna para el comprobante en el backend .NET: la relación
-  // factura↔comprobante vive solo en el nombre del archivo
-  // ("factura-<id>.<ext>"), así que para saber si una factura tiene
-  // comprobante basta con preguntarle al servidor Node si existe ese archivo.
+  // Respaldo para facturas de antes de la columna comprobante_url: busca por
+  // convención de nombre de archivo ("factura-<id>.<ext>") en el servidor
+  // Node. Las facturas nuevas ya traen la URL directo en la factura.
   buscar(idFactura: number): Observable<string | null> {
     return this.http.get<ComprobanteUrlResp>(`/api/uploads/comprobante/${idFactura}`).pipe(
       map((resp) => resp.datos?.url ?? null),
@@ -80,6 +79,19 @@ export class ComprobantesService {
           return throwError(() => new Error(mensaje));
         }),
       );
+  }
+
+  // Borra el archivo físico del servidor (no solo el valor en la base de
+  // datos). Se usa al quitar un comprobante ya guardado, para que no quede
+  // huérfano y lo siga mostrando la búsqueda de respaldo de buscar().
+  eliminar(idFactura: number): Observable<void> {
+    return this.http.delete<ComprobanteUrlResp>(`/api/uploads/comprobante/${idFactura}`).pipe(
+      map(() => undefined),
+      catchError((err: HttpErrorResponse) => {
+        const mensaje = err.error?.mensaje || 'No se pudo borrar el comprobante.';
+        return throwError(() => new Error(mensaje));
+      }),
+    );
   }
 
   // El nombre del archivo subido viaja dentro de la URL que devuelve
