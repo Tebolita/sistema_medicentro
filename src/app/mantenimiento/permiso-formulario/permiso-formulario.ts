@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Permiso, PermisoInput, PermisosService } from '../../service/permisos.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-permiso-formulario',
@@ -30,6 +31,7 @@ export class PermisoFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private permisosService = inject(PermisosService);
+  private notificaciones = inject(NotificacionesService);
 
   // A diferencia de otros formularios, acá NO se cae a una lista de ejemplo
   // si el catálogo real todavía no cargó: el id que se guarda es el id real
@@ -97,7 +99,10 @@ export class PermisoFormulario {
       ? this.permisosService.crear(input)
       : this.permisosService.actualizar(this.idPermiso(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/permisos']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/permisos']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

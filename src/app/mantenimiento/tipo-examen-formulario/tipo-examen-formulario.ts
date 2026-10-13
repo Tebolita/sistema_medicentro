@@ -10,6 +10,7 @@ import { TipoExamen, TipoExamenInput, TiposExamenService } from '../../service/t
 import { CatalogosService } from '../../service/catalogos.service';
 import { CATEGORIAS_EXAMEN } from '../../laboratorio/laboratorio-catalogos';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-tipo-examen-formulario',
@@ -31,6 +32,7 @@ export class TipoExamenFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tiposService = inject(TiposExamenService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private categoriasApi = this.catalogos.obtener('CATEGORIA_EXAMEN');
@@ -90,7 +92,10 @@ export class TipoExamenFormulario {
       ? this.tiposService.crear(input)
       : this.tiposService.actualizar(this.idTipoExamen(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/tipos-examen']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/tipos-examen']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

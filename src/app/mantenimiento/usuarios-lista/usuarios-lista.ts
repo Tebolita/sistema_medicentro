@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UsuariosService } from '../../service/usuarios.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 // ESTADO_USUARIO ya se siembra junto con el usuario inicial
 // (scripts/insertar_usuario.sql): ACTIVO / BLOQUEADO / INACTIVO.
@@ -23,6 +24,7 @@ const ESTADOS_USUARIO_EJEMPLO = [
 })
 export class UsuariosLista {
   private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -60,6 +62,7 @@ export class UsuariosLista {
     }
     this.errorAccion.set('');
     this.usuariosService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

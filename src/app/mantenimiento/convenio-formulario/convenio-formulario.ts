@@ -10,6 +10,7 @@ import { Convenio, ConvenioInput, ConveniosService } from '../../service/conveni
 import { AseguradorasService } from '../../service/aseguradoras.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-convenio-formulario',
@@ -32,6 +33,7 @@ export class ConvenioFormulario {
   private router = inject(Router);
   private conveniosService = inject(ConveniosService);
   private aseguradorasService = inject(AseguradorasService);
+  private notificaciones = inject(NotificacionesService);
 
   aseguradoras = this.aseguradorasService.listar;
 
@@ -114,7 +116,10 @@ export class ConvenioFormulario {
       ? this.conveniosService.crear(input)
       : this.conveniosService.actualizar(this.idConvenio(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/convenios']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/convenios']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

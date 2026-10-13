@@ -8,7 +8,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { FacturaDetalle } from '../../models';
 import { FacturaCompleta, FacturaInput, FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA, FORMAS_PAGO, TASA_IVA, TIPOS_ITEM_FACTURA } from '../facturacion-catalogos';
@@ -19,6 +18,7 @@ import { ComprobantesService } from '../../service/comprobantes.service';
 import { ConveniosService } from '../../service/convenios.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { esImagenComprobante as esUrlDeImagen } from '../comprobante-descripcion.util';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-factura-formulario',
@@ -44,7 +44,7 @@ export class FacturaFormulario {
   private polizasService = inject(PolizasDirectorioService);
   private comprobantesService = inject(ComprobantesService);
   private usuariosService = inject(UsuariosService);
-  private snackBar = inject(MatSnackBar);
+  private notificaciones = inject(NotificacionesService);
 
   // GET /api/convenios ya existe. Si por alguna razón no hay convenios
   // sembrados todavía, se cae al campo numérico de respaldo para el id.
@@ -362,7 +362,7 @@ export class FacturaFormulario {
     peticion.subscribe({
       next: (guardada) => {
         this.guardando.set(false);
-        this.snackBar.open('Factura guardada correctamente', 'Cerrar', { duration: 4000 });
+        this.notificaciones.exito('Factura guardada correctamente');
         const nombreTemporal = this.comprobanteNombreTemporal();
         if (nombreTemporal) {
           // El archivo se subió con nombre al azar (factura todavía sin id);
@@ -407,7 +407,7 @@ export class FacturaFormulario {
             this.cabecera.patchValue({ idEstadoFactura: actualizada.factura.idEstadoFactura });
           }
           this.pagoForm.reset({ monto: this.saldoPendiente(), idFormaPago: null, referenciaPago: '' });
-          this.snackBar.open('Pago registrado correctamente', 'Cerrar', { duration: 4000 });
+          this.notificaciones.exito('Pago registrado correctamente');
         },
         error: (err: Error) => this.errorPago.set(err.message),
       });

@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MedicamentosService } from '../../service/medicamentos.service';
 import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -20,6 +21,7 @@ export class MedicamentosLista {
   private medicamentosService = inject(MedicamentosService);
   private inventarioService = inject(InventarioFarmaciaService);
   private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -88,6 +90,7 @@ export class MedicamentosLista {
     }
     this.errorAccion.set('');
     this.medicamentosService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -109,6 +112,7 @@ export class MedicamentosLista {
     }
     this.errorAccion.set('');
     this.medicamentosService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

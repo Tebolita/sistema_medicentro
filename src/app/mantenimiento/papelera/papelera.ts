@@ -15,6 +15,7 @@ import {
 } from '../../service/papelera.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { nombreGrupo } from '../../shared/menu-data';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 interface GrupoDeRecursos {
   nombre: string;
@@ -38,6 +39,7 @@ interface GrupoDeRecursos {
 export class Papelera {
   private papeleraService = inject(PapeleraService);
   private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
 
   // Agrupados igual que el menú/Catálogos (mismo "grupo" que ya usan los
   // demás módulos), para que el selector no sea una lista plana de 30.
@@ -139,7 +141,10 @@ export class Papelera {
     }
     this.errorAccion.set('');
     this.papeleraService.reactivar(recurso, registro.id).subscribe({
-      next: () => this.registros.update((lista) => lista.filter((r) => r.id !== registro.id)),
+      next: () => {
+        this.registros.update((lista) => lista.filter((r) => r.id !== registro.id));
+        this.notificaciones.exito('Reactivado correctamente');
+      },
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

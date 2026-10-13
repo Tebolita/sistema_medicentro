@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { TIPOS_MOVIMIENTO, TIPO_MOVIMIENTO_ENTRADA, TIPO_MOVIMIENTO_SALIDA } from '../farmacia-catalogos';
 import { CatalogosService } from '../../service/catalogos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-movimiento-formulario',
@@ -30,6 +31,7 @@ export class MovimientoFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private inventarioService = inject(InventarioFarmaciaService);
+  private notificaciones = inject(NotificacionesService);
 
   items = this.inventarioService.listar;
 
@@ -135,7 +137,10 @@ export class MovimientoFormulario {
     this.inventarioService
       .registrarMovimiento(v.idItemInventario!, v.idTipoMovimiento!, v.cantidad, v.motivo || null)
       .subscribe({
-        next: () => this.router.navigate(['/home/farmacia']),
+        next: () => {
+          this.notificaciones.exito('Movimiento registrado correctamente');
+          this.router.navigate(['/home/farmacia']);
+        },
         error: (err: Error) => {
           this.errorMsg.set(err.message);
           this.guardando.set(false);

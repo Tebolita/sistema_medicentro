@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TiposExamenService } from '../../service/tipos-examen.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { CATEGORIAS_EXAMEN } from '../../laboratorio/laboratorio-catalogos';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -18,6 +19,7 @@ type Vista = 'activos' | 'eliminados';
 })
 export class TiposExamenLista {
   private tiposService = inject(TiposExamenService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private categoriasApi = this.catalogos.obtener('CATEGORIA_EXAMEN');
@@ -68,6 +70,7 @@ export class TiposExamenLista {
     }
     this.errorAccion.set('');
     this.tiposService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -78,6 +81,7 @@ export class TiposExamenLista {
     }
     this.errorAccion.set('');
     this.tiposService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

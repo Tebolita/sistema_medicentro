@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConveniosService } from '../../service/convenios.service';
 import { AseguradorasService } from '../../service/aseguradoras.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-convenios-lista',
@@ -16,6 +17,7 @@ import { AseguradorasService } from '../../service/aseguradoras.service';
 export class ConveniosLista {
   private conveniosService = inject(ConveniosService);
   private aseguradorasService = inject(AseguradorasService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -66,6 +68,7 @@ export class ConveniosLista {
     }
     this.errorAccion.set('');
     this.conveniosService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

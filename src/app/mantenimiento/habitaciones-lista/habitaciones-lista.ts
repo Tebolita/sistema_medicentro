@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { HabitacionesService } from '../../service/habitaciones.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_HABITACION, ESTADOS_HABITACION } from '../habitaciones-catalogos';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -18,6 +19,7 @@ type Vista = 'activas' | 'eliminadas';
 })
 export class HabitacionesLista {
   private habitacionesService = inject(HabitacionesService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private tiposApi = this.catalogos.obtener('TIPO_HABITACION');
@@ -85,6 +87,7 @@ export class HabitacionesLista {
     }
     this.errorAccion.set('');
     this.habitacionesService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -95,6 +98,7 @@ export class HabitacionesLista {
     }
     this.errorAccion.set('');
     this.habitacionesService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { EspecialidadesService } from '../../service/especialidades.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -16,6 +17,7 @@ type Vista = 'activas' | 'eliminadas';
 })
 export class EspecialidadesLista {
   private especialidadesService = inject(EspecialidadesService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -60,6 +62,7 @@ export class EspecialidadesLista {
     }
     this.errorAccion.set('');
     this.especialidadesService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -70,6 +73,7 @@ export class EspecialidadesLista {
     }
     this.errorAccion.set('');
     this.especialidadesService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

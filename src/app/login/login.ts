@@ -6,7 +6,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 
 // servicios
 import { AuthService } from '../service/auth.service';
@@ -25,8 +24,7 @@ import { ActivatedRoute, Router } from '@angular/router';
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
-    MatButtonModule,
-    MatCheckboxModule
+    MatButtonModule
   ],
 
   templateUrl: './login.html',
@@ -48,8 +46,6 @@ export class Login {
 
 
 
-
-  rememberMe: boolean = false;
 
   mostrarPassword: boolean = false;
   mostrarCodigo: boolean = false;

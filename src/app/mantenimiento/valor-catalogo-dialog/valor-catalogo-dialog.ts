@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CatalogoValor, CatalogosService } from '../../service/catalogos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 export interface ValorCatalogoDialogData {
   codigoTipo: string;
@@ -37,6 +38,7 @@ export class ValorCatalogoDialog {
   private dialogRef = inject(MatDialogRef<ValorCatalogoDialog>);
   private fb = inject(FormBuilder);
   private catalogosService = inject(CatalogosService);
+  private notificaciones = inject(NotificacionesService);
 
   esNuevo = !this.data.valor;
   guardando = signal(false);
@@ -107,6 +109,7 @@ export class ValorCatalogoDialog {
     peticion.subscribe({
       next: () => {
         this.guardando.set(false);
+        this.notificaciones.exito(this.esNuevo ? 'Creado correctamente' : 'Actualizado correctamente');
         this.dialogRef.close(true);
       },
       error: (err: Error) => {

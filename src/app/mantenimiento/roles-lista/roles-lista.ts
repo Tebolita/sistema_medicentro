@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RolesService } from '../../service/roles.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-roles-lista',
@@ -14,6 +15,7 @@ import { RolesService } from '../../service/roles.service';
 })
 export class RolesLista {
   private rolesService = inject(RolesService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -40,6 +42,7 @@ export class RolesLista {
     }
     this.errorAccion.set('');
     this.rolesService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

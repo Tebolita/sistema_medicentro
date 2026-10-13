@@ -54,7 +54,7 @@
 
           <!-- USUARIO -->
           <mat-form-field
-            appearance="outline"
+            appearance="fill"
             class="full-width"
           >
 
@@ -83,7 +83,7 @@
 
           <!-- CÓDIGO -->
           <mat-form-field
-            appearance="outline"
+            appearance="fill"
             class="full-width"
           >
 
@@ -124,7 +124,7 @@
 
           <!-- CONTRASEÑA -->
           <mat-form-field
-            appearance="outline"
+            appearance="fill"
             class="full-width"
           >
 
@@ -165,27 +165,11 @@
 
 
           <!-- OPCIONES -->
-          <div class="login-options">
-            @if(errorMsg()){
+          @if(errorMsg()){
+            <div class="login-options">
               <p class="text-red-300 text-xs text-center">{{ errorMsg() }}</p>
-            }
-
-            <mat-checkbox
-              [(ngModel)]="rememberMe"
-              name="rememberMe"
-              color="primary"
-            >
-              Recuérdame
-            </mat-checkbox>
-
-            <a
-              href="javascript:void(0)"
-              class="forgot-password"
-            >
-              ¿Olvidó su contraseña?
-            </a>
-
-          </div>
+            </div>
+          }
 
 
           <!-- BOTÓN -->

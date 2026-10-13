@@ -14,6 +14,7 @@ import { ESTADOS_RECETA } from '../farmacia-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MedicosService } from '../../service/medicos.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-receta-formulario',
@@ -36,6 +37,7 @@ export class RecetaFormulario {
   private router = inject(Router);
   private recetasService = inject(RecetasService);
   private pacientesService = inject(PacientesService);
+  private notificaciones = inject(NotificacionesService);
 
   pacientes = this.pacientesService.directorio;
   private medicosService = inject(MedicosService);
@@ -146,7 +148,10 @@ export class RecetaFormulario {
       ? this.recetasService.crear(receta)
       : this.recetasService.actualizar(idReceta, receta);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/farmacia/recetas']),
+      next: () => {
+        this.notificaciones.exito(this.esNueva() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/farmacia/recetas']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

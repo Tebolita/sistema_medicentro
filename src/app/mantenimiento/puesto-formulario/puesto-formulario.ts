@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Puesto, PuestoInput, PuestosService } from '../../service/puestos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-puesto-formulario',
@@ -27,6 +28,7 @@ export class PuestoFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private puestosService = inject(PuestosService);
+  private notificaciones = inject(NotificacionesService);
 
   idPuesto = signal(0);
   esNuevo = computed(() => this.idPuesto() === 0);
@@ -70,7 +72,10 @@ export class PuestoFormulario {
       ? this.puestosService.crear(input)
       : this.puestosService.actualizar(this.idPuesto(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/puestos']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/puestos']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

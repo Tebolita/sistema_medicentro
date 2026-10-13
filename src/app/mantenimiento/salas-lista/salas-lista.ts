@@ -8,6 +8,7 @@ import { SalasService } from '../../service/salas.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { TIPOS_SALA, ESTADOS_SALA } from '../salas-catalogos';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -20,6 +21,7 @@ type Vista = 'activas' | 'eliminadas';
 export class SalasLista {
   private salasService = inject(SalasService);
   private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private tiposApi = this.catalogos.obtener('TIPO_SALA');
@@ -94,6 +96,7 @@ export class SalasLista {
     }
     this.errorAccion.set('');
     this.salasService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -104,6 +107,7 @@ export class SalasLista {
     }
     this.errorAccion.set('');
     this.salasService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

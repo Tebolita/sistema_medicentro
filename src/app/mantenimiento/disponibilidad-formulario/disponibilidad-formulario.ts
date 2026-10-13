@@ -14,6 +14,7 @@ import {
 } from '../../service/disponibilidades.service';
 import { MedicosService } from '../../service/medicos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-disponibilidad-formulario',
@@ -36,6 +37,7 @@ export class DisponibilidadFormulario {
   private router = inject(Router);
   private disponibilidadesService = inject(DisponibilidadesService);
   private medicosService = inject(MedicosService);
+  private notificaciones = inject(NotificacionesService);
 
   medicos = this.medicosService.listar;
   dias = DIAS_SEMANA;
@@ -100,7 +102,10 @@ export class DisponibilidadFormulario {
       ? this.disponibilidadesService.crear(input)
       : this.disponibilidadesService.actualizar(this.idDisponibilidad(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/disponibilidad-medicos']),
+      next: () => {
+        this.notificaciones.exito(this.esNueva() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/disponibilidad-medicos']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

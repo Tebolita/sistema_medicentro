@@ -56,17 +56,22 @@
             @if (r.ipOrigen) {
               <p class="item-meta">IP: {{ r.ipOrigen }}</p>
             }
-            @if (r.valoresAnteriores) {
-              <div>
-                <strong>Valores anteriores</strong>
-                <pre>{{ r.valoresAnteriores }}</pre>
+            @for (c of camposCambiados(r); track c.campo) {
+              <div class="cambio-fila">
+                <mat-icon [class]="'cambio-icono cambio-' + c.tipo">{{ iconoDeCambio(c.tipo) }}</mat-icon>
+                <span class="cambio-campo">{{ c.campo }}</span>
+                <span class="cambio-valores">
+                  @if (c.tipo === 'cambio') {
+                    <span class="cambio-antes">{{ c.antes }}</span>
+                    <mat-icon class="cambio-flecha">arrow_forward</mat-icon>
+                    <span class="cambio-despues">{{ c.despues }}</span>
+                  } @else {
+                    <span>{{ c.despues ?? c.antes }}</span>
+                  }
+                </span>
               </div>
-            }
-            @if (r.valoresNuevos) {
-              <div>
-                <strong>Valores nuevos</strong>
-                <pre>{{ r.valoresNuevos }}</pre>
-              </div>
+            } @empty {
+              <p class="item-meta">Sin cambios de campos para mostrar.</p>
             }
           </div>
         }

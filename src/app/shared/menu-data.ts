@@ -41,12 +41,6 @@ export const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'person_add', label: 'Registro de pacientes', route: '/home/pacientes/nuevo' },
       { icon: 'menu_book', label: 'Libro de actas', route: '/home/libro-actas' },
-      {
-        icon: 'manage_search',
-        label: 'Búsqueda de expediente',
-        route: '/home/pacientes',
-        queryParams: { foco: 'buscar' },
-      },
       { icon: 'assignment_ind', label: 'Consulta externa', route: '/home/consultas' },
     ],
   },
@@ -59,13 +53,6 @@ export const MENU_SECTIONS: MenuSection[] = [
     color: '#6a1b9a',
     route: '/home/polizas',
     items: [
-      {
-        icon: 'verified_user',
-        label: 'Validación Mediprocesos',
-        route: '/home/polizas',
-        queryParams: { foco: 'buscar' },
-      },
-      { icon: 'request_quote', label: 'Copago consulta / hospital', route: '/home/polizas' },
       { icon: 'support_agent', label: 'Gestión seguro Mi Cope', route: '/home/polizas/nueva' },
     ],
   },
@@ -167,12 +154,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         queryParams: { tipo: 'venta' },
       },
       { icon: 'receipt_long', label: 'Recetas internas', route: '/home/farmacia/recetas' },
-      {
-        icon: 'sync_alt',
-        label: 'Recetas Mediprocesos (sistema)',
-        route: '/home/farmacia/recetas',
-        queryParams: { foco: 'buscar' },
-      },
+      // {
+      //   icon: 'sync_alt',
+      //   label: 'Recetas Mediprocesos (sistema)',
+      //   route: '/home/farmacia/recetas',
+      //   queryParams: { foco: 'buscar' },
+      // },
       { icon: 'medication', label: 'Catálogo de medicamentos', route: '/home/farmacia/medicamentos' },
       { icon: 'swap_vert', label: 'Movimientos de medicamentos', route: '/home/farmacia/movimientos' },
       {

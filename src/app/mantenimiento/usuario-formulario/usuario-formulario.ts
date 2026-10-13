@@ -1,7 +1,6 @@
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +14,7 @@ import { EmpleadosService } from '../../service/empleados.service';
 import { RolesService } from '../../service/roles.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 const ESTADOS_USUARIO_EJEMPLO = [
   { id: 1, label: 'Activo' },
@@ -45,7 +45,7 @@ export class UsuarioFormulario {
   private router = inject(Router);
   private usuariosService = inject(UsuariosService);
   private rolesService = inject(RolesService);
-  private snackBar = inject(MatSnackBar);
+  private notificaciones = inject(NotificacionesService);
 
   empleadosService = inject(EmpleadosService);
   empleados = this.empleadosService.listar;
@@ -162,6 +162,7 @@ export class UsuarioFormulario {
       next: () => {
         this.rolParaAsignar.set(null);
         this.cargarRoles();
+        this.notificaciones.exito('Rol asignado correctamente');
       },
       error: (err: Error) => this.errorRoles.set(err.message),
     });
@@ -173,7 +174,10 @@ export class UsuarioFormulario {
     }
     this.errorRoles.set('');
     this.usuariosService.quitarRol(this.idUsuario(), idRol).subscribe({
-      next: () => this.cargarRoles(),
+      next: () => {
+        this.cargarRoles();
+        this.notificaciones.exito('Rol quitado correctamente');
+      },
       error: (err: Error) => this.errorRoles.set(err.message),
     });
   }
@@ -206,7 +210,10 @@ export class UsuarioFormulario {
         });
 
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/usuarios']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/usuarios']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);
@@ -240,7 +247,7 @@ export class UsuarioFormulario {
       next: () => {
         this.guardandoReset.set(false);
         this.resetForm.reset({ contrasenaNueva: '', repetirContrasenaNueva: '', requiereCambioPassword: true });
-        this.snackBar.open('Contraseña reseteada correctamente', 'Cerrar', { duration: 4000 });
+        this.notificaciones.exito('Contraseña reseteada correctamente');
       },
       error: (err: Error) => {
         this.errorReset.set(err.message);

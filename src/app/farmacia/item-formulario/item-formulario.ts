@@ -14,6 +14,7 @@ import { ESTADOS_ITEM_INVENTARIO, UNIDADES_MEDIDA } from '../farmacia-catalogos'
 import { CatalogosService } from '../../service/catalogos.service';
 import { ProveedoresService } from '../../service/proveedores.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-item-formulario',
@@ -35,6 +36,7 @@ export class ItemFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private inventarioService = inject(InventarioFarmaciaService);
+  private notificaciones = inject(NotificacionesService);
 
   private medicamentosService = inject(MedicamentosService);
   medicamentos = this.medicamentosService.listar;
@@ -142,7 +144,10 @@ export class ItemFormulario {
         });
 
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/farmacia']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/farmacia']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

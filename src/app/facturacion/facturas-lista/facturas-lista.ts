@@ -11,6 +11,7 @@ import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -27,6 +28,7 @@ export class FacturasLista {
   private catalogos = inject(CatalogosService);
   private usuariosService = inject(UsuariosService);
   private estadosFacturaApi = this.catalogos.obtener('ESTADO_FACTURA');
+  private notificaciones = inject(NotificacionesService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -142,6 +144,7 @@ export class FacturasLista {
     }
     this.errorAccion.set('');
     this.facturasService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -152,6 +155,7 @@ export class FacturasLista {
     }
     this.errorAccion.set('');
     this.facturasService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

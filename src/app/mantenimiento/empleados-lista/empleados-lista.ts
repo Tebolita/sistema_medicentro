@@ -8,6 +8,7 @@ import { EmpleadosService } from '../../service/empleados.service';
 import { PuestosService } from '../../service/puestos.service';
 import { ESTADOS_EMPLEADO } from '../empleados-catalogos';
 import { CatalogosService } from '../../service/catalogos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -20,6 +21,7 @@ type Vista = 'activos' | 'eliminados';
 export class EmpleadosLista {
   private empleadosService = inject(EmpleadosService);
   private puestosService = inject(PuestosService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private estadosApi = this.catalogos.obtener('ESTADO_EMPLEADO');
@@ -84,6 +86,7 @@ export class EmpleadosLista {
     }
     this.errorAccion.set('');
     this.empleadosService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -94,6 +97,7 @@ export class EmpleadosLista {
     }
     this.errorAccion.set('');
     this.empleadosService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

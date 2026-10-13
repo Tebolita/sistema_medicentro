@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { PermisosService } from '../../service/permisos.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { MODULOS_SISTEMA } from '../permisos-catalogos';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -18,6 +19,7 @@ type Vista = 'activos' | 'eliminados';
 })
 export class PermisosLista {
   private permisosService = inject(PermisosService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private modulosApi = this.catalogos.obtener('MODULO_SISTEMA');
@@ -68,6 +70,7 @@ export class PermisosLista {
     }
     this.errorAccion.set('');
     this.permisosService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -78,6 +81,7 @@ export class PermisosLista {
     }
     this.errorAccion.set('');
     this.permisosService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

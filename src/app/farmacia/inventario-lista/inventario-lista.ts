@@ -11,6 +11,7 @@ import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
 import { ProveedoresService } from '../../service/proveedores.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -26,6 +27,7 @@ export class InventarioLista {
   private router = inject(Router);
   private proveedoresService = inject(ProveedoresService);
   private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
 
   // Mismo patrón que item-formulario: valores reales del catálogo si existen
   // en la base, si no, la lista de ejemplo.
@@ -108,6 +110,7 @@ export class InventarioLista {
     }
     this.errorAccion.set('');
     this.inventarioService.eliminar(idItemInventario).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -120,6 +123,7 @@ export class InventarioLista {
     }
     this.errorAccion.set('');
     this.inventarioService.reactivar(idItemInventario).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

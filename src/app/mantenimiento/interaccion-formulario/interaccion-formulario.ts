@@ -10,6 +10,7 @@ import { Interaccion, InteraccionInput, InteraccionesService } from '../../servi
 import { MedicamentosService } from '../../service/medicamentos.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 // Mismos códigos/ids de ejemplo que ya usa Pacientes para 'SEVERIDAD'
 // (pacientes-catalogos.ts) — de respaldo mientras ese catálogo no haya
@@ -41,6 +42,7 @@ export class InteraccionFormulario {
   private router = inject(Router);
   private interaccionesService = inject(InteraccionesService);
   private medicamentosService = inject(MedicamentosService);
+  private notificaciones = inject(NotificacionesService);
 
   medicamentos = this.medicamentosService.listar;
 
@@ -111,7 +113,10 @@ export class InteraccionFormulario {
       ? this.interaccionesService.crear(input)
       : this.interaccionesService.actualizar(this.idInteraccion(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/interacciones']),
+      next: () => {
+        this.notificaciones.exito(this.esNueva() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/interacciones']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

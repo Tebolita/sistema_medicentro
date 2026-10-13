@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Proveedor, ProveedorInput, ProveedoresService } from '../../service/proveedores.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-proveedor-formulario',
@@ -27,6 +28,7 @@ export class ProveedorFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private proveedoresService = inject(ProveedoresService);
+  private notificaciones = inject(NotificacionesService);
 
   idProveedor = signal(0);
   esNuevo = computed(() => this.idProveedor() === 0);
@@ -86,7 +88,10 @@ export class ProveedorFormulario {
       ? this.proveedoresService.crear(input)
       : this.proveedoresService.actualizar(this.idProveedor(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/proveedores']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/proveedores']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

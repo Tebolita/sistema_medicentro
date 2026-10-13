@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ProveedoresService } from '../../service/proveedores.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-proveedores-lista',
@@ -14,6 +15,7 @@ import { ProveedoresService } from '../../service/proveedores.service';
 })
 export class ProveedoresLista {
   private proveedoresService = inject(ProveedoresService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -42,6 +44,7 @@ export class ProveedoresLista {
     }
     this.errorAccion.set('');
     this.proveedoresService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

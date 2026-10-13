@@ -9,6 +9,7 @@ import { UsuariosService } from '../../service/usuarios.service';
 import { TIPOS_CATALOGO_CONOCIDOS, TipoCatalogoConocido } from '../mantenimiento-catalogos';
 import { TipoCatalogoDialog } from '../tipo-catalogo-dialog/tipo-catalogo-dialog';
 import { ValorCatalogoDialog } from '../valor-catalogo-dialog/valor-catalogo-dialog';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-catalogos-lista',
@@ -20,6 +21,7 @@ export class CatalogosLista {
   private catalogosService = inject(CatalogosService);
   private usuariosService = inject(UsuariosService);
   private dialog = inject(MatDialog);
+  private notificaciones = inject(NotificacionesService);
 
   constructor() {
     // CatalogosService (como el resto de servicios "singleton" de la app)
@@ -185,6 +187,7 @@ export class CatalogosLista {
     }
     this.errorAccion.set('');
     this.catalogosService.eliminarValor(codigoTipo, idValor).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

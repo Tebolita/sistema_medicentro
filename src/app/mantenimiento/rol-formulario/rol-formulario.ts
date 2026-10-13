@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Rol, RolPermiso, RolesService } from '../../service/roles.service';
 import { PermisosService } from '../../service/permisos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-rol-formulario',
@@ -31,6 +32,7 @@ export class RolFormulario {
   private router = inject(Router);
   private rolesService = inject(RolesService);
   private permisosService = inject(PermisosService);
+  private notificaciones = inject(NotificacionesService);
 
   permisos = this.permisosService.listar;
 
@@ -92,7 +94,10 @@ export class RolFormulario {
       ? this.rolesService.asignarPermiso(this.idRol(), idPermiso)
       : this.rolesService.quitarPermiso(this.idRol(), idPermiso);
     peticion.subscribe({
-      next: () => this.cargarPermisos(),
+      next: () => {
+        this.cargarPermisos();
+        this.notificaciones.exito(marcado ? 'Permiso asignado correctamente' : 'Permiso quitado correctamente');
+      },
       error: (err: Error) => this.errorPermisos.set(err.message),
     });
   }
@@ -108,7 +113,10 @@ export class RolFormulario {
     const input = { nombre: v.nombre.trim(), descripcion: v.descripcion.trim() || null };
     const peticion = this.esNuevo() ? this.rolesService.crear(input) : this.rolesService.actualizar(this.idRol(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/roles']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/roles']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

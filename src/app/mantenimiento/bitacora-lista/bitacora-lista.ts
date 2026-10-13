@@ -20,6 +20,26 @@ const ACCIONES_EJEMPLO = [
   { id: 3, label: 'Eliminar (baja lógica)' },
 ];
 
+// Campos que vienen en TODOS los registros (valoresAnteriores/valoresNuevos
+// los manda MedicentroDbContext.SerializarValores con el nombre de
+// propiedad de C#, ver backend) pero no aportan nada para entender QUÉ
+// cambió — se ocultan del detalle en vez de llenarlo de ruido.
+const CAMPOS_IGNORADOS = new Set([
+  'FechaCreacion',
+  'FechaModificacion',
+  'IdUsuarioCreacion',
+  'IdUsuarioModificacion',
+]);
+
+export type TipoCambioCampo = 'nuevo' | 'cambio' | 'quitado';
+
+export interface CambioCampo {
+  campo: string;
+  tipo: TipoCambioCampo;
+  antes: string | null;
+  despues: string | null;
+}
+
 @Component({
   selector: 'app-bitacora-lista',
   imports: [FormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, DatePipe],
@@ -103,5 +123,74 @@ export class BitacoraLista {
       }
       return nuevo;
     });
+  }
+
+  // Convierte el par de JSON crudos (valoresAnteriores/valoresNuevos) en una
+  // lista de "qué campo cambió, de qué a qué" — en vez de mostrar el JSON
+  // tal cual, que nadie fuera de un desarrollador puede leer rápido.
+  camposCambiados(r: RegistroBitacora): CambioCampo[] {
+    const antes = this.parsear(r.valoresAnteriores);
+    const despues = this.parsear(r.valoresNuevos);
+    const campos = new Set([...Object.keys(antes ?? {}), ...Object.keys(despues ?? {})]);
+
+    const cambios: CambioCampo[] = [];
+    for (const campo of campos) {
+      if (CAMPOS_IGNORADOS.has(campo)) {
+        continue;
+      }
+      const tieneAntes = !!antes && campo in antes;
+      const tieneDespues = !!despues && campo in despues;
+      const valorAntes = tieneAntes ? antes![campo] : undefined;
+      const valorDespues = tieneDespues ? despues![campo] : undefined;
+
+      if (tieneAntes && tieneDespues && JSON.stringify(valorAntes) === JSON.stringify(valorDespues)) {
+        continue; // sin cambios en este campo — no aporta nada mostrarlo
+      }
+
+      let tipo: TipoCambioCampo = 'cambio';
+      if (!tieneAntes) tipo = 'nuevo';
+      else if (!tieneDespues) tipo = 'quitado';
+
+      cambios.push({
+        campo: this.humanizarCampo(campo),
+        tipo,
+        antes: tieneAntes ? this.formatearValor(valorAntes) : null,
+        despues: tieneDespues ? this.formatearValor(valorDespues) : null,
+      });
+    }
+    return cambios;
+  }
+
+  iconoDeCambio(tipo: TipoCambioCampo): string {
+    return tipo === 'nuevo' ? 'add_circle' : tipo === 'quitado' ? 'remove_circle' : 'sync_alt';
+  }
+
+  private parsear(json: string | null): Record<string, unknown> | null {
+    if (!json) {
+      return null;
+    }
+    try {
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  private humanizarCampo(campo: string): string {
+    return campo.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+  }
+
+  private formatearValor(valor: unknown): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return '(vacío)';
+    }
+    if (typeof valor === 'boolean') {
+      return valor ? 'Sí' : 'No';
+    }
+    if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(valor)) {
+      const fecha = new Date(valor);
+      return isNaN(fecha.getTime()) ? valor : fecha.toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return String(valor);
   }
 }

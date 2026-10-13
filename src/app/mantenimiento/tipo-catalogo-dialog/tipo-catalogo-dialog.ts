@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { CatalogosService } from '../../service/catalogos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 // Popup para crear un catálogo (cat_tipo_catalogo) nuevo. El backend ya
 // tiene GET /api/catalogos (lista todos los que existen), así que al
@@ -23,6 +24,7 @@ export class TipoCatalogoDialog {
   private dialogRef = inject(MatDialogRef<TipoCatalogoDialog>);
   private fb = inject(FormBuilder);
   private catalogosService = inject(CatalogosService);
+  private notificaciones = inject(NotificacionesService);
 
   guardando = signal(false);
   error = signal('');
@@ -51,6 +53,7 @@ export class TipoCatalogoDialog {
       .subscribe({
         next: () => {
           this.guardando.set(false);
+          this.notificaciones.exito('Creado correctamente');
           this.dialogRef.close(true);
         },
         error: (err: Error) => {

@@ -6,11 +6,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { FacturasService } from '../../service/facturas.service';
 import { FORMAS_PAGO } from '../facturacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-pago-formulario',
@@ -31,7 +31,7 @@ export class PagoFormulario {
   private router = inject(Router);
   private facturasService = inject(FacturasService);
   private pacientesService = inject(PacientesService);
-  private snackBar = inject(MatSnackBar);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   // "Emitida" (aún no pagada): id real si el catálogo existe, si no, 1.
@@ -90,7 +90,7 @@ export class PagoFormulario {
       })
       .subscribe({
         next: () => {
-          this.snackBar.open('Pago registrado correctamente', 'Cerrar', { duration: 4000 });
+          this.notificaciones.exito('Pago registrado correctamente');
           this.router.navigate(['/home/facturacion/pagos']);
         },
         error: (err: Error) => {

@@ -106,3 +106,76 @@
 .datepicker-azul .mat-calendar-body-disabled .mat-calendar-body-cell-content {
   color: #ccc !important;
 }
+/* =========================================================
+   TOASTS (NotificacionesService) — arriba a la derecha, con ícono según
+   la acción. panelClass se aplica al contenedor del overlay de Material,
+   que vive fuera de cualquier componente, por eso va en el CSS global.
+   ========================================================= */
+
+.toast-panel .mdc-snackbar__surface {
+  padding: 4px 8px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Un color por tipo de acción — crear/actualizar en tonos positivos,
+   reactivar en teal, asignar en morado, y eliminar/quitar en tonos de
+   advertencia (son acciones exitosas, no errores, pero conviene que se
+   noten distinto de un simple "guardado"). */
+.toast-crear .mdc-snackbar__surface {
+  background-color: #1b5e20 !important;
+}
+.toast-crear .toast-icono {
+  color: #81c784;
+}
+
+.toast-actualizar .mdc-snackbar__surface {
+  background-color: #0d47a1 !important;
+}
+.toast-actualizar .toast-icono {
+  color: #90caf9;
+}
+
+.toast-reactivar .mdc-snackbar__surface {
+  background-color: #00695c !important;
+}
+.toast-reactivar .toast-icono {
+  color: #80cbc4;
+}
+
+.toast-asignar .mdc-snackbar__surface {
+  background-color: #4527a0 !important;
+}
+.toast-asignar .toast-icono {
+  color: #b39ddb;
+}
+
+.toast-quitar .mdc-snackbar__surface {
+  background-color: #e65100 !important;
+}
+.toast-quitar .toast-icono {
+  color: #ffcc80;
+}
+
+.toast-eliminar .mdc-snackbar__surface {
+  background-color: #b71c1c !important;
+}
+.toast-eliminar .toast-icono {
+  color: #ef9a9a;
+}
+
+.toast-error .mdc-snackbar__surface {
+  background-color: #c62828 !important;
+}
+
+.toast-error .toast-icono {
+  color: #ffcdd2;
+}
+
+.toast-panel .toast-mensaje {
+  color: #ffffff;
+}
+
+.toast-panel .toast-cerrar {
+  color: rgba(255, 255, 255, 0.75);
+}

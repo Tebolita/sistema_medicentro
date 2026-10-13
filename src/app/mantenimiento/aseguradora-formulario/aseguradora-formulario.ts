@@ -10,6 +10,7 @@ import { Aseguradora, AseguradoraInput, AseguradorasService } from '../../servic
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_ENTIDAD_ASEGURADORA } from '../aseguradoras-catalogos';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-aseguradora-formulario',
@@ -31,6 +32,7 @@ export class AseguradoraFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private aseguradorasService = inject(AseguradorasService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private tiposEntidadApi = this.catalogos.obtener('TIPO_ENTIDAD_ASEGURADORA');
@@ -99,7 +101,10 @@ export class AseguradoraFormulario {
       ? this.aseguradorasService.crear(input)
       : this.aseguradorasService.actualizar(this.idAseguradora(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/aseguradoras']),
+      next: () => {
+        this.notificaciones.exito(this.esNueva() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/aseguradoras']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

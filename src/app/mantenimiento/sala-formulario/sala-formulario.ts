@@ -10,6 +10,7 @@ import { Sala, SalaInput, SalasService } from '../../service/salas.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { TIPOS_SALA, ESTADOS_SALA } from '../salas-catalogos';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-sala-formulario',
@@ -31,6 +32,7 @@ export class SalaFormulario {
   private router = inject(Router);
   private salasService = inject(SalasService);
   private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private tiposApi = this.catalogos.obtener('TIPO_SALA');
@@ -98,7 +100,10 @@ export class SalaFormulario {
       ? this.salasService.crear(input)
       : this.salasService.actualizar(this.idSala(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/salas']),
+      next: () => {
+        this.notificaciones.exito(this.esNueva() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/salas']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

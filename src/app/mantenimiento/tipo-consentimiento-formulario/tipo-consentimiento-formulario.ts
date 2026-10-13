@@ -11,6 +11,7 @@ import {
   TiposConsentimientoService,
 } from '../../service/tipos-consentimiento.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-tipo-consentimiento-formulario',
@@ -31,6 +32,7 @@ export class TipoConsentimientoFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tiposService = inject(TiposConsentimientoService);
+  private notificaciones = inject(NotificacionesService);
 
   idTipoConsentimiento = signal(0);
   esNuevo = computed(() => this.idTipoConsentimiento() === 0);
@@ -83,7 +85,10 @@ export class TipoConsentimientoFormulario {
       ? this.tiposService.crear(input)
       : this.tiposService.actualizar(this.idTipoConsentimiento(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/tipos-consentimiento']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/tipos-consentimiento']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

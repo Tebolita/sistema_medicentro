@@ -11,6 +11,7 @@ import { Medicamento } from '../../models';
 import { MedicamentoInput, MedicamentosService } from '../../service/medicamentos.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-medicamento-formulario',
@@ -33,6 +34,7 @@ export class MedicamentoFormulario {
   private router = inject(Router);
   private medicamentosService = inject(MedicamentosService);
   private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
 
   idMedicamento = signal(0);
   esNuevo = computed(() => this.idMedicamento() === 0);
@@ -103,7 +105,10 @@ export class MedicamentoFormulario {
       ? this.medicamentosService.crear(input)
       : this.medicamentosService.actualizar(this.idMedicamento(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/farmacia/medicamentos']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/farmacia/medicamentos']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

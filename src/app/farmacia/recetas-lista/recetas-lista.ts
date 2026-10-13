@@ -10,6 +10,7 @@ import { MedicamentosService } from '../../service/medicamentos.service';
 import { ESTADOS_RECETA } from '../farmacia-catalogos';
 import { MedicosService } from '../../service/medicos.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-recetas-lista',
@@ -23,6 +24,7 @@ export class RecetasLista {
   private pacientesService = inject(PacientesService);
   private medicosService = inject(MedicosService);
   private route = inject(ActivatedRoute);
+  private notificaciones = inject(NotificacionesService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -108,6 +110,7 @@ export class RecetasLista {
     }
     this.errorAccion.set('');
     this.recetasService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

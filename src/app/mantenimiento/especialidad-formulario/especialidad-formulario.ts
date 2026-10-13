@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Especialidad, EspecialidadInput, EspecialidadesService } from '../../service/especialidades.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-especialidad-formulario',
@@ -27,6 +28,7 @@ export class EspecialidadFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private especialidadesService = inject(EspecialidadesService);
+  private notificaciones = inject(NotificacionesService);
 
   idEspecialidad = signal(0);
   esNueva = computed(() => this.idEspecialidad() === 0);
@@ -70,7 +72,10 @@ export class EspecialidadFormulario {
       ? this.especialidadesService.crear(input)
       : this.especialidadesService.actualizar(this.idEspecialidad(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/especialidades']),
+      next: () => {
+        this.notificaciones.exito(this.esNueva() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/especialidades']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TiposConsentimientoService } from '../../service/tipos-consentimiento.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -16,6 +17,7 @@ type Vista = 'activos' | 'eliminados';
 })
 export class TiposConsentimientoLista {
   private tiposService = inject(TiposConsentimientoService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -55,6 +57,7 @@ export class TiposConsentimientoLista {
     }
     this.errorAccion.set('');
     this.tiposService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -65,6 +68,7 @@ export class TiposConsentimientoLista {
     }
     this.errorAccion.set('');
     this.tiposService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

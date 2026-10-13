@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { InteraccionesService } from '../../service/interacciones.service';
 import { MedicamentosService } from '../../service/medicamentos.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -27,6 +28,7 @@ const SEVERIDADES_EJEMPLO = [
 export class InteraccionesLista {
   private interaccionesService = inject(InteraccionesService);
   private medicamentosService = inject(MedicamentosService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private severidadApi = this.catalogos.obtener('SEVERIDAD');
@@ -90,6 +92,7 @@ export class InteraccionesLista {
     }
     this.errorAccion.set('');
     this.interaccionesService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -100,6 +103,7 @@ export class InteraccionesLista {
     }
     this.errorAccion.set('');
     this.interaccionesService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DIAS_SEMANA, DisponibilidadesService } from '../../service/disponibilidades.service';
 import { MedicosService } from '../../service/medicos.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -18,6 +19,7 @@ type Vista = 'activas' | 'eliminadas';
 export class DisponibilidadLista {
   private disponibilidadesService = inject(DisponibilidadesService);
   private medicosService = inject(MedicosService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -71,6 +73,7 @@ export class DisponibilidadLista {
     }
     this.errorAccion.set('');
     this.disponibilidadesService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -81,6 +84,7 @@ export class DisponibilidadLista {
     }
     this.errorAccion.set('');
     this.disponibilidadesService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }

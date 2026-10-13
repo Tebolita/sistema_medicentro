@@ -11,6 +11,7 @@ import { Cama, Habitacion, HabitacionCompleta, HabitacionInput, HabitacionesServ
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_HABITACION, ESTADOS_HABITACION, ESTADOS_CAMA } from '../habitaciones-catalogos';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-habitacion-formulario',
@@ -33,6 +34,7 @@ export class HabitacionFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private habitacionesService = inject(HabitacionesService);
+  private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
   private tiposApi = this.catalogos.obtener('TIPO_HABITACION');
@@ -120,6 +122,7 @@ export class HabitacionFormulario {
       : this.habitacionesService.actualizar(this.idHabitacion(), input);
     peticion.subscribe({
       next: (r) => {
+        this.notificaciones.exito(this.esNueva() ? 'Creado correctamente' : 'Actualizado correctamente');
         if (this.esNueva()) {
           // Recién creada: ahora sí tiene id, se queda en esta pantalla
           // (en modo edición) para poder agregarle camas sin salir.
@@ -175,6 +178,7 @@ export class HabitacionFormulario {
         );
         this.guardandoCama.set(false);
         this.mostrandoFormCama.set(false);
+        this.notificaciones.exito(idCama ? 'Cama actualizada correctamente' : 'Cama agregada correctamente');
       },
       error: (err: Error) => {
         this.errorCamas.set(err.message);
@@ -189,7 +193,10 @@ export class HabitacionFormulario {
     }
     this.errorCamas.set('');
     this.habitacionesService.eliminarCama(this.idHabitacion(), cama.idCama).subscribe({
-      next: () => this.camas.update((lista) => lista.filter((c) => c.idCama !== cama.idCama)),
+      next: () => {
+        this.camas.update((lista) => lista.filter((c) => c.idCama !== cama.idCama));
+        this.notificaciones.exito('Cama eliminada correctamente');
+      },
       error: (err: Error) => this.errorCamas.set(err.message),
     });
   }

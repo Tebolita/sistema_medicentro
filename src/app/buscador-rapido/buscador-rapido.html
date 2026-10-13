@@ -1,0 +1,42 @@
+<div class="fondo" (click)="cerrar.emit()">
+  <div class="panel" (click)="$event.stopPropagation()">
+    <div class="buscador-caja">
+      <mat-icon>search</mat-icon>
+      <input
+        #inputBuscador
+        type="text"
+        placeholder="Buscar una opción del sistema..."
+        [ngModel]="termino()"
+        (ngModelChange)="onTermino($event)"
+        (keydown.arrowDown)="$event.preventDefault(); mover(1)"
+        (keydown.arrowUp)="$event.preventDefault(); mover(-1)"
+        (keydown.enter)="seleccionarResaltado()"
+      />
+      <span class="atajo">Esc para cerrar</span>
+    </div>
+
+    <div class="lista">
+      @for (opcion of resultados(); track opcion.route + (opcion.label); let i = $index) {
+        <button
+          type="button"
+          class="opcion"
+          [class.resaltado]="i === resaltado()"
+          (mouseenter)="resaltado.set(i)"
+          (click)="ir(opcion)"
+        >
+          <mat-icon>{{ opcion.icono }}</mat-icon>
+          <span class="opcion-texto">
+            <span class="opcion-label">{{ opcion.label }}</span>
+            @if (opcion.seccion) {
+              <span class="opcion-seccion">{{ opcion.seccion }}</span>
+            }
+          </span>
+        </button>
+      }
+
+      @if (resultados().length === 0) {
+        <p class="sin-resultados">Sin resultados para "{{ termino() }}".</p>
+      }
+    </div>
+  </div>
+</div>

@@ -12,6 +12,7 @@ import { EspecialidadesService } from '../../service/especialidades.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { GENEROS, TIPOS_DOCUMENTO, ESTADOS_EMPLEADO } from '../empleados-catalogos';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-empleado-formulario',
@@ -33,6 +34,7 @@ export class EmpleadoFormulario {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private empleadosService = inject(EmpleadosService);
+  private notificaciones = inject(NotificacionesService);
 
   puestosService = inject(PuestosService);
   puestos = this.puestosService.listar;
@@ -151,7 +153,10 @@ export class EmpleadoFormulario {
       ? this.empleadosService.crear(input)
       : this.empleadosService.actualizar(this.idEmpleado(), input);
     peticion.subscribe({
-      next: () => this.router.navigate(['/home/mantenimiento/empleados']),
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/empleados']);
+      },
       error: (err: Error) => {
         this.errorMsg.set(err.message);
         this.guardando.set(false);

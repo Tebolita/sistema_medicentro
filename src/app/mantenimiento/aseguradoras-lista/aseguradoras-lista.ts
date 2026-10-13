@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AseguradorasService } from '../../service/aseguradoras.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -16,6 +17,7 @@ type Vista = 'activas' | 'eliminadas';
 })
 export class AseguradorasLista {
   private aseguradorasService = inject(AseguradorasService);
+  private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -62,6 +64,7 @@ export class AseguradorasLista {
     }
     this.errorAccion.set('');
     this.aseguradorasService.eliminar(id).subscribe({
+      next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
@@ -72,6 +75,7 @@ export class AseguradorasLista {
     }
     this.errorAccion.set('');
     this.aseguradorasService.reactivar(id).subscribe({
+      next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
   }
