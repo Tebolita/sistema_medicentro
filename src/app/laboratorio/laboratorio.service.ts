@@ -1,7 +1,7 @@
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, map, tap, forkJoin } from 'rxjs';
 import { OrdenDetalle, OrdenLaboratorio } from '../models';
 
 export interface OrdenCompleta {
@@ -106,6 +106,17 @@ export class LaboratorioService {
     return null;
   }
 
+  /**
+   * ✅ Devuelve el id del usuario actual desde localStorage.
+   */
+  private obtenerIdUsuarioActual(): number | null {
+    if (!this.esNavegador) return null;
+    const valor = localStorage.getItem('id_usuario');
+    if (!valor) return null;
+    const id = Number(valor);
+    return isNaN(id) ? null : id;
+  }
+
   private getHeaders(): HttpHeaders {
     let headers = new HttpHeaders({
       'Content-Type': 'application/json',
@@ -118,17 +129,25 @@ export class LaboratorioService {
     return headers;
   }
 
+  /**
+   * ✅ Carga activos Y eliminados en paralelo.
+   * El endpoint /eliminadas del backend devuelve las órdenes eliminadas.
+   */
   private cargar(): void {
     if (!this.esNavegador) return;
 
-    this.http.get<ApiResponse<OrdenApi[]>>(this.apiUrl, {
-      headers: this.getHeaders(),
+    forkJoin({
+      activos: this.http.get<ApiResponse<OrdenApi[]>>(this.apiUrl, {
+        headers: this.getHeaders(),
+      }),
+      eliminados: this.http.get<ApiResponse<OrdenApi[]>>(`${this.apiUrl}/eliminadas`, {
+        headers: this.getHeaders(),
+      }),
     }).subscribe({
-      next: (resp) => {
-        const lista = resp.datos ?? [];
-        const completos = lista.map((o) => this.aPlano(o));
-        console.log('🔍 [LaboratorioService] Órdenes cargadas:', completos.length);
-        this.registros.set(completos);
+      next: ({ activos, eliminados }) => {
+        const listaActivos = (activos.datos ?? []).map((o) => this.aPlano(o));
+        const listaEliminados = (eliminados.datos ?? []).map((o) => this.aPlano(o));
+        this.registros.set([...listaActivos, ...listaEliminados]);
       },
       error: (err: HttpErrorResponse) => {
         console.error('❌ [LaboratorioService] Error al cargar:', err.status, err.statusText);
@@ -154,6 +173,12 @@ export class LaboratorioService {
   listar = computed(() =>
     this.registros()
       .filter((r) => r.orden.activo)
+      .sort((a, b) => (b.orden.fechaOrden ?? '').localeCompare(a.orden.fechaOrden ?? '')),
+  );
+
+  listarInactivas = computed(() =>
+    this.registros()
+      .filter((r) => !r.orden.activo)
       .sort((a, b) => (b.orden.fechaOrden ?? '').localeCompare(a.orden.fechaOrden ?? '')),
   );
 
@@ -221,15 +246,30 @@ export class LaboratorioService {
     );
   }
 
+  /**
+   * ✅ Elimina (baja lógica).
+   * Actualiza el signal local con activo=false, fechaModificacion e idUsuarioModificacion.
+   */
   eliminar(id: number): void {
     this.http.delete<ApiResponse<null>>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders(),
     }).subscribe({
       next: () => {
+        const ahora = new Date().toISOString();
+        const idUsuarioActual = this.obtenerIdUsuarioActual();
+
         this.registros.update((list) =>
           list.map((r) =>
             r.orden.idOrden === id
-              ? { ...r, orden: { ...r.orden, activo: false } }
+              ? {
+                  ...r,
+                  orden: {
+                    ...r.orden,
+                    activo: false,
+                    fechaModificacion: ahora,
+                    idUsuarioModificacion: idUsuarioActual,
+                  } as OrdenLaboratorio,
+                }
               : r,
           ),
         );
@@ -237,6 +277,28 @@ export class LaboratorioService {
       error: (err: HttpErrorResponse) =>
         console.error('❌ [LaboratorioService] No se pudo eliminar:', err.status),
     });
+  }
+
+  /**
+   * ✅ Reactiva una orden eliminada.
+   * Endpoint: PUT /api/laboratorio/{id}/reactivar
+   */
+  reactivar(id: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(
+      `${this.apiUrl}/${id}/reactivar`,
+      {},
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.orden.idOrden === id
+              ? { ...r, orden: { ...r.orden, activo: true } }
+              : r,
+          ),
+        );
+      }),
+    );
   }
 
   // =============================================================
@@ -248,9 +310,6 @@ export class LaboratorioService {
       headers: this.getHeaders(),
     }).pipe(
       map((resp) => (resp.datos ?? []).filter((t) => t.activo !== false)),
-      tap((tipos) => {
-        console.log('🔍 [LaboratorioService] Tipos de examen cargados:', tipos.length);
-      }),
     );
   }
 
@@ -274,14 +333,11 @@ export class LaboratorioService {
           especialidad: m.especialidad?.nombre ?? m.especialidad ?? '',
         })),
       ),
-      tap((medicos) =>
-        console.log('🔍 [LaboratorioService] Médicos cargados:', medicos.length),
-      ),
     );
   }
 
   // =============================================================
-  // CATÁLOGOS GENÉRICOS (prioridad, estado, etc.)
+  // CATÁLOGOS GENÉRICOS
   // =============================================================
 
   private retornarCatalogo(codigoTipo: string): Observable<OpcionCatalogo[]> {
@@ -299,19 +355,11 @@ export class LaboratorioService {
   }
 
   RetornarPrioridades(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('PRIORIDAD_ORDEN').pipe(
-      tap((items) =>
-        console.log('🔍 [LaboratorioService] Prioridades cargadas:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogo('PRIORIDAD_ORDEN');
   }
 
   RetornarEstadosOrden(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('ESTADO_ORDEN_LABORATORIO').pipe(
-      tap((items) =>
-        console.log('🔍 [LaboratorioService] Estados cargados:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogo('ESTADO_ORDEN_LABORATORIO');
   }
 
   // =============================================================
@@ -331,12 +379,6 @@ export class LaboratorioService {
           .filter((b) => b.idRegistroAfectado === idRegistro)
           .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
       ),
-      tap((items) =>
-        console.log(
-          `🔍 [LaboratorioService] Bitácora de ${tablaAfectada}#${idRegistro}:`,
-          items.length,
-        ),
-      ),
     );
   }
 
@@ -346,9 +388,6 @@ export class LaboratorioService {
       { headers: this.getHeaders() },
     ).pipe(
       map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
-      tap((items) =>
-        console.log(`🔍 [LaboratorioService] Bitácora general de ${tablaAfectada}:`, items.length),
-      ),
     );
   }
 
@@ -361,9 +400,6 @@ export class LaboratorioService {
           id: u.idUsuario ?? u.id_usuario,
           nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
         })),
-      ),
-      tap((items) =>
-        console.log('🔍 [LaboratorioService] Usuarios cargados:', items.length),
       ),
     );
   }

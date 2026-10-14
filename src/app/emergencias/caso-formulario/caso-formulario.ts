@@ -18,13 +18,12 @@ import {
   UsuarioOpcion,
 } from '../casos-emergencia.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 const PACIENTE_NO_REGISTRADO = 0;
 
 /**
  * Devuelve la fecha+hora LOCAL en formato "2026-10-06T18:21:17" (SIN la Z).
- * El backend lo interpreta como hora local y lo guarda correctamente.
- * NO usar toISOString() porque devuelve UTC y desfasa 6 horas en Guatemala.
  */
 function fechaHoraLocal(d: Date = new Date()): string {
   const y = d.getFullYear();
@@ -57,11 +56,11 @@ export class CasoFormulario {
   private router = inject(Router);
   private casosService = inject(CasosEmergenciaService);
   private pacientesService = inject(PacientesService);
+  private notif = inject(NotificacionesService);
 
   pacientes = this.pacientesService.directorio;
   pacienteNoRegistrado = PACIENTE_NO_REGISTRADO;
 
-  // Signals para los dropdowns que vienen del backend
   medicosSignal = signal<MedicoOpcion[]>([]);
   nivelesTriageSignal = signal<OpcionCatalogo[]>([]);
   estadosSignal = signal<OpcionCatalogo[]>([]);
@@ -80,43 +79,51 @@ export class CasoFormulario {
   bitacoraSignal = signal<BitacoraItem[]>([]);
   cargandoHistorial = signal(false);
 
+  // ✅ Validaciones agregadas: nombrePaciente y motivo
   form = this.fb.nonNullable.group({
     idPaciente: this.fb.control<number | null>(null, Validators.required),
-    nombrePaciente: [''],
+    nombrePaciente: [
+      '',
+      [
+        Validators.maxLength(100),
+        Validators.minLength(3),
+      ],
+    ],
     idMedico: this.fb.control<number | null>(null),
     idNivelTriage: this.fb.control<number | null>(null, Validators.required),
     idEstadoCaso: this.fb.control<number | null>(null, Validators.required),
-    motivo: ['', Validators.required],
+    motivo: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(300),
+        Validators.minLength(3),
+      ],
+    ],
   });
 
   private idPacienteSeleccionado = signal<number | null>(null);
   esWalkIn = computed(() => this.idPacienteSeleccionado() === PACIENTE_NO_REGISTRADO);
 
   constructor() {
-    // 1) Cargar médicos del backend
     this.casosService.RetornarMedicos().subscribe({
-      next: (m) => {
-        console.log('✅ [CasoFormulario] Médicos cargados:', m.length);
-        this.medicosSignal.set(m);
+      next: (m) => this.medicosSignal.set(m),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasoFormulario] Error médicos:', err.status);
+        this.notif.error('No se pudieron cargar los médicos');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasoFormulario] Error médicos:', err.status),
     });
 
-    // 2) Cargar niveles de triaje del backend
     this.casosService.RetornarNivelesTriage().subscribe({
-      next: (n) => {
-        console.log('✅ [CasoFormulario] Niveles cargados:', n.length);
-        this.nivelesTriageSignal.set(n);
+      next: (n) => this.nivelesTriageSignal.set(n),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasoFormulario] Error niveles:', err.status);
+        this.notif.error('No se pudieron cargar los niveles de triaje');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasoFormulario] Error niveles:', err.status),
     });
 
-    // 3) Cargar estados del backend + auto-seleccionar "Esperando"
     this.casosService.RetornarEstadosCaso().subscribe({
       next: (e) => {
-        console.log('✅ [CasoFormulario] Estados cargados:', e.length);
         this.estadosSignal.set(e);
         if (this.esNuevo() && e.length > 0 && !this.form.controls.idEstadoCaso.value) {
           const esperando =
@@ -124,26 +131,22 @@ export class CasoFormulario {
           this.form.patchValue({ idEstadoCaso: esperando.id });
         }
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasoFormulario] Error estados:', err.status),
-    });
-
-    // 4) Cargar usuarios (para el nombre en la bitácora)
-    this.casosService.RetornarUsuarios().subscribe({
-      next: (u) => {
-        console.log('✅ [CasoFormulario] Usuarios cargados:', u.length);
-        this.usuariosSignal.set(u);
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasoFormulario] Error estados:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasoFormulario] Error usuarios:', err.status),
     });
 
-    // Sincronizar si el usuario selecciona "no registrado"
+    this.casosService.RetornarUsuarios().subscribe({
+      next: (u) => this.usuariosSignal.set(u),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasoFormulario] Error usuarios:', err.status);
+      },
+    });
+
     this.form.controls.idPaciente.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((id) => this.idPacienteSeleccionado.set(id));
 
-    // Cargar si es edición
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam && idParam !== 'nuevo') {
       const id = Number(idParam);
@@ -153,8 +156,10 @@ export class CasoFormulario {
       } else {
         this.casosService.obtenerDesdeApi(id).subscribe({
           next: (reg) => this.cargar(reg),
-          error: (err: HttpErrorResponse) =>
-            console.error('No se pudo cargar el caso', err),
+          error: (err: HttpErrorResponse) => {
+            console.error('No se pudo cargar el caso', err);
+            this.notif.error('No se pudo cargar el caso');
+          },
         });
       }
     }
@@ -180,6 +185,7 @@ export class CasoFormulario {
       this.form.controls.nombrePaciente.setErrors({ required: true });
     }
     if (this.form.invalid) {
+      this.notif.error('Revisá los campos obligatorios');
       return;
     }
 
@@ -211,6 +217,11 @@ export class CasoFormulario {
     this.casosService.guardar(registro).subscribe({
       next: () => {
         this.guardando.set(false);
+        this.notif.exito(
+          this.esNuevo()
+            ? 'Caso de emergencia creado correctamente'
+            : 'Caso de emergencia actualizado correctamente',
+        );
         this.router.navigate(['/home/emergencias']);
       },
       error: (err: HttpErrorResponse) => {
@@ -218,9 +229,10 @@ export class CasoFormulario {
         this.errorGuardar.set(
           err.status === 401
             ? 'Tu sesión expiró. Cierra sesión y vuelve a iniciarla.'
-            : 'No se pudo guardar el caso. Revisa la consola.',
+            : 'No se pudo guardar el caso. Intenta de nuevo.',
         );
         console.error('Error al guardar caso:', err);
+        this.notif.error('No se pudo guardar el caso');
       },
     });
   }
@@ -245,6 +257,7 @@ export class CasoFormulario {
       error: (err: HttpErrorResponse) => {
         console.error('❌ Error al cargar bitácora:', err.status);
         this.cargandoHistorial.set(false);
+        this.notif.error('No se pudo cargar la bitácora');
       },
     });
   }
@@ -254,7 +267,6 @@ export class CasoFormulario {
     this.bitacoraSignal.set([]);
   }
 
-  /** Traduce el id_tipo_accion a texto legible. */
   accionLabel(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'Creó';
     if (idTipoAccion === 80) return 'Modificó';
@@ -262,7 +274,6 @@ export class CasoFormulario {
     return 'Cambió';
   }
 
-  /** Clase CSS según el tipo de acción. */
   accionClase(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'accion-crear';
     if (idTipoAccion === 80) return 'accion-modificar';
@@ -270,7 +281,6 @@ export class CasoFormulario {
     return 'accion-default';
   }
 
-  /** Icono Material según el tipo de acción. */
   accionIcono(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'add_circle';
     if (idTipoAccion === 80) return 'edit';
@@ -278,18 +288,16 @@ export class CasoFormulario {
     return 'history';
   }
 
-  /** Traduce el id de usuario a nombre. */
   usuarioLabel(idUsuario: number | null): string {
     if (idUsuario == null) return 'Sistema';
     const u = this.usuariosSignal().find((x) => x.id === idUsuario);
     return u?.nombre ?? `Usuario ${idUsuario}`;
   }
 
-  /** Formatea la fecha en hora local. */
   formatFechaHora(iso: string): string {
     if (!iso) return '—';
-    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';  // ← AGREGAR ESTA LÍNEA
-    const fecha = new Date(isoConZona);                        // ← CAMBIAR esto
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
     if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleString('es-GT', {
       day: '2-digit',
@@ -300,20 +308,17 @@ export class CasoFormulario {
     });
   }
 
-  /** Devuelve la lista de campos que cambiaron entre valoresAnteriores y valoresNuevos. */
   camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
     try {
       const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
       const despues = item.valoresNuevos ? JSON.parse(item.valoresNuevos) : {};
 
-      // Campos técnicos que no aportan
       const camposIgnorados = new Set([
         'IdUsuarioModificacion',
         'FechaModificacion',
         'IdUsuarioCreacion',
       ]);
 
-      // ID real del registro
       const idRegistroReal = this.idCaso();
 
       const cambios: Array<{ campo: string; antes: string; despues: string }> = [];
@@ -325,7 +330,6 @@ export class CasoFormulario {
         let a = antes[k];
         let d = despues[k];
 
-        // Parche: el backend guarda mal el IdCaso. Usamos el ID real.
         if (k === 'IdCaso' && idRegistroReal != null) {
           a = idRegistroReal;
           d = idRegistroReal;
@@ -340,7 +344,6 @@ export class CasoFormulario {
         });
       }
 
-      // Ordenar para que el ID quede primero
       cambios.sort((x, y) => {
         if (x.campo.toLowerCase().includes('id caso')) return -1;
         if (y.campo.toLowerCase().includes('id caso')) return 1;
@@ -360,11 +363,11 @@ export class CasoFormulario {
       .trim();
   }
 
-   private formatearValor(valor: any, nombreCampo: string = ''): string {
+  private formatearValor(valor: any, nombreCampo: string = ''): string {
     if (valor === null || valor === undefined) return '—';
 
     if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
-      const fecha = new Date(valor);  // ← SIN la Z (correcto, ya está en local)
+      const fecha = new Date(valor);
       if (!isNaN(fecha.getTime())) {
         return fecha.toLocaleString('es-GT', {
           day: '2-digit',

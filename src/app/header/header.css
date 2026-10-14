@@ -60,8 +60,11 @@
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
-
   letter-spacing: 0.2px;
+}
+
+.datetime-text::first-letter {
+  text-transform: uppercase;
 }
 
 .hidden-datepicker-field {
@@ -71,50 +74,189 @@
   visibility: hidden;
 }
 
-.alertas-titulo {
-  padding: 10px 16px 6px;
-  font-size: 13px;
+/* =========================================================================
+   Botón de la campanita
+   ========================================================================= */
+.campana-btn {
+  transition: background-color 0.15s ease;
+}
+
+.campana-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* =========================================================================
+   Contenido del menú de alertas (dentro del mat-menu)
+   ========================================================================= */
+
+/* ---------- Encabezado del menú ---------- */
+.alertas-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0d6a8f 0%, #00838f 100%);
+  color: #fff;
+  cursor: default;
+}
+
+.alertas-header-icono {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.alertas-header-texto {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.alertas-header-titulo {
+  font-size: 14px;
   font-weight: 700;
-  color: var(--c-accent);
+  letter-spacing: 0.2px;
 }
 
-.alertas-vacio {
-  padding: 8px 16px 12px;
-  font-size: 13px;
-  color: var(--c-text-soft);
+.alertas-header-modulo {
+  font-size: 11.5px;
+  font-weight: 500;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.alertas-header-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ---------- Cada alerta ---------- */
 .alerta-item {
-  height: auto;
-  min-height: 48px;
-  padding-block: 6px;
+  height: auto !important;
+  min-height: 56px !important;
+  padding: 10px 16px !important;
+  line-height: 1.3 !important;
+  border-bottom: 1px solid #f5f5f5;
+  transition: background-color 0.12s ease;
+  background-color: #ffffff;
+}
+
+.alerta-item:hover {
+  background-color: rgba(13, 106, 143, 0.06) !important;
+}
+
+.alerta-item:last-child {
+  border-bottom: none;
+}
+
+.alerta-icono {
+  font-size: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  margin-right: 12px !important;
+}
+
+.alerta-icono--alta {
+  color: #c62828 !important;
+}
+
+.alerta-icono--media {
+  color: #ef6c00 !important;
+}
+
+.alerta-icono--info {
+  color: #0d6a8f !important;
 }
 
 .alerta-texto {
   display: flex;
   flex-direction: column;
+  gap: 2px;
   white-space: normal;
-  max-width: 320px;
+  max-width: 260px;
 }
 
 .alerta-linea {
   font-size: 13px;
   font-weight: 600;
+  color: #263238;
+  line-height: 1.35;
 }
 
 .alerta-detalle {
   font-size: 12px;
-  color: var(--c-text-muted);
+  color: #78909c;
+  line-height: 1.35;
 }
 
-.alerta-icono.alta {
-  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+/* ---------- Estado vacío ---------- */
+.alertas-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 20px 32px;
+  cursor: default;
+  background-color: #ffffff;
+  border-radius: 0 0 14px 14px;
 }
 
-.alerta-icono.media {
-  color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
+.alertas-vacio-icono {
+  font-size: 40px !important;
+  width: 40px !important;
+  height: 40px !important;
+  color: #81c784;
+  opacity: 0.8;
 }
 
-.datetime-text::first-letter {
-  text-transform: uppercase;
+.alertas-vacio-texto {
+  font-size: 12.5px;
+  color: #78909c;
+  text-align: center;
+  line-height: 1.5;
+  max-width: 220px;
+}
+
+/* =========================================================================
+   Modo oscuro
+   ========================================================================= */
+:root[data-theme='dark'] .alertas-header {
+  background: linear-gradient(135deg, #1e3a4a 0%, #164653 100%);
+}
+
+:root[data-theme='dark'] .alerta-item {
+  background-color: #1c2529;
+  border-bottom-color: #2c393f;
+}
+
+:root[data-theme='dark'] .alerta-item:hover {
+  background-color: rgba(79, 179, 217, 0.08) !important;
+}
+
+:root[data-theme='dark'] .alerta-linea {
+  color: #e3eaed;
+}
+
+:root[data-theme='dark'] .alerta-detalle {
+  color: #8299a3;
+}
+
+:root[data-theme='dark'] .alertas-vacio {
+  background-color: #1c2529;
+}
+
+:root[data-theme='dark'] .alertas-vacio-texto {
+  color: #8299a3;
 }

@@ -106,11 +106,12 @@
 .datepicker-azul .mat-calendar-body-disabled .mat-calendar-body-cell-content {
   color: #ccc !important;
 }
-/* =========================================================
+
+/* =========================================================================
    TOASTS (NotificacionesService) — arriba a la derecha, con ícono según
    la acción. panelClass se aplica al contenedor del overlay de Material,
    que vive fuera de cualquier componente, por eso va en el CSS global.
-   ========================================================= */
+   ========================================================================= */
 
 .toast-panel .mdc-snackbar__surface {
   padding: 4px 8px !important;
@@ -118,10 +119,6 @@
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Un color por tipo de acción — crear/actualizar en tonos positivos,
-   reactivar en teal, asignar en morado, y eliminar/quitar en tonos de
-   advertencia (son acciones exitosas, no errores, pero conviene que se
-   noten distinto de un simple "guardado"). */
 .toast-crear .mdc-snackbar__surface {
   background-color: #1b5e20 !important;
 }
@@ -178,4 +175,136 @@
 
 .toast-panel .toast-cerrar {
   color: rgba(255, 255, 255, 0.75);
+}
+
+/* =========================================================================
+   Menú de alertas del header (campanita)
+   ========================================================================= */
+
+/* Capa 1: el panel exterior (mat-menu-panel) */
+.mat-mdc-menu-panel.alertas-menu-panel {
+  min-width: 340px !important;
+  max-width: 360px !important;
+  background-color: #ffffff !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.18),
+    0 8px 16px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid #e5e7eb !important;
+  overflow: hidden !important;
+  margin-top: 12px !important;
+  z-index: 2000 !important;
+  animation: alertasMenuFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Capa 2: la superficie interna (Material la hace transparente por defecto) */
+.mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-surface,
+.mat-mdc-menu-panel.alertas-menu-panel .mdc-menu-surface {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+/* Capa 3: el contenido y la lista */
+.mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-content,
+.mat-mdc-menu-panel.alertas-menu-panel .mdc-list,
+.mat-mdc-menu-panel.alertas-menu-panel mat-menu-content {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Capa 4: cada item del menú */
+.mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-item {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+.mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-item:hover {
+  background-color: rgba(13, 106, 143, 0.06) !important;
+}
+
+/* Capa 5: el estado vacío (div propio) */
+.mat-mdc-menu-panel.alertas-menu-panel .alertas-vacio {
+  background-color: #ffffff !important;
+}
+
+/* Capa 6: el encabezado con gradiente (ya es sólido, pero reforzamos) */
+.mat-mdc-menu-panel.alertas-menu-panel .alertas-header {
+  background-color: #0d6a8f !important;
+}
+
+/* Capa 7: refuerzo extra — el contenido del menú siempre blanco,
+   incluso cuando está vacío (estado @empty). */
+.mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-content:empty,
+.mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-content > * {
+  background-color: #ffffff !important;
+}
+
+@keyframes alertasMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================================
+   MODO OSCURO
+   ========================================================================= */
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-surface,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mdc-menu-surface,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-content,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mdc-list,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel mat-menu-content,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-item,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .alertas-vacio,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-content:empty,
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-content > * {
+  background-color: #1c2529 !important;
+  background: #1c2529 !important;
+  border-color: #2c393f !important;
+}
+
+:root[data-theme='dark'] .mat-mdc-menu-panel.alertas-menu-panel .mat-mdc-menu-item:hover {
+  background-color: rgba(79, 179, 217, 0.08) !important;
+}
+
+/* =========================================================================
+   Overlay de Material — debe quedar SIEMPRE por encima del drawer y del
+   contenido. Los mat-drawer usan z-index de 1 por defecto, pero sus
+   contenedores crean stacking contexts propios que atrapan al menú.
+   Forzamos position: fixed + z-index alto para sacarlo de ese contexto.
+   ========================================================================= */
+.cdk-overlay-container {
+  z-index: 2000 !important;
+  position: fixed !important;
+}
+
+/* Refuerzo: el contenido del drawer no debe competir con el overlay */
+mat-drawer-content.mat-drawer-content {
+  position: relative;
+  z-index: 0;
+}
+
+/* =========================================================================
+   Fondo oscuro detrás del menú de alertas (backdrop)
+   ========================================================================= */
+.cdk-overlay-backdrop.alertas-backdrop {
+  background-color: rgba(15, 23, 42, 0.35) !important;
+  backdrop-filter: blur(2px);
+  animation: alertasBackdropFadeIn 0.18s ease-out;
+}
+
+@keyframes alertasBackdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

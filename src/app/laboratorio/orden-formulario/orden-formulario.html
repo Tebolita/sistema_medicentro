@@ -154,9 +154,19 @@
       </div>
     }
 
+    <!-- ✅ NUEVO: Notas con contador y validación maxLength -->
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Notas</mat-label>
-      <textarea matInput formControlName="notas" rows="2"></textarea>
+      <textarea
+        matInput
+        formControlName="notas"
+        rows="2"
+        placeholder="Notas adicionales sobre la orden (opcional)"
+      ></textarea>
+      <mat-hint align="end">{{ form.controls.notas.value?.length ?? 0 }} / 500</mat-hint>
+      @if (form.controls.notas.hasError('maxlength') && form.controls.notas.touched) {
+        <mat-error>Las notas no pueden superar 500 caracteres</mat-error>
+      }
     </mat-form-field>
 
     @if (errorGuardar()) {

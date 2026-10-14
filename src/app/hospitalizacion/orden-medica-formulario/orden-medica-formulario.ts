@@ -15,8 +15,8 @@ import {
   OpcionCatalogo,
 } from '../hospitalizaciones.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
-/** Devuelve "2026-10-06T18:21:30" (hora local, sin Z). */
 function fechaHoraLocal(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -48,6 +48,7 @@ export class OrdenMedicaFormulario {
   private router = inject(Router);
   private hospitalizacionesService = inject(HospitalizacionesService);
   private pacientesService = inject(PacientesService);
+  private notif = inject(NotificacionesService);
 
   medicosSignal = signal<MedicoOpcion[]>([]);
   tiposOrdenSignal = signal<OpcionCatalogo[]>([]);
@@ -59,15 +60,22 @@ export class OrdenMedicaFormulario {
   guardando = signal(false);
   errorGuardar = signal<string | null>(null);
 
+  // ✅ Validaciones agregadas: descripcion
   form = this.fb.nonNullable.group({
     idHospitalizacion: this.fb.control<number | null>(null, Validators.required),
     idTipoOrden: this.fb.control<number | null>(null, Validators.required),
     idMedico: this.fb.control<number | null>(null, Validators.required),
-    descripcion: ['', Validators.required],
+    descripcion: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(5),
+        Validators.maxLength(300),
+      ],
+    ],
   });
 
   constructor() {
-    // ✅ Deshabilitar control desde el inicio si viene ?hospitalizacion=X
     const hospitalizacionParam = this.route.snapshot.queryParamMap.get('hospitalizacion');
     if (hospitalizacionParam) {
       const id = Number(hospitalizacionParam);
@@ -76,20 +84,16 @@ export class OrdenMedicaFormulario {
       this.form.controls.idHospitalizacion.disable();
     }
 
-    // 1) Médicos del backend
     this.hospitalizacionesService.RetornarMedicos().subscribe({
-      next: (m) => {
-        console.log('✅ [OrdenMedicaFormulario] Médicos cargados:', m.length);
-        this.medicosSignal.set(m);
+      next: (m) => this.medicosSignal.set(m),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenMedicaFormulario] Error médicos:', err.status);
+        this.notif.error('No se pudieron cargar los médicos');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [OrdenMedicaFormulario] Error médicos:', err.status),
     });
 
-    // 2) Tipos de orden del backend
     this.hospitalizacionesService.RetornarTiposOrden().subscribe({
       next: (t) => {
-        console.log('✅ [OrdenMedicaFormulario] Tipos de orden cargados:', t.length);
         this.tiposOrdenSignal.set(t);
 
         const tipoParam = this.route.snapshot.queryParamMap.get('tipo');
@@ -100,11 +104,12 @@ export class OrdenMedicaFormulario {
           }
         }
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [OrdenMedicaFormulario] Error tipos de orden:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenMedicaFormulario] Error tipos de orden:', err.status);
+        this.notif.error('No se pudieron cargar los tipos de orden');
+      },
     });
 
-    // 3) Otros query params
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const hospitalizacionParam = params.get('hospitalizacion');
       if (hospitalizacionParam) {
@@ -128,6 +133,7 @@ export class OrdenMedicaFormulario {
   guardar(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid) {
+      this.notif.error('Revisá los campos obligatorios');
       return;
     }
 
@@ -140,7 +146,6 @@ export class OrdenMedicaFormulario {
       .agregarOrden(v.idHospitalizacion!, {
         idMedico: v.idMedico!,
         idTipoOrden: v.idTipoOrden!,
-        // ✅ CAMBIO: hora local en lugar de UTC
         fechaOrden: fechaHoraLocal(),
         descripcion: v.descripcion,
         fechaCreacion: fechaHoraLocal(),
@@ -149,6 +154,7 @@ export class OrdenMedicaFormulario {
       .subscribe({
         next: () => {
           this.guardando.set(false);
+          this.notif.exito('Orden médica creada correctamente');
           this.router.navigate(['/home/hospitalizacion', v.idHospitalizacion], {
             queryParams: { refresh: Date.now() },
           });
@@ -158,9 +164,10 @@ export class OrdenMedicaFormulario {
           this.errorGuardar.set(
             err.status === 401
               ? 'Tu sesión expiró. Cierra sesión y vuelve a iniciarla.'
-              : 'No se pudo guardar la orden. Revisa la consola.',
+              : 'No se pudo guardar la orden. Intenta de nuevo.',
           );
           console.error('Error al guardar orden médica:', err);
+          this.notif.error('No se pudo guardar la orden');
         },
       });
   }

@@ -77,11 +77,34 @@
         }
       </mat-form-field>
 
+      <!-- ✅ Motivo de ingreso con validaciones -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Motivo de ingreso</mat-label>
-        <textarea matInput formControlName="motivoIngreso" rows="2"></textarea>
-        @if (form.controls.motivoIngreso.invalid && form.controls.motivoIngreso.touched) {
-          <mat-error>Requerido</mat-error>
+        <textarea
+          matInput
+          formControlName="motivoIngreso"
+          rows="2"
+          maxlength="300"
+          placeholder="Ej. Dolor abdominal agudo, fiebre de 3 días de evolución..."
+        ></textarea>
+        <mat-hint align="end">{{ form.controls.motivoIngreso.value?.length ?? 0 }} / 300</mat-hint>
+        @if (
+          form.controls.motivoIngreso.hasError('required') &&
+          form.controls.motivoIngreso.touched
+        ) {
+          <mat-error>El motivo de ingreso es obligatorio</mat-error>
+        }
+        @if (
+          form.controls.motivoIngreso.hasError('minlength') &&
+          form.controls.motivoIngreso.touched
+        ) {
+          <mat-error>El motivo debe tener al menos 5 caracteres</mat-error>
+        }
+        @if (
+          form.controls.motivoIngreso.hasError('maxlength') &&
+          form.controls.motivoIngreso.touched
+        ) {
+          <mat-error>El motivo no puede superar 300 caracteres</mat-error>
         }
       </mat-form-field>
     </div>
@@ -97,9 +120,23 @@
           <mat-hint>Déjalo vacío mientras el paciente siga internado.</mat-hint>
         </mat-form-field>
 
+        <!-- ✅ Diagnóstico de egreso con validación de longitud -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Diagnóstico de egreso</mat-label>
-          <textarea matInput formControlName="diagnosticoEgreso" rows="2"></textarea>
+          <textarea
+            matInput
+            formControlName="diagnosticoEgreso"
+            rows="2"
+            maxlength="300"
+            placeholder="Ej. Paciente estable, se indica control ambulatorio en 7 días."
+          ></textarea>
+          <mat-hint align="end">{{ form.controls.diagnosticoEgreso.value?.length ?? 0 }} / 300</mat-hint>
+          @if (
+            form.controls.diagnosticoEgreso.hasError('maxlength') &&
+            form.controls.diagnosticoEgreso.touched
+          ) {
+            <mat-error>El diagnóstico no puede superar 300 caracteres</mat-error>
+          }
         </mat-form-field>
       </div>
     </div>

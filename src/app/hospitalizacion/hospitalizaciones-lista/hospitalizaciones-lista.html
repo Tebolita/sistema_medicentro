@@ -16,6 +16,28 @@
     </div>
   </div>
 
+  <!-- TABS: Activas / Eliminadas -->
+  <div class="tabs-filtro">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'activas'"
+      (click)="filtro.set('activas')"
+    >
+      <mat-icon>check_circle</mat-icon>
+      Activas
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'eliminadas'"
+      (click)="filtro.set('eliminadas')"
+    >
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
   <div class="top-row">
     <div class="search-bar" [class.pulse]="resaltarBusqueda()">
       <mat-icon>search</mat-icon>
@@ -52,12 +74,16 @@
   </div>
 
   <h2 class="section-title">
-    {{ buscando() ? 'Resultados de búsqueda (' + hospitalizaciones().length + ')' : 'Hospitalizaciones registradas' }}
+    {{ buscando() ? 'Resultados de búsqueda (' + hospitalizaciones().length + ')' : (filtro() === 'eliminadas' ? 'Hospitalizaciones eliminadas' : 'Hospitalizaciones registradas') }}
   </h2>
 
   <div class="hosp-grid">
     @for (r of hospitalizaciones(); track r.hospitalizacion.idHospitalizacion) {
-      <a class="hosp-card" [routerLink]="['/home/hospitalizacion', r.hospitalizacion.idHospitalizacion]">
+      <a
+        class="hosp-card"
+        [class.card-eliminada]="filtro() === 'eliminadas'"
+        [routerLink]="filtro() === 'activas' ? ['/home/hospitalizacion', r.hospitalizacion.idHospitalizacion] : null"
+      >
         <div class="patient-avatar">{{ iniciales(r.hospitalizacion.idPaciente) }}</div>
         <div class="hosp-info">
           <h2>{{ nombrePaciente(r.hospitalizacion.idPaciente) }}</h2>
@@ -70,6 +96,44 @@
             Ingreso: {{ formatFecha(r.hospitalizacion.fechaIngreso) }} · {{ medicoLabel(r.hospitalizacion.idMedicoResponsable) }}
           </span>
           <span class="hosp-meta motivo">{{ r.hospitalizacion.motivoIngreso }}</span>
+
+          <!-- ✅ Auditoría en tab Activas (formato compacto + tooltip) -->
+          @if (filtro() === 'activas') {
+            <span
+              class="hosp-meta meta-auditoria"
+              [matTooltip]="'Creado el ' + formatFechaUTC(r.hospitalizacion.fechaCreacion)"
+              matTooltipPosition="above"
+            >
+              <mat-icon>person_add</mat-icon>
+              {{ usuarioLabel(r.hospitalizacion.idUsuarioCreacion ?? null) }}
+              · {{ formatFechaUTC(r.hospitalizacion.fechaCreacion) }}
+            </span>
+
+            @if (r.hospitalizacion.fechaModificacion && r.hospitalizacion.idUsuarioModificacion) {
+              <span
+                class="hosp-meta meta-auditoria"
+                [matTooltip]="'Modificado el ' + formatFechaUTC(r.hospitalizacion.fechaModificacion)"
+                matTooltipPosition="above"
+              >
+                <mat-icon>edit</mat-icon>
+                {{ usuarioLabel(r.hospitalizacion.idUsuarioModificacion) }}
+                · {{ formatFechaUTC(r.hospitalizacion.fechaModificacion) }}
+              </span>
+            }
+          }
+
+          <!-- Texto "Eliminado ... por ..." solo en tab Eliminadas -->
+          @if (filtro() === 'eliminadas') {
+            <span class="hosp-meta meta-eliminada">
+              <mat-icon>person_off</mat-icon>
+              @if (r.hospitalizacion.fechaModificacion) {
+                Eliminado {{ formatFechaEliminacion(r.hospitalizacion.fechaModificacion) }}
+                por {{ usuarioLabel(r.hospitalizacion.idUsuarioModificacion ?? null) }}
+              } @else {
+                Eliminado por {{ usuarioLabel(r.hospitalizacion.idUsuarioModificacion ?? null) }}
+              }
+            </span>
+          }
         </div>
         <div class="hosp-actions">
           <span
@@ -78,29 +142,49 @@
           >
             {{ estadoLabel(r.hospitalizacion.idEstadoHospitalizacion) }}
           </span>
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Eliminar registro'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.hospitalizacion.idHospitalizacion, nombrePaciente(r.hospitalizacion.idPaciente))"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
+
+          @if (filtro() === 'activas') {
+            <button
+              matIconButton
+              type="button"
+              class="btn-eliminar"
+              [matTooltip]="'Eliminar registro'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.hospitalizacion.idHospitalizacion, nombrePaciente(r.hospitalizacion.idPaciente))"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          } @else {
+            <button
+              matIconButton
+              type="button"
+              class="btn-reactivar"
+              [matTooltip]="'Reactivar'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(r.hospitalizacion.idHospitalizacion)"
+            >
+              <mat-icon>restore_from_trash</mat-icon>
+            </button>
+          }
         </div>
       </a>
     }
 
     @if (hospitalizaciones().length === 0) {
       <div class="empty-state">
-        <mat-icon>bed</mat-icon>
-        <p>No se encontraron hospitalizaciones{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        <mat-icon>{{ filtro() === 'activas' ? 'bed' : 'delete_outline' }}</mat-icon>
+        <p>
+          @if (buscar()) {
+            No se encontraron hospitalizaciones{{ filtro() === 'eliminadas' ? ' eliminadas' : '' }} para "{{ buscar() }}".
+          } @else if (filtro() === 'eliminadas') {
+            No hay hospitalizaciones eliminadas.
+          } @else {
+            No se encontraron hospitalizaciones.
+          }
+        </p>
       </div>
     }
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MODAL: Historial general de Hospitalización
-       ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: Historial general -->
   @if (historialAbierto()) {
     <div class="modal-overlay" (click)="cerrarHistorialGeneral()">
       <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">

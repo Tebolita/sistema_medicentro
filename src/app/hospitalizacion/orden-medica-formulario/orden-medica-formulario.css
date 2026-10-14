@@ -168,3 +168,11 @@
 :host ::ng-deep button[matButton="filled"] mat-icon {
   color: #fff !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Hint de caracteres
+   ═══════════════════════════════════════════════════════════════ */
+mat-hint {
+  font-size: 11px;
+  color: var(--c-text-muted, #6b7280);
+}

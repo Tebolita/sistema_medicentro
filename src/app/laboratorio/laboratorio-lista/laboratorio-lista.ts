@@ -18,6 +18,7 @@ import {
 } from '../laboratorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-laboratorio-lista',
@@ -29,12 +30,15 @@ export class LaboratorioLista {
   private laboratorioService = inject(LaboratorioService);
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
+  private notif = inject(NotificacionesService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   buscar = signal('');
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
+
+  filtro = signal<'activas' | 'eliminadas'>('activas');
 
   tiposExamen = signal<TipoExamen[]>([]);
   medicos = signal<MedicoOpcion[]>([]);
@@ -62,46 +66,40 @@ export class LaboratorioLista {
 
   constructor() {
     this.laboratorioService.RetornarTiposExamen().subscribe({
-      next: (tipos) => {
-        console.log('✅ [LaboratorioLista] Tipos de examen cargados:', tipos.length);
-        this.tiposExamen.set(tipos);
+      next: (tipos) => this.tiposExamen.set(tipos),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [LaboratorioLista] Tipos examen:', err.status);
+        this.notif.error('No se pudieron cargar los tipos de examen');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [LaboratorioLista] Tipos examen:', err.status),
     });
 
     this.laboratorioService.RetornarMedicos().subscribe({
-      next: (m) => {
-        console.log('✅ [LaboratorioLista] Médicos cargados:', m.length);
-        this.medicos.set(m);
+      next: (m) => this.medicos.set(m),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [LaboratorioLista] Médicos:', err.status);
+        this.notif.error('No se pudieron cargar los médicos');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [LaboratorioLista] Médicos:', err.status),
     });
 
     this.laboratorioService.RetornarEstadosOrden().subscribe({
-      next: (e) => {
-        console.log('✅ [LaboratorioLista] Estados cargados:', e.length);
-        this.estados.set(e);
+      next: (e) => this.estados.set(e),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [LaboratorioLista] Estados:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [LaboratorioLista] Estados:', err.status),
     });
 
     this.laboratorioService.RetornarPrioridades().subscribe({
-      next: (p) => {
-        console.log('✅ [LaboratorioLista] Prioridades cargadas:', p.length);
-        this.prioridades.set(p);
+      next: (p) => this.prioridades.set(p),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [LaboratorioLista] Prioridades:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [LaboratorioLista] Prioridades:', err.status),
     });
 
-    // Cargar usuarios (para el nombre en la bitácora)
     this.laboratorioService.RetornarUsuarios().subscribe({
       next: (u) => this.usuariosSignal.set(u),
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [LaboratorioLista] Usuarios:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [LaboratorioLista] Usuarios:', err.status);
+      },
     });
 
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
@@ -114,8 +112,14 @@ export class LaboratorioLista {
 
   ordenes = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.laboratorioService.listar();
+    const tab = this.filtro();
+
+    const lista = tab === 'activas'
+      ? this.laboratorioService.listar()
+      : this.laboratorioService.listarInactivas();
+
     if (!term) return lista;
+
     return lista.filter((r) =>
       [
         this.nombrePaciente(r.orden.idPaciente),
@@ -181,20 +185,76 @@ export class LaboratorioLista {
     return 'estado-solicitada';
   }
 
- // ✅ DESPUÉS (bien):
-formatFecha(iso: string): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('es-GT', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+  /**
+   * ✅ Formatea fecha de la orden (viene en LOCAL — la genera el frontend).
+   */
+  formatFecha(iso: string): string {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  /**
+   * ✅ NUEVO: Formatea una fecha UTC corta para la card (día-mes, hh:mm).
+   * Se usa para fechaCreacion y fechaModificacion en la sección de auditoría.
+   */
+  formatFechaUTC(iso: string | null): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  /**
+   * ✅ Formatea la fecha de eliminación (viene en UTC del backend).
+   */
+  formatFechaEliminacion(iso: string | null): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return `el ${fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+  }
+
+  usuarioLabel(idUsuario: number | null | undefined): string {
+    if (idUsuario == null) return 'Sistema';
+    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
+    return u?.nombre ?? `Usuario #${idUsuario}`;
+  }
 
   eliminar(id: number, paciente: string): void {
     if (!confirm(`¿Eliminar la orden de "${paciente}"?`)) return;
     this.laboratorioService.eliminar(id);
+    this.notif.exito('Orden de laboratorio eliminada correctamente');
+  }
+
+  reactivar(id: number): void {
+    if (!confirm('¿Reactivar esta orden de laboratorio?')) return;
+
+    this.laboratorioService.reactivar(id).subscribe({
+      next: () => {
+        this.notif.exito('Orden de laboratorio reactivada correctamente');
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error al reactivar orden:', err);
+        this.notif.error('No se pudo reactivar la orden');
+      },
+    });
   }
 
   // ============================================================
@@ -215,6 +275,7 @@ formatFecha(iso: string): string {
       error: (err: HttpErrorResponse) => {
         console.error('❌ Error bitácora laboratorio:', err.status);
         this.cargandoHistorial.set(false);
+        this.notif.error('No se pudo cargar la bitácora');
       },
     });
   }
@@ -253,12 +314,6 @@ formatFecha(iso: string): string {
   tablaIcono(tabla: string): string {
     if (tabla === 'ordenes_laboratorio') return 'science';
     return 'description';
-  }
-
-  usuarioLabel(idUsuario: number | null): string {
-    if (idUsuario == null) return 'Sistema';
-    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
-    return u?.nombre ?? `Usuario ${idUsuario}`;
   }
 
   formatFechaHoraUTC(iso: string): string {

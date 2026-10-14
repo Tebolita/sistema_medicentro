@@ -6,7 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TiposExamenService } from '../../service/tipos-examen.service';
 import { CatalogosService } from '../../service/catalogos.service';
-import { CATEGORIAS_EXAMEN } from '../../laboratorio/laboratorio-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 type Vista = 'activos' | 'eliminados';
@@ -23,9 +22,11 @@ export class TiposExamenLista {
 
   private catalogos = inject(CatalogosService);
   private categoriasApi = this.catalogos.obtener('CATEGORIA_EXAMEN');
+
+  // ✅ Solo desde la BD. Sin fallback hardcodeado.
   private categorias = computed(() => {
     const api = this.categoriasApi();
-    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : CATEGORIAS_EXAMEN;
+    return api.map((v) => ({ id: v.id, label: v.nombre }));
   });
 
   buscar = signal('');

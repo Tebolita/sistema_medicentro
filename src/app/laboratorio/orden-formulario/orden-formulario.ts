@@ -24,6 +24,7 @@ import {
   UsuarioOpcion,
 } from '../laboratorio.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 /**
  * Toma un Date del datepicker y le añade la HORA ACTUAL.
@@ -73,6 +74,7 @@ export class OrdenFormulario {
   private router = inject(Router);
   private laboratorioService = inject(LaboratorioService);
   private pacientesService = inject(PacientesService);
+  private notif = inject(NotificacionesService);
 
   pacientes = this.pacientesService.directorio;
 
@@ -125,66 +127,69 @@ export class OrdenFormulario {
     fecha: this.fb.control<Date | null>(new Date(), Validators.required),
     idPrioridad: this.fb.control<number | null>(null, Validators.required),
     idEstadoOrden: this.fb.control<number | null>(null, Validators.required),
-    notas: [''],
+    // ✅ NUEVO: notas con maxLength(500)
+    notas: [
+      '',
+      [
+        Validators.maxLength(500),
+      ],
+    ],
   });
 
   constructor() {
     this.laboratorioService.RetornarMedicos().subscribe({
-      next: (m) => {
-        console.log('✅ [OrdenFormulario] Médicos cargados:', m.length);
-        this.medicosSignal.set(m);
+      next: (m) => this.medicosSignal.set(m),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenFormulario] Error médicos:', err.status);
+        this.notif.error('No se pudieron cargar los médicos');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [OrdenFormulario] Error médicos:', err.status),
     });
 
     this.laboratorioService.RetornarPrioridades().subscribe({
       next: (p) => {
-        console.log('✅ [OrdenFormulario] Prioridades cargadas:', p.length);
         this.prioridadesSignal.set(p);
         if (this.esNueva() && p.length > 0 && !this.form.controls.idPrioridad.value) {
           const normal = p.find((x) => x.label.toLowerCase().includes('normal')) ?? p[0];
           this.form.patchValue({ idPrioridad: normal.id });
         }
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [OrdenFormulario] Error prioridades:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenFormulario] Error prioridades:', err.status);
+      },
     });
 
     this.laboratorioService.RetornarEstadosOrden().subscribe({
       next: (e) => {
-        console.log('✅ [OrdenFormulario] Estados cargados:', e.length);
         this.estadosSignal.set(e);
         if (this.esNueva() && e.length > 0 && !this.form.controls.idEstadoOrden.value) {
           const solicitada = e.find((x) => x.label.toLowerCase().includes('solicit')) ?? e[0];
           this.form.patchValue({ idEstadoOrden: solicitada.id });
         }
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [OrdenFormulario] Error estados:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenFormulario] Error estados:', err.status);
+      },
     });
 
     this.cargandoTipos.set(true);
     this.laboratorioService.RetornarTiposExamen().subscribe({
       next: (tipos) => {
-        console.log('✅ [OrdenFormulario] Tipos de examen cargados:', tipos.length);
         this.tiposExamen.set(tipos);
         this.cargandoTipos.set(false);
       },
       error: (err: HttpErrorResponse) => {
         console.error('❌ [OrdenFormulario] Error tipos examen:', err.status);
         this.cargandoTipos.set(false);
+        this.notif.error('No se pudieron cargar los tipos de examen');
       },
     });
 
     // Cargar usuarios (para el nombre en la bitácora)
     this.laboratorioService.RetornarUsuarios().subscribe({
-      next: (u) => {
-        console.log('✅ [OrdenFormulario] Usuarios cargados:', u.length);
-        this.usuariosSignal.set(u);
+      next: (u) => this.usuariosSignal.set(u),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenFormulario] Error usuarios:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [OrdenFormulario] Error usuarios:', err.status),
     });
 
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -196,8 +201,10 @@ export class OrdenFormulario {
       } else {
         this.laboratorioService.obtenerDesdeApi(id).subscribe({
           next: (reg) => this.cargar(reg),
-          error: (err: HttpErrorResponse) =>
-            console.error('No se pudo cargar la orden', err),
+          error: (err: HttpErrorResponse) => {
+            console.error('No se pudo cargar la orden', err);
+            this.notif.error('No se pudo cargar la orden');
+          },
         });
       }
       return;
@@ -256,6 +263,7 @@ export class OrdenFormulario {
       this.seleccionInvalida.set(true);
     }
     if (this.form.invalid || this.examenesSeleccionados().size === 0) {
+      this.notif.error('Revisá los campos obligatorios y seleccioná al menos un examen');
       return;
     }
 
@@ -296,12 +304,18 @@ export class OrdenFormulario {
     this.laboratorioService.guardar(registro).subscribe({
       next: () => {
         this.guardando.set(false);
+        this.notif.exito(
+          this.esNueva()
+            ? 'Orden de laboratorio creada correctamente'
+            : 'Orden de laboratorio actualizada correctamente',
+        );
         this.router.navigate(['/home/laboratorio']);
       },
       error: (err: HttpErrorResponse) => {
         this.guardando.set(false);
         this.errorGuardar.set('No se pudo guardar la orden. Intenta de nuevo.');
         console.error('Error al guardar la orden', err);
+        this.notif.error('No se pudo guardar la orden');
       },
     });
   }
@@ -328,6 +342,7 @@ export class OrdenFormulario {
         error: (err: HttpErrorResponse) => {
           console.error('❌ Error al cargar bitácora:', err.status);
           this.cargandoHistorial.set(false);
+          this.notif.error('No se pudo cargar la bitácora');
         },
       });
   }
@@ -337,7 +352,6 @@ export class OrdenFormulario {
     this.bitacoraSignal.set([]);
   }
 
-  /** Traduce el id_tipo_accion a texto legible. */
   accionLabel(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'Creó';
     if (idTipoAccion === 80) return 'Modificó';
@@ -345,7 +359,6 @@ export class OrdenFormulario {
     return 'Cambió';
   }
 
-  /** Clase CSS según el tipo de acción. */
   accionClase(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'accion-crear';
     if (idTipoAccion === 80) return 'accion-modificar';
@@ -353,7 +366,6 @@ export class OrdenFormulario {
     return 'accion-default';
   }
 
-  /** Icono Material según el tipo de acción. */
   accionIcono(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'add_circle';
     if (idTipoAccion === 80) return 'edit';
@@ -361,18 +373,16 @@ export class OrdenFormulario {
     return 'history';
   }
 
-  /** Traduce el id de usuario a nombre. */
   usuarioLabel(idUsuario: number | null): string {
     if (idUsuario == null) return 'Sistema';
     const u = this.usuariosSignal().find((x) => x.id === idUsuario);
     return u?.nombre ?? `Usuario ${idUsuario}`;
   }
 
-  /** Formatea la fecha en hora local (bitácora). */
- formatFechaHora(iso: string): string {
+  formatFechaHora(iso: string): string {
     if (!iso) return '—';
-    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';  // ← AGREGAR ESTA LÍNEA
-    const fecha = new Date(isoConZona);                        // ← CAMBIAR esto
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
     if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleString('es-GT', {
       day: '2-digit',
@@ -383,7 +393,6 @@ export class OrdenFormulario {
     });
   }
 
-  /** Devuelve la lista de campos que cambiaron entre valoresAnteriores y valoresNuevos. */
   camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
     try {
       const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
@@ -406,7 +415,6 @@ export class OrdenFormulario {
         let a = antes[k];
         let d = despues[k];
 
-        // Parche: el backend guarda mal el IdOrden. Usamos el ID real.
         if (k === 'IdOrden' && idRegistroReal != null) {
           a = idRegistroReal;
           d = idRegistroReal;
@@ -440,11 +448,11 @@ export class OrdenFormulario {
       .trim();
   }
 
-   private formatearValor(valor: any, nombreCampo: string = ''): string {
+  private formatearValor(valor: any, nombreCampo: string = ''): string {
     if (valor === null || valor === undefined) return '—';
 
     if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
-      const fecha = new Date(valor);  // ← SIN la Z (correcto, ya está en local)
+      const fecha = new Date(valor);
       if (!isNaN(fecha.getTime())) {
         return fecha.toLocaleString('es-GT', {
           day: '2-digit',

@@ -40,11 +40,33 @@
         }
       </mat-form-field>
 
+      <!-- ✅ Nombre del responsable con validaciones -->
       <mat-form-field appearance="outline">
         <mat-label>Nombre del responsable</mat-label>
-        <input matInput formControlName="nombreResponsable" placeholder="Familiar que firma" />
-        @if (form.controls.nombreResponsable.invalid && form.controls.nombreResponsable.touched) {
-          <mat-error>Requerido</mat-error>
+        <input
+          matInput
+          formControlName="nombreResponsable"
+          placeholder="Familiar que firma"
+          maxlength="100"
+        />
+        <mat-hint align="end">{{ form.controls.nombreResponsable.value?.length ?? 0 }} / 100</mat-hint>
+        @if (
+          form.controls.nombreResponsable.hasError('required') &&
+          form.controls.nombreResponsable.touched
+        ) {
+          <mat-error>El nombre es obligatorio</mat-error>
+        }
+        @if (
+          form.controls.nombreResponsable.hasError('minlength') &&
+          form.controls.nombreResponsable.touched
+        ) {
+          <mat-error>El nombre debe tener al menos 3 caracteres</mat-error>
+        }
+        @if (
+          form.controls.nombreResponsable.hasError('maxlength') &&
+          form.controls.nombreResponsable.touched
+        ) {
+          <mat-error>El nombre no puede superar 100 caracteres</mat-error>
         }
       </mat-form-field>
 
@@ -60,11 +82,26 @@
         }
       </mat-form-field>
 
+      <!-- ✅ Teléfono del responsable con validación de formato -->
       <mat-form-field appearance="outline">
         <mat-label>Teléfono del responsable</mat-label>
-        <input matInput formControlName="telefonoResponsable" />
-        @if (form.controls.telefonoResponsable.invalid && form.controls.telefonoResponsable.touched) {
-          <mat-error>Requerido</mat-error>
+        <input
+          matInput
+          formControlName="telefonoResponsable"
+          placeholder="Ej: 5555-5555"
+          maxlength="20"
+        />
+        @if (
+          form.controls.telefonoResponsable.hasError('required') &&
+          form.controls.telefonoResponsable.touched
+        ) {
+          <mat-error>El teléfono es obligatorio</mat-error>
+        }
+        @if (
+          form.controls.telefonoResponsable.hasError('pattern') &&
+          form.controls.telefonoResponsable.touched
+        ) {
+          <mat-error>Ingresá un teléfono válido (8-20 dígitos, +, -, espacios o paréntesis)</mat-error>
         }
       </mat-form-field>
 
@@ -102,7 +139,6 @@
     </div>
   </form>
 
-  <!-- Botón de historial (solo si ya existe el compromiso) -->
   @if (!esNuevo()) {
     <div class="historial-btn-wrap">
       <button matButton type="button" (click)="abrirHistorial()">
@@ -112,9 +148,6 @@
     </div>
   }
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MODAL: Historial del compromiso
-       ═══════════════════════════════════════════════════════════════ -->
   @if (historialAbierto()) {
     <div class="modal-overlay" (click)="cerrarHistorial()">
       <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">
