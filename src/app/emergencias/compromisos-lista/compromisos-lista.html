@@ -16,6 +16,28 @@
     </div>
   </div>
 
+  <!-- TABS: Activas / Eliminadas -->
+  <div class="tabs-filtro">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'activas'"
+      (click)="filtro.set('activas')"
+    >
+      <mat-icon>check_circle</mat-icon>
+      Activas
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'eliminadas'"
+      (click)="filtro.set('eliminadas')"
+    >
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
   <div class="search-bar">
     <mat-icon>search</mat-icon>
     <input
@@ -33,7 +55,11 @@
 
   <div class="compromiso-grid">
     @for (c of compromisos(); track c.consentimiento.idConsentimiento) {
-      <a class="compromiso-card" [routerLink]="['/home/emergencias/compromisos', c.consentimiento.idConsentimiento]">
+      <a
+        class="compromiso-card"
+        [class.card-eliminada]="filtro() === 'eliminadas'"
+        [routerLink]="filtro() === 'activas' ? ['/home/emergencias/compromisos', c.consentimiento.idConsentimiento] : null"
+      >
         <div class="patient-avatar">{{ iniciales(c.consentimiento.idPaciente) }}</div>
         <div class="compromiso-info">
           <h2>{{ nombrePaciente(c.consentimiento.idPaciente) }}</h2>
@@ -48,6 +74,44 @@
             <mat-icon>event</mat-icon>
             {{ formatFecha(c.consentimiento.fechaFirma) }} · {{ medicoLabel(c.consentimiento.idMedicoResponsable) }}
           </span>
+
+          <!-- ✅ Auditoría (solo en tab Activas) -->
+          @if (filtro() === 'activas') {
+            <span
+              class="compromiso-meta meta-auditoria"
+              [matTooltip]="'Creado el ' + formatFechaUTC(c.consentimiento.fechaCreacion)"
+              matTooltipPosition="above"
+            >
+              <mat-icon>person_add</mat-icon>
+              {{ usuarioLabel(c.consentimiento.idUsuarioCreacion) }}
+              · {{ formatFechaUTC(c.consentimiento.fechaCreacion) }}
+            </span>
+
+            @if (c.consentimiento.fechaModificacion && c.consentimiento.idUsuarioModificacion) {
+              <span
+                class="compromiso-meta meta-auditoria"
+                [matTooltip]="'Modificado el ' + formatFechaUTC(c.consentimiento.fechaModificacion)"
+                matTooltipPosition="above"
+              >
+                <mat-icon>edit</mat-icon>
+                {{ usuarioLabel(c.consentimiento.idUsuarioModificacion) }}
+                · {{ formatFechaUTC(c.consentimiento.fechaModificacion) }}
+              </span>
+            }
+          }
+
+          <!-- Texto "Eliminado ... por ..." solo en tab Eliminadas -->
+          @if (filtro() === 'eliminadas') {
+            <span class="compromiso-meta meta-eliminada">
+              <mat-icon>person_off</mat-icon>
+              @if (c.consentimiento.fechaModificacion) {
+                Eliminado {{ formatFechaEliminacion(c.consentimiento.fechaModificacion) }}
+                por {{ usuarioLabel(c.consentimiento.idUsuarioModificacion) }}
+              } @else {
+                Eliminado por {{ usuarioLabel(c.consentimiento.idUsuarioModificacion) }}
+              }
+            </span>
+          }
         </div>
         <div class="compromiso-actions">
           <span
@@ -56,29 +120,49 @@
           >
             {{ estadoLabel(c.consentimiento.idEstadoConsentimiento) }}
           </span>
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Eliminar compromiso'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.consentimiento.idConsentimiento, nombrePaciente(c.consentimiento.idPaciente))"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
+
+          @if (filtro() === 'activas') {
+            <button
+              matIconButton
+              type="button"
+              class="btn-eliminar"
+              [matTooltip]="'Eliminar compromiso'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.consentimiento.idConsentimiento, nombrePaciente(c.consentimiento.idPaciente))"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          } @else {
+            <button
+              matIconButton
+              type="button"
+              class="btn-reactivar"
+              [matTooltip]="'Reactivar'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(c.consentimiento.idConsentimiento)"
+            >
+              <mat-icon>restore_from_trash</mat-icon>
+            </button>
+          }
         </div>
       </a>
     }
 
     @if (compromisos().length === 0) {
       <div class="empty-state">
-        <mat-icon>handshake</mat-icon>
-        <p>No se encontraron compromisos{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        <mat-icon>{{ filtro() === 'activas' ? 'handshake' : 'delete_outline' }}</mat-icon>
+        <p>
+          @if (buscar()) {
+            No se encontraron compromisos{{ filtro() === 'eliminadas' ? ' eliminados' : '' }} para "{{ buscar() }}".
+          } @else if (filtro() === 'eliminadas') {
+            No hay compromisos eliminados.
+          } @else {
+            No se encontraron compromisos.
+          }
+        </p>
       </div>
     }
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MODAL: Historial general de Compromisos
-       ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: Historial general -->
   @if (historialAbierto()) {
     <div class="modal-overlay" (click)="cerrarHistorialGeneral()">
       <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">

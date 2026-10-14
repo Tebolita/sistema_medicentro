@@ -16,6 +16,7 @@ import {
 } from '../casos-emergencia.service';
 import { PacientesService } from '../../pacientes/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-casos-lista',
@@ -33,9 +34,13 @@ import { MENU_SECTIONS } from '../../shared/menu-data';
 export class CasosLista {
   private casosService = inject(CasosEmergenciaService);
   private pacientesService = inject(PacientesService);
+  private notif = inject(NotificacionesService);
 
   buscar = signal('');
   buscando = computed(() => this.buscar().trim().length > 0);
+
+  // ✅ Filtro Activas / Eliminadas
+  filtro = signal<'activas' | 'eliminadas'>('activas');
 
   // Signals con los catálogos traídos del backend
   medicosSignal = signal<MedicoOpcion[]>([]);
@@ -55,39 +60,45 @@ export class CasosLista {
   ).filter((item) => item.route !== '/home/emergencias');
 
   constructor() {
-    // Cargar médicos del backend
     this.casosService.RetornarMedicos().subscribe({
       next: (m) => this.medicosSignal.set(m),
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasosLista] Error médicos:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasosLista] Error médicos:', err.status);
+        this.notif.error('No se pudieron cargar los médicos');
+      },
     });
 
-    // Cargar niveles de triaje del backend
     this.casosService.RetornarNivelesTriage().subscribe({
       next: (n) => this.nivelesSignal.set(n),
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasosLista] Error niveles:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasosLista] Error niveles:', err.status);
+      },
     });
 
-    // Cargar estados del backend
     this.casosService.RetornarEstadosCaso().subscribe({
       next: (e) => this.estadosSignal.set(e),
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasosLista] Error estados:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasosLista] Error estados:', err.status);
+      },
     });
 
-    // Cargar usuarios (para el nombre en la bitácora)
     this.casosService.RetornarUsuarios().subscribe({
       next: (u) => this.usuariosSignal.set(u),
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CasosLista] Error usuarios:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasosLista] Error usuarios:', err.status);
+      },
     });
   }
 
-  // Ordenado por urgencia real del triaje (según el orden del catálogo)
+  // Ordenado por urgencia real del triaje + filtro activas/eliminadas
   casos = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    let lista = this.casosService.listar();
+    const tab = this.filtro();
+
+    let lista = tab === 'activas'
+      ? this.casosService.listar()
+      : this.casosService.listarInactivos();
+
     if (term) {
       lista = lista.filter((c) =>
         [this.nombrePaciente(c), c.motivo]
@@ -149,20 +160,72 @@ export class CasosLista {
     return 'estado-esperando';
   }
 
- // ✅ DESPUÉS (bien):
-formatHora(iso: string): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString('es-GT', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+  formatHora(iso: string): string {
+    if (!iso) return '—';
+    // horaLlegada viene en LOCAL
+    return new Date(iso).toLocaleTimeString('es-GT', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  /**
+   * ✅ NUEVO: Formatea una fecha UTC corta para la card (día-mes, hh:mm).
+   * Se usa para fechaCreacion y fechaModificacion en la sección de auditoría.
+   */
+  formatFechaUTC(iso: string | null): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  /**
+   * ✅ Formatea la fecha de eliminación para el tab Eliminadas.
+   */
+  formatFechaEliminacion(iso: string | null): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return `el ${fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+  }
+
+  usuarioLabel(idUsuario: number | null | undefined): string {
+    if (idUsuario == null) return 'Sistema';
+    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
+    return u?.nombre ?? `Usuario #${idUsuario}`;
+  }
 
   eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Eliminar el caso de "${paciente}"?`)) {
-      return;
-    }
+    if (!confirm(`¿Eliminar el caso de "${paciente}"?`)) return;
     this.casosService.eliminar(id);
+    this.notif.exito('Caso de emergencia eliminado correctamente');
+  }
+
+  reactivar(id: number): void {
+    if (!confirm('¿Reactivar este caso de emergencia?')) return;
+
+    this.casosService.reactivar(id).subscribe({
+      next: () => {
+        this.notif.exito('Caso de emergencia reactivado correctamente');
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error al reactivar caso:', err);
+        this.notif.error('No se pudo reactivar el caso');
+      },
+    });
   }
 
   // ============================================================
@@ -182,6 +245,7 @@ formatHora(iso: string): string {
       error: (err: HttpErrorResponse) => {
         console.error('❌ Error bitácora casos:', err.status);
         this.cargandoHistorial.set(false);
+        this.notif.error('No se pudo cargar la bitácora');
       },
     });
   }
@@ -220,12 +284,6 @@ formatHora(iso: string): string {
   tablaIcono(tabla: string): string {
     if (tabla === 'casos_emergencia') return 'emergency';
     return 'description';
-  }
-
-  usuarioLabel(idUsuario: number | null): string {
-    if (idUsuario == null) return 'Sistema';
-    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
-    return u?.nombre ?? `Usuario ${idUsuario}`;
   }
 
   formatFechaHoraUTC(iso: string): string {

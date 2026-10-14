@@ -1,13 +1,17 @@
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, map, tap, shareReplay, forkJoin } from 'rxjs';
 import { Hospitalizacion, OrdenMedicaHospitalizacion } from '../models';
-import {
-  CamaOpcion,
-  ESTADO_CAMA_LIBRE,
-  ESTADO_CAMA_OCUPADA,
-} from './hospitalizacion-catalogos';
+
+export interface CamaOpcion {
+  id: number;
+  label: string;
+  idTipoHabitacion: number;
+  idHabitacion: number;
+  numeroCama: string;
+  idEstadoCama: number;
+}
 
 export interface HospitalizacionCompleta {
   hospitalizacion: Hospitalizacion;
@@ -17,6 +21,7 @@ export interface HospitalizacionCompleta {
 export interface OpcionCatalogo {
   id: number;
   label: string;
+  codigo?: string;
 }
 
 export interface MedicoOpcion {
@@ -63,6 +68,8 @@ export class HospitalizacionesService {
   private registros = signal<HospitalizacionCompleta[]>([]);
   private esNavegador: boolean;
 
+  private catalogosCache = new Map<string, OpcionCatalogo[]>();
+
   constructor(
     private http: HttpClient,
     @Inject(PLATFORM_ID) platformId: Object,
@@ -98,6 +105,17 @@ export class HospitalizacionesService {
     return null;
   }
 
+  /**
+   * ✅ Devuelve el id del usuario actual desde localStorage.
+   */
+  private obtenerIdUsuarioActual(): number | null {
+    if (!this.esNavegador) return null;
+    const valor = localStorage.getItem('id_usuario');
+    if (!valor) return null;
+    const id = Number(valor);
+    return isNaN(id) ? null : id;
+  }
+
   private getHeaders(): HttpHeaders {
     let headers = new HttpHeaders({
       'Content-Type': 'application/json',
@@ -110,15 +128,76 @@ export class HospitalizacionesService {
     return headers;
   }
 
+  // =============================================================
+  // ✅ RESOLUCIÓN DE IDs POR CÓDIGO
+  // =============================================================
+
+  private retornarCatalogoCacheado(codigoTipo: string): Observable<OpcionCatalogo[]> {
+    const cache = this.catalogosCache.get(codigoTipo);
+    if (cache) {
+      return new Observable((obs) => {
+        obs.next(cache);
+        obs.complete();
+      });
+    }
+    return this.http.get<ApiResponse<any[]>>(
+      `${this.apiUrlCatalogos}/${codigoTipo}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) =>
+        (resp.datos ?? []).map((c: any) => ({
+          id: c.id ?? c.idValorCatalogo ?? c.id_valor_catalogo,
+          label: c.nombre ?? c.label ?? '',
+          codigo: c.codigo ?? '',
+        })),
+      ),
+      tap((items) => this.catalogosCache.set(codigoTipo, items)),
+      shareReplay(1),
+    );
+  }
+
+  idPorCodigo(codigoTipo: string, codigoValor: string): number | null {
+    const items = this.catalogosCache.get(codigoTipo);
+    if (!items) return null;
+    const item = items.find((x) => x.codigo === codigoValor);
+    return item?.id ?? null;
+  }
+
+  opcionPorCodigo(codigoTipo: string, codigoValor: string): OpcionCatalogo | null {
+    const items = this.catalogosCache.get(codigoTipo);
+    if (!items) return null;
+    return items.find((x) => x.codigo === codigoValor) ?? null;
+  }
+
+  precargarCatalogosCamas(): void {
+    this.retornarCatalogoCacheado('ESTADO_CAMA').subscribe();
+    this.retornarCatalogoCacheado('ESTADO_HOSPITALIZACION').subscribe();
+  }
+
+  // =============================================================
+  // CRUD PRINCIPAL
+  // =============================================================
+
+  /**
+   * ✅ Carga activos Y eliminados en paralelo.
+   * Endpoint eliminados: GET /api/hospitalizaciones/eliminadas
+   */
   private cargar(): void {
     if (!this.esNavegador) return;
-    this.http.get<ApiResponse<any[]>>(this.apiUrl, {
-      headers: this.getHeaders(),
+
+    forkJoin({
+      activos: this.http.get<ApiResponse<any[]>>(this.apiUrl, {
+        headers: this.getHeaders(),
+      }),
+      eliminados: this.http.get<ApiResponse<any[]>>(
+        'https://localhost:7086/api/hospitalizaciones/eliminadas',
+        { headers: this.getHeaders() },
+      ),
     }).subscribe({
-      next: (resp) => {
-        const lista = (resp.datos ?? []).map((r) => this.aCompleta(r));
-        console.log('🔍 [Hospitalizaciones] Registros cargados:', lista.length);
-        this.registros.set(lista);
+      next: ({ activos, eliminados }) => {
+        const listaActivos = (activos.datos ?? []).map((r) => this.aCompleta(r));
+        const listaEliminados = (eliminados.datos ?? []).map((r) => this.aCompleta(r));
+        this.registros.set([...listaActivos, ...listaEliminados]);
       },
       error: (err: HttpErrorResponse) => {
         console.error('❌ [Hospitalizaciones] Error al cargar:', err.status, err.statusText);
@@ -148,9 +227,19 @@ export class HospitalizacionesService {
       ),
   );
 
-  activas = computed(() =>
-    this.listar().filter((r) => r.hospitalizacion.idEstadoHospitalizacion === 65),
+  listarInactivas = computed(() =>
+    this.registros()
+      .filter((r) => !r.hospitalizacion.activo)
+      .sort((a, b) =>
+        (b.hospitalizacion.fechaIngreso ?? '').localeCompare(a.hospitalizacion.fechaIngreso ?? ''),
+      ),
   );
+
+  activas = computed(() => {
+    const idActiva = this.idPorCodigo('ESTADO_HOSPITALIZACION', 'ACTIVA');
+    if (idActiva == null) return [];
+    return this.listar().filter((r) => r.hospitalizacion.idEstadoHospitalizacion === idActiva);
+  });
 
   obtener(id: number): HospitalizacionCompleta | undefined {
     return this.registros().find((r) => r.hospitalizacion.idHospitalizacion === id);
@@ -225,7 +314,6 @@ export class HospitalizacionesService {
     ).pipe(
       map((resp) => resp.datos ?? []),
       tap((ordenes) => {
-        console.log('🔍 [Hospitalizaciones] Órdenes cargadas:', ordenes.length);
         this.registros.update((list) =>
           list.map((r) =>
             r.hospitalizacion.idHospitalizacion === idHospitalizacion
@@ -312,15 +400,30 @@ export class HospitalizacionesService {
     );
   }
 
+  /**
+   * ✅ Elimina (baja lógica).
+   * Actualiza el signal local con activo=false, fechaModificacion e idUsuarioModificacion.
+   */
   eliminar(id: number): void {
     this.http.delete<ApiResponse<null>>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders(),
     }).subscribe({
       next: () => {
+        const ahora = new Date().toISOString();
+        const idUsuarioActual = this.obtenerIdUsuarioActual();
+
         this.registros.update((list) =>
           list.map((r) =>
             r.hospitalizacion.idHospitalizacion === id
-              ? { ...r, hospitalizacion: { ...r.hospitalizacion, activo: false } }
+              ? {
+                  ...r,
+                  hospitalizacion: {
+                    ...r.hospitalizacion,
+                    activo: false,
+                    fechaModificacion: ahora,
+                    idUsuarioModificacion: idUsuarioActual,
+                  } as Hospitalizacion,
+                }
               : r,
           ),
         );
@@ -328,6 +431,28 @@ export class HospitalizacionesService {
       error: (err: HttpErrorResponse) =>
         console.error('❌ [Hospitalizaciones] No se pudo eliminar:', err.status),
     });
+  }
+
+  /**
+   * ✅ Reactiva una hospitalización eliminada.
+   * Endpoint: PUT /api/Hospitalizaciones/{id}/reactivar
+   */
+  reactivar(id: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(
+      `${this.apiUrl}/${id}/reactivar`,
+      {},
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === id
+              ? { ...r, hospitalizacion: { ...r.hospitalizacion, activo: true } }
+              : r,
+          ),
+        );
+      }),
+    );
   }
 
   // =============================================================
@@ -365,7 +490,6 @@ export class HospitalizacionesService {
           }
         }
 
-        console.log('🔍 [Hospitalizaciones] Camas recibidas:', camas.length);
         return camas;
       }),
     );
@@ -373,8 +497,11 @@ export class HospitalizacionesService {
 
   RetornarCamasLibres(): Observable<CamaOpcion[]> {
     return this.RetornarCamas().pipe(
-      map((camas) => camas.filter((c) => c.idEstadoCama === ESTADO_CAMA_LIBRE)),
-      tap((camas) => console.log('🔍 [Hospitalizaciones] Camas libres:', camas.length)),
+      map((camas) => {
+        const idLibre = this.idPorCodigo('ESTADO_CAMA', 'LIBRE');
+        if (idLibre == null) return [];
+        return camas.filter((c) => c.idEstadoCama === idLibre);
+      }),
     );
   }
 
@@ -409,9 +536,6 @@ export class HospitalizacionesService {
           especialidad: m.especialidad?.nombre ?? m.especialidad ?? '',
         })),
       ),
-      tap((medicos) =>
-        console.log('🔍 [Hospitalizaciones] Médicos cargados:', medicos.length),
-      ),
     );
   }
 
@@ -419,43 +543,22 @@ export class HospitalizacionesService {
   // CATÁLOGOS GENÉRICOS
   // =============================================================
 
-  private retornarCatalogo(codigoTipo: string): Observable<OpcionCatalogo[]> {
-    return this.http.get<ApiResponse<any[]>>(
-      `${this.apiUrlCatalogos}/${codigoTipo}`,
-      { headers: this.getHeaders() },
-    ).pipe(
-      map((resp) =>
-        (resp.datos ?? []).map((c: any) => ({
-          id: c.id ?? c.idValorCatalogo ?? c.id_valor_catalogo,
-          label: c.nombre,
-        })),
-      ),
-    );
-  }
-
   RetornarEstadosHospitalizacion(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('ESTADO_HOSPITALIZACION').pipe(
-      tap((items) =>
-        console.log('🔍 [Hospitalizaciones] Estados cargados:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogoCacheado('ESTADO_HOSPITALIZACION');
   }
 
   RetornarTiposOrden(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('TIPO_ORDEN_HOSPITALIZACION').pipe(
-      tap((items) =>
-        console.log('🔍 [Hospitalizaciones] Tipos de orden cargados:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogoCacheado('TIPO_ORDEN_HOSPITALIZACION');
+  }
+
+  RetornarEstadosCama(): Observable<OpcionCatalogo[]> {
+    return this.retornarCatalogoCacheado('ESTADO_CAMA');
   }
 
   // =============================================================
   // BITÁCORA DE AUDITORÍA
   // =============================================================
 
-  /**
-   * Trae el historial de auditoría de un registro específico.
-   */
   RetornarBitacoraPorRegistro(
     tablaAfectada: string,
     idRegistro: number,
@@ -469,34 +572,18 @@ export class HospitalizacionesService {
           .filter((b) => b.idRegistroAfectado === idRegistro)
           .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
       ),
-      tap((items) =>
-        console.log(
-          `🔍 [Hospitalizaciones] Bitácora de ${tablaAfectada}#${idRegistro}:`,
-          items.length,
-        ),
-      ),
     );
   }
 
-  /**
-   * Trae TODA la bitácora de una tabla (sin filtrar por id de registro).
-   * Se usa para el historial general del módulo.
-   */
   RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
     return this.http.get<ApiResponse<BitacoraItem[]>>(
       `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
       { headers: this.getHeaders() },
     ).pipe(
       map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
-      tap((items) =>
-        console.log(`🔍 [Hospitalizaciones] Bitácora general de ${tablaAfectada}:`, items.length),
-      ),
     );
   }
 
-  /**
-   * Trae todos los usuarios (para mostrar el nombre del que hizo el cambio).
-   */
   RetornarUsuarios(): Observable<UsuarioOpcion[]> {
     return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios, {
       headers: this.getHeaders(),
@@ -506,9 +593,6 @@ export class HospitalizacionesService {
           id: u.idUsuario ?? u.id_usuario,
           nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
         })),
-      ),
-      tap((items) =>
-        console.log('🔍 [Hospitalizaciones] Usuarios cargados:', items.length),
       ),
     );
   }

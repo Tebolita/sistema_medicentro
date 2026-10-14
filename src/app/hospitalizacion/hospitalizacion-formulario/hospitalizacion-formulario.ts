@@ -14,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { Hospitalizacion, OrdenMedicaHospitalizacion } from '../../models';
 import {
+  CamaOpcion,
   HospitalizacionCompleta,
   HospitalizacionesService,
   MedicoOpcion,
@@ -21,13 +22,8 @@ import {
   BitacoraItem,
   UsuarioOpcion,
 } from '../hospitalizaciones.service';
-import {
-  CamaOpcion,
-  ESTADO_CAMA_LIBRE,
-  ESTADO_CAMA_OCUPADA,
-  ESTADO_HOSPITALIZACION_ACTIVA,
-} from '../hospitalizacion-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 function toIsoDateTime(value: Date | string | null): string | null {
   if (!value) return null;
@@ -72,6 +68,7 @@ export class HospitalizacionFormulario {
   private router = inject(Router);
   private hospitalizacionesService = inject(HospitalizacionesService);
   private pacientesService = inject(PacientesService);
+  private notif = inject(NotificacionesService);
 
   pacientes = this.pacientesService.directorio;
 
@@ -79,13 +76,8 @@ export class HospitalizacionFormulario {
   estadosSignal = signal<OpcionCatalogo[]>([]);
   tiposOrdenSignal = signal<OpcionCatalogo[]>([]);
 
-  /** Camas libres para el dropdown al crear una nueva hospitalización. */
   camasLibres = signal<CamaOpcion[]>([]);
-
-  /** Camas actuales del registro (para poder guardar la cama original). */
   camasTodas = signal<CamaOpcion[]>([]);
-
-  /** Cama seleccionada actualmente en el form (para saber cuál modificar). */
   camaOriginal = signal<CamaOpcion | null>(null);
 
   idHospitalizacion = signal(0);
@@ -98,80 +90,83 @@ export class HospitalizacionFormulario {
   ordenEditando = signal<OrdenMedicaHospitalizacion | null>(null);
   guardandoOrden = signal(false);
 
-  // ============================================================
-  // Historial de auditoría
-  // ============================================================
   historialAbierto = signal(false);
   bitacoraSignal = signal<BitacoraItem[]>([]);
   usuariosSignal = signal<UsuarioOpcion[]>([]);
   cargandoHistorial = signal(false);
   registroHistorial = signal<{ tabla: string; id: number; titulo: string } | null>(null);
 
+  // ✅ Validaciones agregadas: motivoIngreso y diagnosticoEgreso
   form = this.fb.nonNullable.group({
     idPaciente: this.fb.control<number | null>(null, Validators.required),
     idCama: this.fb.control<number | null>(null, Validators.required),
     idMedicoResponsable: this.fb.control<number | null>(null, Validators.required),
     fechaIngreso: this.fb.control<Date | null>(new Date(), Validators.required),
-    motivoIngreso: ['', Validators.required],
+    motivoIngreso: [
+      '',
+      [
+        Validators.required,
+        Validators.minLength(5),
+        Validators.maxLength(300),
+      ],
+    ],
     idEstadoHospitalizacion: this.fb.control<number | null>(null, Validators.required),
     fechaEgreso: this.fb.control<Date | null>(null),
-    diagnosticoEgreso: [''],
+    diagnosticoEgreso: ['', [Validators.maxLength(300)]],
   });
 
   constructor() {
-    // 1) Camas desde /api/Habitaciones
+    // ✅ Precargar catálogos para idPorCodigo
+    this.hospitalizacionesService.precargarCatalogosCamas();
+
+    // 1) Camas
     this.hospitalizacionesService.RetornarCamas().subscribe({
       next: (camas) => {
-        console.log('✅ [HospitalizacionFormulario] Camas totales:', camas.length);
         this.camasTodas.set(camas);
         this.actualizarCamasLibres();
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [HospitalizacionFormulario] Error camas:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [HospitalizacionFormulario] Error camas:', err.status);
+        this.notif.error('No se pudieron cargar las camas');
+      },
     });
 
     // 2) Médicos
     this.hospitalizacionesService.RetornarMedicos().subscribe({
-      next: (m) => {
-        console.log('✅ [HospitalizacionFormulario] Médicos cargados:', m.length);
-        this.medicosSignal.set(m);
+      next: (m) => this.medicosSignal.set(m),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [HospitalizacionFormulario] Error médicos:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [HospitalizacionFormulario] Error médicos:', err.status),
     });
 
     // 3) Estados
     this.hospitalizacionesService.RetornarEstadosHospitalizacion().subscribe({
       next: (e) => {
-        console.log('✅ [HospitalizacionFormulario] Estados cargados:', e.length);
         this.estadosSignal.set(e);
         if (this.esNueva() && e.length > 0 && !this.form.controls.idEstadoHospitalizacion.value) {
           const activa = e.find((x) => x.label.toLowerCase().includes('activ')) ?? e[0];
           this.form.patchValue({ idEstadoHospitalizacion: activa.id });
         }
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [HospitalizacionFormulario] Error estados:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [HospitalizacionFormulario] Error estados:', err.status);
+      },
     });
 
     // 4) Tipos de orden
     this.hospitalizacionesService.RetornarTiposOrden().subscribe({
-      next: (t) => {
-        console.log('✅ [HospitalizacionFormulario] Tipos de orden cargados:', t.length);
-        this.tiposOrdenSignal.set(t);
+      next: (t) => this.tiposOrdenSignal.set(t),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [HospitalizacionFormulario] Error tipos de orden:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [HospitalizacionFormulario] Error tipos de orden:', err.status),
     });
 
-    // 5) Usuarios (para el nombre en la bitácora)
+    // 5) Usuarios
     this.hospitalizacionesService.RetornarUsuarios().subscribe({
-      next: (u) => {
-        console.log('✅ [HospitalizacionFormulario] Usuarios cargados:', u.length);
-        this.usuariosSignal.set(u);
+      next: (u) => this.usuariosSignal.set(u),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [HospitalizacionFormulario] Error usuarios:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [HospitalizacionFormulario] Error usuarios:', err.status),
     });
 
     // 6) Refrescar detalle si hay id
@@ -185,9 +180,7 @@ export class HospitalizacionFormulario {
   }
 
   /**
-   * Calcula las camas que se muestran en el dropdown.
-   * Si es nueva → solo libres.
-   * Si es edición → libres + la cama actual del registro (para que aparezca seleccionada).
+   * ✅ CORREGIDO: ahora usa 'LIBRE' en vez de 'DISPONIBLE'.
    */
   private actualizarCamasLibres(): void {
     const todas = this.camasTodas();
@@ -195,11 +188,18 @@ export class HospitalizacionFormulario {
     const camaActual = todas.find((c) => c.id === idCamaActual) ?? null;
     this.camaOriginal.set(camaActual);
 
-    const libres = todas.filter((c) => c.idEstadoCama === ESTADO_CAMA_LIBRE);
+    const idLibre = this.hospitalizacionesService.idPorCodigo('ESTADO_CAMA', 'LIBRE');
 
-    // Si es edición y la cama actual NO está libre, la agregamos
-    // para que el dropdown muestre la selección actual.
-    if (camaActual && camaActual.idEstadoCama !== ESTADO_CAMA_LIBRE) {
+    // Si aún no se ha cargado el catálogo, no filtramos (mostramos todas)
+    // para no dejar el dropdown vacío.
+    if (idLibre == null) {
+      this.camasLibres.set(todas);
+      return;
+    }
+
+    const libres = todas.filter((c) => c.idEstadoCama === idLibre);
+
+    if (camaActual && camaActual.idEstadoCama !== idLibre) {
       this.camasLibres.set([camaActual, ...libres]);
     } else {
       this.camasLibres.set(libres);
@@ -208,12 +208,10 @@ export class HospitalizacionFormulario {
 
   private cargarDesdeBackend(id: number): void {
     this.hospitalizacionesService.obtenerDesdeApi(id).subscribe({
-      next: (reg) => {
-        this.cargar(reg);
-        console.log('✅ [HospitalizacionFormulario] Detalle refrescado. Órdenes:', reg.ordenes.length);
-      },
+      next: (reg) => this.cargar(reg),
       error: (err: HttpErrorResponse) => {
         console.error('❌ [HospitalizacionFormulario] Error al refrescar detalle:', err.status);
+        this.notif.error('No se pudo cargar el detalle');
       },
     });
   }
@@ -232,7 +230,6 @@ export class HospitalizacionFormulario {
       fechaEgreso: h.fechaEgreso ? parseIsoDateLocal(h.fechaEgreso) : null,
       diagnosticoEgreso: h.diagnosticoEgreso ?? '',
     });
-    // Recalcular camas libres + cama original
     this.actualizarCamasLibres();
   }
 
@@ -289,12 +286,12 @@ export class HospitalizacionFormulario {
           this.guardandoOrden.set(false);
           this.ordenEditando.set(null);
           this.cargarDesdeBackend(idHospitalizacion);
-          console.log('✅ Orden actualizada');
+          this.notif.exito('Orden médica actualizada correctamente');
         },
         error: (err: HttpErrorResponse) => {
           this.guardandoOrden.set(false);
           console.error('❌ Error al actualizar orden:', err);
-          alert('No se pudo actualizar la orden. Revisa la consola.');
+          this.notif.error('No se pudo actualizar la orden');
         },
       });
   }
@@ -310,11 +307,11 @@ export class HospitalizacionFormulario {
       .subscribe({
         next: () => {
           this.cargarDesdeBackend(idHospitalizacion);
-          console.log('✅ Orden eliminada');
+          this.notif.exito('Orden médica eliminada correctamente');
         },
         error: (err: HttpErrorResponse) => {
           console.error('❌ Error al eliminar orden:', err);
-          alert('No se pudo eliminar la orden. Revisa la consola.');
+          this.notif.error('No se pudo eliminar la orden');
         },
       });
   }
@@ -322,6 +319,7 @@ export class HospitalizacionFormulario {
   guardar(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid) {
+      this.notif.error('Revisá los campos obligatorios');
       return;
     }
 
@@ -330,8 +328,8 @@ export class HospitalizacionFormulario {
     const camaSeleccionada = this.camasTodas().find((c) => c.id === v.idCama) ?? null;
     const camaOriginal = this.camaOriginal();
     const cambioEstado = this.esNueva()
-      ? true // nueva → siempre marcamos la cama como ocupada
-      : camaOriginal?.id !== camaSeleccionada?.id; // edición → solo si cambió la cama
+      ? true
+      : camaOriginal?.id !== camaSeleccionada?.id;
 
     const registro: Hospitalizacion = {
       idHospitalizacion,
@@ -363,11 +361,15 @@ export class HospitalizacionFormulario {
           resp?.datos?.idHospitalizacion ??
           0;
 
-        // ✅ Si cambió la cama → actualizar estados
         if (cambioEstado) {
           this.aplicarCambioDeCama(camaOriginal, camaSeleccionada, id);
         } else {
           this.guardando.set(false);
+          this.notif.exito(
+            this.esNueva()
+              ? 'Ingreso hospitalario creado correctamente'
+              : 'Ingreso hospitalario actualizado correctamente',
+          );
           this.router.navigate(['/home/hospitalizacion', id]);
         }
       },
@@ -376,39 +378,52 @@ export class HospitalizacionFormulario {
         this.errorGuardar.set(
           err.status === 401
             ? 'Tu sesión expiró. Cierra sesión y vuelve a iniciarla.'
-            : 'No se pudo guardar el ingreso. Revisa la consola.',
+            : 'No se pudo guardar el ingreso. Intenta de nuevo.',
         );
         console.error('Error al guardar hospitalización:', err);
+        this.notif.error('No se pudo guardar el ingreso');
       },
     });
   }
 
   /**
-   * Cambia el estado de las camas:
-   *  - La cama ANTERIOR (si había) → Libre.
-   *  - La cama NUEVA → Ocupada.
-   *  - Si el estado de la hospitalización es Alta/Trasladada, la nueva queda Libre.
+   * ✅ CORREGIDO: ahora usa 'LIBRE' (código real en la BD) en vez de 'DISPONIBLE'.
    */
   private aplicarCambioDeCama(
     camaAnterior: CamaOpcion | null,
     camaNueva: CamaOpcion | null,
     idHospitalizacion: number,
   ): void {
+    const idOcupada = this.hospitalizacionesService.idPorCodigo('ESTADO_CAMA', 'OCUPADA');
+    const idLibre = this.hospitalizacionesService.idPorCodigo('ESTADO_CAMA', 'LIBRE');
+    const idActiva = this.hospitalizacionesService.idPorCodigo('ESTADO_HOSPITALIZACION', 'ACTIVA');
+
+    // ⚠️ Si no se pudieron resolver los IDs, abortamos con error visible
+    // en vez de escribir IDs incorrectos.
+    if (idOcupada == null || idLibre == null || idActiva == null) {
+      this.guardando.set(false);
+      console.error('❌ No se pudieron resolver los IDs de catálogo (ESTADO_CAMA / ESTADO_HOSPITALIZACION)');
+      this.notif.error(
+        'No se pudo actualizar el estado de las camas. Verificá los catálogos.',
+      );
+      // Igual navegamos para no dejar al usuario atrapado
+      this.router.navigate(['/home/hospitalizacion', idHospitalizacion]);
+      return;
+    }
+
     const estadoFinal: number =
-      this.form.controls.idEstadoHospitalizacion.value === ESTADO_HOSPITALIZACION_ACTIVA
-        ? ESTADO_CAMA_OCUPADA
-        : ESTADO_CAMA_LIBRE;
+      this.form.controls.idEstadoHospitalizacion.value === idActiva
+        ? idOcupada
+        : idLibre;
 
     const operaciones: any[] = [];
 
-    // 1. Liberar cama anterior (si cambió)
     if (camaAnterior && camaAnterior.id !== camaNueva?.id) {
       operaciones.push(
-        this.hospitalizacionesService.actualizarEstadoCama(camaAnterior, ESTADO_CAMA_LIBRE),
+        this.hospitalizacionesService.actualizarEstadoCama(camaAnterior, idLibre),
       );
     }
 
-    // 2. Marcar nueva cama con el estado final
     if (camaNueva) {
       operaciones.push(
         this.hospitalizacionesService.actualizarEstadoCama(camaNueva, estadoFinal),
@@ -417,16 +432,24 @@ export class HospitalizacionFormulario {
 
     if (operaciones.length === 0) {
       this.guardando.set(false);
+      this.notif.exito(
+        this.esNueva()
+          ? 'Ingreso hospitalario creado correctamente'
+          : 'Ingreso hospitalario actualizado correctamente',
+      );
       this.router.navigate(['/home/hospitalizacion', idHospitalizacion]);
       return;
     }
 
-    // Ejecutar en serie. Si la primera falla, avisamos pero seguimos.
     let idx = 0;
     const siguiente = () => {
       if (idx >= operaciones.length) {
         this.guardando.set(false);
-        console.log('✅ Estados de camas actualizados');
+        this.notif.exito(
+          this.esNueva()
+            ? 'Ingreso hospitalario creado correctamente'
+            : 'Ingreso hospitalario actualizado correctamente',
+        );
         this.router.navigate(['/home/hospitalizacion', idHospitalizacion]);
         return;
       }
@@ -435,6 +458,7 @@ export class HospitalizacionFormulario {
         next: () => siguiente(),
         error: (err: HttpErrorResponse) => {
           console.error('❌ Error al actualizar estado de cama:', err.status);
+          this.notif.error('No se pudo actualizar el estado de una cama');
           siguiente();
         },
       });
@@ -460,6 +484,7 @@ export class HospitalizacionFormulario {
       error: (err: HttpErrorResponse) => {
         console.error('❌ Error al cargar bitácora:', err.status);
         this.cargandoHistorial.set(false);
+        this.notif.error('No se pudo cargar la bitácora');
       },
     });
   }
@@ -470,7 +495,6 @@ export class HospitalizacionFormulario {
     this.bitacoraSignal.set([]);
   }
 
-  /** Traduce el id_tipo_accion a texto legible. */
   accionLabel(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'Creó';
     if (idTipoAccion === 80) return 'Modificó';
@@ -478,7 +502,6 @@ export class HospitalizacionFormulario {
     return 'Cambió';
   }
 
-  /** Clase CSS según el tipo de acción. */
   accionClase(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'accion-crear';
     if (idTipoAccion === 80) return 'accion-modificar';
@@ -486,7 +509,6 @@ export class HospitalizacionFormulario {
     return 'accion-default';
   }
 
-  /** Icono Material según el tipo de acción. */
   accionIcono(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'add_circle';
     if (idTipoAccion === 80) return 'edit';
@@ -494,24 +516,17 @@ export class HospitalizacionFormulario {
     return 'history';
   }
 
-  /** Traduce el id de usuario a nombre. */
   usuarioLabel(idUsuario: number | null): string {
     if (idUsuario == null) return 'Sistema';
     const u = this.usuariosSignal().find((x) => x.id === idUsuario);
     return u?.nombre ?? `Usuario ${idUsuario}`;
   }
 
-  /** Formatea la fecha en hora local (convierte UTC → local). */
   formatFechaHora(iso: string): string {
     if (!iso) return '—';
-
-    // ⚠️ El backend manda el ISO sin la "Z" al final (sin zona horaria),
-    // pero es UTC. Le agregamos la Z para que JS lo interprete correctamente.
     const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
     const fecha = new Date(isoConZona);
-
     if (isNaN(fecha.getTime())) return '—';
-
     return fecha.toLocaleString('es-GT', {
       day: '2-digit',
       month: 'short',
@@ -521,20 +536,17 @@ export class HospitalizacionFormulario {
     });
   }
 
-  /** Devuelve la lista de campos que cambiaron entre valoresAnteriores y valoresNuevos. */
   camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
     try {
       const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
       const despues = item.valoresNuevos ? JSON.parse(item.valoresNuevos) : {};
 
-      // Campos técnicos que no aportan al usuario final
       const camposIgnorados = new Set([
         'IdUsuarioModificacion',
         'FechaModificacion',
         'IdUsuarioCreacion',
       ]);
 
-      // ID del registro actual (el correcto, del título)
       const idRegistroReal = this.registroHistorial()?.id ?? null;
 
       const cambios: Array<{ campo: string; antes: string; despues: string }> = [];
@@ -546,8 +558,6 @@ export class HospitalizacionFormulario {
         let a = antes[k];
         let d = despues[k];
 
-        // ⚠️ Parche: el backend guarda mal el IdHospitalizacion.
-        // Si el campo es "IdHospitalizacion", usamos el ID real.
         if (k === 'IdHospitalizacion' && idRegistroReal != null) {
           a = idRegistroReal;
           d = idRegistroReal;
@@ -562,7 +572,6 @@ export class HospitalizacionFormulario {
         });
       }
 
-      // Ordenar para que el ID quede primero
       cambios.sort((x, y) => {
         if (x.campo.toLowerCase().includes('id hospitalizacion')) return -1;
         if (y.campo.toLowerCase().includes('id hospitalizacion')) return 1;
@@ -585,9 +594,7 @@ export class HospitalizacionFormulario {
   private formatearValor(valor: any, nombreCampo: string = ''): string {
     if (valor === null || valor === undefined) return '—';
 
-    // Si el campo es una fecha, formatearla legible (con conversión UTC → local)
     if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
-      // Le agregamos la "Z" si no la tiene, para interpretar como UTC
       const isoConZona = valor.endsWith('Z') ? valor : valor + 'Z';
       const fecha = new Date(isoConZona);
       if (!isNaN(fecha.getTime())) {

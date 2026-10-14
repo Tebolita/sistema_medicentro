@@ -1,7 +1,7 @@
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, map, tap, forkJoin } from 'rxjs';
 
 export interface CasoEmergencia {
   idCaso: number;
@@ -15,6 +15,8 @@ export interface CasoEmergencia {
   activo: boolean;
   fechaCreacion: string;
   fechaModificacion: string | null;
+  idUsuarioCreacion?: number | null;
+  idUsuarioModificacion?: number | null;
 }
 
 export interface OpcionCatalogo {
@@ -99,6 +101,19 @@ export class CasosEmergenciaService {
     return null;
   }
 
+  /**
+   * ✅ Devuelve el id del usuario actual desde localStorage.
+   * Lo usamos para setear idUsuarioModificacion en el signal local
+   * (así la UI muestra el nombre correcto sin esperar a recargar).
+   */
+  private obtenerIdUsuarioActual(): number | null {
+    if (!this.esNavegador) return null;
+    const valor = localStorage.getItem('id_usuario');
+    if (!valor) return null;
+    const id = Number(valor);
+    return isNaN(id) ? null : id;
+  }
+
   private getHeaders(): HttpHeaders {
     let headers = new HttpHeaders({
       'Content-Type': 'application/json',
@@ -111,15 +126,24 @@ export class CasosEmergenciaService {
     return headers;
   }
 
+  /**
+   * ✅ Carga activos Y eliminados en paralelo.
+   */
   private cargar(): void {
     if (!this.esNavegador) return;
-    this.http.get<ApiResponse<CasoEmergencia[]>>(this.apiUrl, {
-      headers: this.getHeaders(),
+
+    forkJoin({
+      activos: this.http.get<ApiResponse<CasoEmergencia[]>>(this.apiUrl, {
+        headers: this.getHeaders(),
+      }),
+      eliminados: this.http.get<ApiResponse<CasoEmergencia[]>>(`${this.apiUrl}/eliminados`, {
+        headers: this.getHeaders(),
+      }),
     }).subscribe({
-      next: (resp) => {
-        const lista = resp.datos ?? [];
-        console.log('🔍 [CasosEmergencia] Casos cargados:', lista.length);
-        this.registros.set(lista);
+      next: ({ activos, eliminados }) => {
+        const listaActivos = activos.datos ?? [];
+        const listaEliminados = eliminados.datos ?? [];
+        this.registros.set([...listaActivos, ...listaEliminados]);
       },
       error: (err: HttpErrorResponse) => {
         console.error('❌ [CasosEmergencia] Error al cargar:', err.status, err.statusText);
@@ -130,6 +154,12 @@ export class CasosEmergenciaService {
   listar = computed(() =>
     this.registros()
       .filter((c) => c.activo)
+      .sort((a, b) => (b.horaLlegada ?? '').localeCompare(a.horaLlegada ?? '')),
+  );
+
+  listarInactivos = computed(() =>
+    this.registros()
+      .filter((c) => !c.activo)
       .sort((a, b) => (b.horaLlegada ?? '').localeCompare(a.horaLlegada ?? '')),
   );
 
@@ -185,18 +215,59 @@ export class CasosEmergenciaService {
     );
   }
 
+  /**
+   * ✅ Elimina (baja lógica).
+   * Actualiza el signal local con:
+   *   - activo: false
+   *   - fechaModificacion: ahora (UTC)
+   *   - idUsuarioModificacion: id del usuario actual
+   *
+   * Con esto la UI muestra "por [usuario]" SIN esperar a recargar.
+   */
   eliminar(id: number): void {
     this.http.delete<ApiResponse<null>>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders(),
     }).subscribe({
       next: () => {
+        const ahora = new Date().toISOString();
+        const idUsuarioActual = this.obtenerIdUsuarioActual();
+
         this.registros.update((list) =>
-          list.map((c) => (c.idCaso === id ? { ...c, activo: false } : c)),
+          list.map((c) =>
+            c.idCaso === id
+              ? {
+                  ...c,
+                  activo: false,
+                  fechaModificacion: ahora,
+                  idUsuarioModificacion: idUsuarioActual,
+                }
+              : c,
+          ),
         );
       },
       error: (err: HttpErrorResponse) =>
         console.error('❌ [CasosEmergencia] No se pudo eliminar:', err.status),
     });
+  }
+
+  /**
+   * ✅ Reactiva un caso eliminado.
+   * Endpoint: PUT /api/casos-emergencia/{id}/reactivar
+   */
+  reactivar(id: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(
+      `${this.apiUrl}/${id}/reactivar`,
+      {},
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((c) =>
+            c.idCaso === id ? { ...c, activo: true } : c,
+          ),
+        );
+      }),
+    );
   }
 
   // =============================================================
@@ -219,14 +290,11 @@ export class CasosEmergenciaService {
           especialidad: m.especialidad?.nombre ?? m.especialidad ?? '',
         })),
       ),
-      tap((medicos) =>
-        console.log('🔍 [CasosEmergencia] Médicos cargados:', medicos.length),
-      ),
     );
   }
 
   // =============================================================
-  // CATÁLOGOS GENÉRICOS (triaje, estado caso, etc.)
+  // CATÁLOGOS GENÉRICOS
   // =============================================================
 
   private retornarCatalogo(codigoTipo: string): Observable<OpcionCatalogo[]> {
@@ -244,19 +312,11 @@ export class CasosEmergenciaService {
   }
 
   RetornarNivelesTriage(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('NIVEL_TRIAGE').pipe(
-      tap((items) =>
-        console.log('🔍 [CasosEmergencia] Niveles cargados:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogo('NIVEL_TRIAGE');
   }
 
   RetornarEstadosCaso(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('ESTADO_CASO_EMERGENCIA').pipe(
-      tap((items) =>
-        console.log('🔍 [CasosEmergencia] Estados cargados:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogo('ESTADO_CASO_EMERGENCIA');
   }
 
   // =============================================================
@@ -276,12 +336,6 @@ export class CasosEmergenciaService {
           .filter((b) => b.idRegistroAfectado === idRegistro)
           .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
       ),
-      tap((items) =>
-        console.log(
-          `🔍 [CasosEmergencia] Bitácora de ${tablaAfectada}#${idRegistro}:`,
-          items.length,
-        ),
-      ),
     );
   }
 
@@ -291,9 +345,6 @@ export class CasosEmergenciaService {
       { headers: this.getHeaders() },
     ).pipe(
       map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
-      tap((items) =>
-        console.log(`🔍 [CasosEmergencia] Bitácora general de ${tablaAfectada}:`, items.length),
-      ),
     );
   }
 
@@ -306,9 +357,6 @@ export class CasosEmergenciaService {
           id: u.idUsuario ?? u.id_usuario,
           nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
         })),
-      ),
-      tap((items) =>
-        console.log('🔍 [CasosEmergencia] Usuarios cargados:', items.length),
       ),
     );
   }

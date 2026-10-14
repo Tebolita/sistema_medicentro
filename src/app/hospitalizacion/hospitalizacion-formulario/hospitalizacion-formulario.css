@@ -622,3 +622,11 @@
 :host ::ng-deep .mat-datepicker-toggle mat-icon {
   color: #0d6a8f !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Hint de caracteres
+   ═══════════════════════════════════════════════════════════════ */
+mat-hint {
+  font-size: 11px;
+  color: var(--c-text-muted, #6b7280);
+}

@@ -16,6 +16,28 @@
     </div>
   </div>
 
+  <!-- TABS: Activas / Eliminadas -->
+  <div class="tabs-filtro">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'activas'"
+      (click)="filtro.set('activas')"
+    >
+      <mat-icon>check_circle</mat-icon>
+      Activas
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'eliminadas'"
+      (click)="filtro.set('eliminadas')"
+    >
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
   <div class="top-row">
     <div class="search-bar">
       <mat-icon>search</mat-icon>
@@ -48,8 +70,8 @@
     @for (c of casos(); track c.idCaso) {
       <a
         class="caso-card"
-        [ngClass]="triageClase(c.idNivelTriage)"
-        [routerLink]="['/home/emergencias', c.idCaso]"
+        [ngClass]="[triageClase(c.idNivelTriage), filtro() === 'eliminadas' ? 'card-eliminada' : '']"
+        [routerLink]="filtro() === 'activas' ? ['/home/emergencias', c.idCaso] : null"
       >
         <div class="triage-stripe"></div>
         <div class="patient-avatar">{{ iniciales(c) }}</div>
@@ -61,34 +83,92 @@
             {{ formatHora(c.horaLlegada) }} · {{ medicoLabel(c.idMedico) }}
           </span>
           <span class="caso-meta motivo">{{ c.motivo }}</span>
+
+          <!-- ✅ Auditoría (solo en tab Activas) -->
+          @if (filtro() === 'activas') {
+            <span
+              class="caso-meta meta-auditoria"
+              [matTooltip]="'Creado el ' + formatFechaUTC(c.fechaCreacion)"
+              matTooltipPosition="above"
+            >
+              <mat-icon>person_add</mat-icon>
+              {{ usuarioLabel(c.idUsuarioCreacion ?? null) }}
+              · {{ formatFechaUTC(c.fechaCreacion) }}
+            </span>
+
+            @if (c.fechaModificacion && c.idUsuarioModificacion) {
+              <span
+                class="caso-meta meta-auditoria"
+                [matTooltip]="'Modificado el ' + formatFechaUTC(c.fechaModificacion)"
+                matTooltipPosition="above"
+              >
+                <mat-icon>edit</mat-icon>
+                {{ usuarioLabel(c.idUsuarioModificacion) }}
+                · {{ formatFechaUTC(c.fechaModificacion) }}
+              </span>
+            }
+          }
+
+          <!-- Texto "Eliminado ... por ..." solo en tab Eliminadas -->
+          @if (filtro() === 'eliminadas') {
+            <span class="caso-meta meta-eliminada">
+              <mat-icon>person_off</mat-icon>
+              @if (c.fechaModificacion) {
+                Eliminado {{ formatFechaEliminacion(c.fechaModificacion) }}
+                por {{ usuarioLabel(c.idUsuarioModificacion ?? null) }}
+              } @else {
+                Eliminado por {{ usuarioLabel(c.idUsuarioModificacion ?? null) }}
+              }
+            </span>
+          }
         </div>
         <div class="caso-actions">
           <span class="status-badge" [ngClass]="estadoClase(c.idEstadoCaso)">
             {{ estadoLabel(c.idEstadoCaso) }}
           </span>
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Eliminar caso'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.idCaso, nombrePaciente(c))"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
+
+          @if (filtro() === 'activas') {
+            <button
+              matIconButton
+              type="button"
+              class="btn-eliminar"
+              [matTooltip]="'Eliminar caso'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.idCaso, nombrePaciente(c))"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          } @else {
+            <button
+              matIconButton
+              type="button"
+              class="btn-reactivar"
+              [matTooltip]="'Reactivar'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(c.idCaso)"
+            >
+              <mat-icon>restore_from_trash</mat-icon>
+            </button>
+          }
         </div>
       </a>
     }
 
     @if (casos().length === 0) {
       <div class="empty-state">
-        <mat-icon>emergency</mat-icon>
-        <p>No hay casos{{ buscar() ? ' para "' + buscar() + '"' : '' }} en este momento.</p>
+        <mat-icon>{{ filtro() === 'activas' ? 'emergency' : 'delete_outline' }}</mat-icon>
+        <p>
+          @if (buscar()) {
+            No hay casos{{ filtro() === 'eliminadas' ? ' eliminados' : '' }} para "{{ buscar() }}".
+          } @else if (filtro() === 'eliminadas') {
+            No hay casos eliminados.
+          } @else {
+            No hay casos en este momento.
+          }
+        </p>
       </div>
     }
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MODAL: Historial general de Emergencias · Casos
-       ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: Historial general -->
   @if (historialAbierto()) {
     <div class="modal-overlay" (click)="cerrarHistorialGeneral()">
       <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">

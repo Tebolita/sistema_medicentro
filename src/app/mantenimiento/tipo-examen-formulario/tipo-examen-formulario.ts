@@ -8,7 +8,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TipoExamen, TipoExamenInput, TiposExamenService } from '../../service/tipos-examen.service';
 import { CatalogosService } from '../../service/catalogos.service';
-import { CATEGORIAS_EXAMEN } from '../../laboratorio/laboratorio-catalogos';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
@@ -36,9 +35,11 @@ export class TipoExamenFormulario {
 
   private catalogos = inject(CatalogosService);
   private categoriasApi = this.catalogos.obtener('CATEGORIA_EXAMEN');
+
+  // ✅ Solo desde la BD. Sin fallback hardcodeado.
   categorias = computed(() => {
     const api = this.categoriasApi();
-    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : CATEGORIAS_EXAMEN;
+    return api.map((v) => ({ id: v.id, label: v.nombre }));
   });
 
   idTipoExamen = signal(0);

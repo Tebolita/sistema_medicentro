@@ -1,7 +1,7 @@
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap } from 'rxjs';
+import { Observable, map, tap, shareReplay, forkJoin } from 'rxjs';
 
 export interface ConsentimientoInformado {
   idConsentimiento: number;
@@ -31,6 +31,7 @@ export interface CompromisoPago {
 export interface OpcionCatalogo {
   id: number;
   label: string;
+  codigo?: string;
 }
 
 export interface MedicoOpcion {
@@ -75,6 +76,8 @@ export class CompromisosPagoService {
   private registros = signal<CompromisoPago[]>([]);
   private esNavegador: boolean;
 
+  private catalogosCache = new Map<string, OpcionCatalogo[]>();
+
   constructor(
     private http: HttpClient,
     @Inject(PLATFORM_ID) platformId: Object,
@@ -110,6 +113,18 @@ export class CompromisosPagoService {
     return null;
   }
 
+  /**
+   * ✅ Devuelve el id del usuario actual desde localStorage.
+   * Lo usamos para setear idUsuarioModificacion en el signal local.
+   */
+  private obtenerIdUsuarioActual(): number | null {
+    if (!this.esNavegador) return null;
+    const valor = localStorage.getItem('id_usuario');
+    if (!valor) return null;
+    const id = Number(valor);
+    return isNaN(id) ? null : id;
+  }
+
   private getHeaders(): HttpHeaders {
     let headers = new HttpHeaders({
       'Content-Type': 'application/json',
@@ -122,15 +137,72 @@ export class CompromisosPagoService {
     return headers;
   }
 
+  // =============================================================
+  // RESOLUCIÓN DE IDs POR CÓDIGO
+  // =============================================================
+
+  private retornarCatalogoCacheado(codigoTipo: string): Observable<OpcionCatalogo[]> {
+    const cache = this.catalogosCache.get(codigoTipo);
+    if (cache) {
+      return new Observable((obs) => {
+        obs.next(cache);
+        obs.complete();
+      });
+    }
+    return this.http.get<ApiResponse<any[]>>(
+      `${this.apiUrlCatalogos}/${codigoTipo}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) =>
+        (resp.datos ?? []).map((c: any) => ({
+          id: c.id ?? c.idValorCatalogo ?? c.id_valor_catalogo,
+          label: c.nombre ?? c.label ?? '',
+          codigo: c.codigo ?? '',
+        })),
+      ),
+      tap((items) => this.catalogosCache.set(codigoTipo, items)),
+      shareReplay(1),
+    );
+  }
+
+  idPorCodigo(codigoTipo: string, codigoValor: string): number | null {
+    const items = this.catalogosCache.get(codigoTipo);
+    if (!items) return null;
+    const item = items.find((x) => x.codigo === codigoValor);
+    return item?.id ?? null;
+  }
+
+  opcionPorCodigo(codigoTipo: string, codigoValor: string): OpcionCatalogo | null {
+    const items = this.catalogosCache.get(codigoTipo);
+    if (!items) return null;
+    return items.find((x) => x.codigo === codigoValor) ?? null;
+  }
+
+  precargarCatalogos(): void {
+    this.retornarCatalogoCacheado('TIPO_CONSENTIMIENTO').subscribe();
+    this.retornarCatalogoCacheado('ESTADO_CONSENTIMIENTO').subscribe();
+    this.retornarCatalogoCacheado('PARENTESCO').subscribe();
+  }
+
+  // =============================================================
+  // CRUD PRINCIPAL
+  // =============================================================
+
   private cargar(): void {
     if (!this.esNavegador) return;
-    this.http.get<ApiResponse<any[]>>(this.apiUrl, {
-      headers: this.getHeaders(),
+
+    forkJoin({
+      activos: this.http.get<ApiResponse<any[]>>(this.apiUrl, {
+        headers: this.getHeaders(),
+      }),
+      eliminados: this.http.get<ApiResponse<any[]>>(`${this.apiUrl}/eliminados`, {
+        headers: this.getHeaders(),
+      }),
     }).subscribe({
-      next: (resp) => {
-        const lista = (resp.datos ?? []).map((c) => this.aPlano(c));
-        console.log('🔍 [CompromisosPago] Compromisos cargados:', lista.length);
-        this.registros.set(lista);
+      next: ({ activos, eliminados }) => {
+        const listaActivos = (activos.datos ?? []).map((c) => this.aPlano(c));
+        const listaEliminados = (eliminados.datos ?? []).map((c) => this.aPlano(c));
+        this.registros.set([...listaActivos, ...listaEliminados]);
       },
       error: (err: HttpErrorResponse) => {
         console.error('❌ [CompromisosPago] Error al cargar:', err.status, err.statusText);
@@ -159,6 +231,14 @@ export class CompromisosPagoService {
   listar = computed(() =>
     this.registros()
       .filter((c) => c.consentimiento.activo)
+      .sort((a, b) =>
+        (b.consentimiento.fechaCreacion ?? '').localeCompare(a.consentimiento.fechaCreacion ?? ''),
+      ),
+  );
+
+  listarInactivos = computed(() =>
+    this.registros()
+      .filter((c) => !c.consentimiento.activo)
       .sort((a, b) =>
         (b.consentimiento.fechaCreacion ?? '').localeCompare(a.consentimiento.fechaCreacion ?? ''),
       ),
@@ -228,15 +308,33 @@ export class CompromisosPagoService {
     );
   }
 
+  /**
+   * ✅ Elimina (baja lógica).
+   * Actualiza el signal local con:
+   *   - activo: false
+   *   - fechaModificacion: ahora (UTC)
+   *   - idUsuarioModificacion: id del usuario actual
+   */
   eliminar(id: number): void {
     this.http.delete<ApiResponse<null>>(`${this.apiUrl}/${id}`, {
       headers: this.getHeaders(),
     }).subscribe({
       next: () => {
+        const ahora = new Date().toISOString();
+        const idUsuarioActual = this.obtenerIdUsuarioActual();
+
         this.registros.update((list) =>
           list.map((c) =>
             c.consentimiento.idConsentimiento === id
-              ? { ...c, consentimiento: { ...c.consentimiento, activo: false } }
+              ? {
+                  ...c,
+                  consentimiento: {
+                    ...c.consentimiento,
+                    activo: false,
+                    fechaModificacion: ahora,
+                    idUsuarioModificacion: idUsuarioActual,
+                  },
+                }
               : c,
           ),
         );
@@ -244,6 +342,27 @@ export class CompromisosPagoService {
       error: (err: HttpErrorResponse) =>
         console.error('❌ [CompromisosPago] No se pudo eliminar:', err.status),
     });
+  }
+
+  /**
+   * ✅ Reactiva un compromiso eliminado.
+   */
+  reactivar(id: number): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(
+      `${this.apiUrl}/${id}/reactivar`,
+      {},
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((c) =>
+            c.consentimiento.idConsentimiento === id
+              ? { ...c, consentimiento: { ...c.consentimiento, activo: true } }
+              : c,
+          ),
+        );
+      }),
+    );
   }
 
   // =============================================================
@@ -266,9 +385,6 @@ export class CompromisosPagoService {
           especialidad: m.especialidad?.nombre ?? m.especialidad ?? '',
         })),
       ),
-      tap((medicos) =>
-        console.log('🔍 [CompromisosPago] Médicos cargados:', medicos.length),
-      ),
     );
   }
 
@@ -276,34 +392,16 @@ export class CompromisosPagoService {
   // CATÁLOGOS GENÉRICOS
   // =============================================================
 
-  private retornarCatalogo(codigoTipo: string): Observable<OpcionCatalogo[]> {
-    return this.http.get<ApiResponse<any[]>>(
-      `${this.apiUrlCatalogos}/${codigoTipo}`,
-      { headers: this.getHeaders() },
-    ).pipe(
-      map((resp) =>
-        (resp.datos ?? []).map((c: any) => ({
-          id: c.id ?? c.idValorCatalogo ?? c.id_valor_catalogo,
-          label: c.nombre,
-        })),
-      ),
-    );
-  }
-
   RetornarParentescos(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('PARENTESCO').pipe(
-      tap((items) =>
-        console.log('🔍 [CompromisosPago] Parentescos cargados:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogoCacheado('PARENTESCO');
   }
 
   RetornarEstadosConsentimiento(): Observable<OpcionCatalogo[]> {
-    return this.retornarCatalogo('ESTADO_CONSENTIMIENTO').pipe(
-      tap((items) =>
-        console.log('🔍 [CompromisosPago] Estados consentimiento cargados:', items.length, items),
-      ),
-    );
+    return this.retornarCatalogoCacheado('ESTADO_CONSENTIMIENTO');
+  }
+
+  RetornarTiposConsentimiento(): Observable<OpcionCatalogo[]> {
+    return this.retornarCatalogoCacheado('TIPO_CONSENTIMIENTO');
   }
 
   // =============================================================
@@ -323,12 +421,6 @@ export class CompromisosPagoService {
           .filter((b) => b.idRegistroAfectado === idRegistro)
           .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
       ),
-      tap((items) =>
-        console.log(
-          `🔍 [CompromisosPago] Bitácora de ${tablaAfectada}#${idRegistro}:`,
-          items.length,
-        ),
-      ),
     );
   }
 
@@ -338,9 +430,6 @@ export class CompromisosPagoService {
       { headers: this.getHeaders() },
     ).pipe(
       map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
-      tap((items) =>
-        console.log(`🔍 [CompromisosPago] Bitácora general de ${tablaAfectada}:`, items.length),
-      ),
     );
   }
 
@@ -353,9 +442,6 @@ export class CompromisosPagoService {
           id: u.idUsuario ?? u.id_usuario,
           nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
         })),
-      ),
-      tap((items) =>
-        console.log('🔍 [CompromisosPago] Usuarios cargados:', items.length),
       ),
     );
   }

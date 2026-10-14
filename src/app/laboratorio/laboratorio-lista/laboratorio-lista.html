@@ -16,6 +16,28 @@
     </div>
   </div>
 
+  <!-- TABS: Activas / Eliminadas -->
+  <div class="tabs-filtro">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'activas'"
+      (click)="filtro.set('activas')"
+    >
+      <mat-icon>check_circle</mat-icon>
+      Activas
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.tab-activo]="filtro() === 'eliminadas'"
+      (click)="filtro.set('eliminadas')"
+    >
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
   <div class="top-row">
     <div class="search-bar" [class.pulse]="resaltarBusqueda()">
       <mat-icon>search</mat-icon>
@@ -53,12 +75,16 @@
   </div>
 
   <h2 class="section-title">
-    {{ buscando() ? 'Resultados de búsqueda (' + ordenes().length + ')' : 'Órdenes registradas' }}
+    {{ buscando() ? 'Resultados de búsqueda (' + ordenes().length + ')' : (filtro() === 'eliminadas' ? 'Órdenes eliminadas' : 'Órdenes registradas') }}
   </h2>
 
   <div class="orden-grid">
     @for (r of ordenes(); track r.orden.idOrden) {
-      <a class="orden-card" [routerLink]="['/home/laboratorio', r.orden.idOrden]">
+      <a
+        class="orden-card"
+        [class.card-eliminada]="filtro() === 'eliminadas'"
+        [routerLink]="filtro() === 'activas' ? ['/home/laboratorio', r.orden.idOrden] : null"
+      >
         <div class="patient-avatar">{{ iniciales(r.orden.idPaciente) }}</div>
         <div class="orden-info">
           <h2>{{ nombrePaciente(r.orden.idPaciente) }}</h2>
@@ -67,32 +93,90 @@
           @if (esUrgente(r.orden.idPrioridad)) {
             <span class="prioridad-badge">Urgente</span>
           }
+
+          <!-- ✅ Auditoría en tab Activas (formato compacto + tooltip) -->
+          @if (filtro() === 'activas') {
+            <span
+              class="orden-meta meta-auditoria"
+              [matTooltip]="'Creado el ' + formatFechaUTC(r.orden.fechaCreacion)"
+              matTooltipPosition="above"
+            >
+              <mat-icon>person_add</mat-icon>
+              {{ usuarioLabel(r.orden.idUsuarioCreacion ?? null) }}
+              · {{ formatFechaUTC(r.orden.fechaCreacion) }}
+            </span>
+
+            @if (r.orden.fechaModificacion && r.orden.idUsuarioModificacion) {
+              <span
+                class="orden-meta meta-auditoria"
+                [matTooltip]="'Modificado el ' + formatFechaUTC(r.orden.fechaModificacion)"
+                matTooltipPosition="above"
+              >
+                <mat-icon>edit</mat-icon>
+                {{ usuarioLabel(r.orden.idUsuarioModificacion) }}
+                · {{ formatFechaUTC(r.orden.fechaModificacion) }}
+              </span>
+            }
+          }
+
+          <!-- Texto "Eliminado ... por ..." solo en tab Eliminadas -->
+          @if (filtro() === 'eliminadas') {
+            <span class="orden-meta meta-eliminada">
+              <mat-icon>person_off</mat-icon>
+              @if (r.orden.fechaModificacion) {
+                Eliminado {{ formatFechaEliminacion(r.orden.fechaModificacion) }}
+                por {{ usuarioLabel(r.orden.idUsuarioModificacion ?? null) }}
+              } @else {
+                Eliminado por {{ usuarioLabel(r.orden.idUsuarioModificacion ?? null) }}
+              }
+            </span>
+          }
         </div>
         <div class="orden-actions">
           <span class="status-badge" [ngClass]="estadoClase(r.orden.idEstadoOrden)">{{ estadoLabel(r.orden.idEstadoOrden) }}</span>
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Eliminar orden'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.orden.idOrden, nombrePaciente(r.orden.idPaciente))"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
+
+          @if (filtro() === 'activas') {
+            <button
+              matIconButton
+              type="button"
+              class="btn-eliminar"
+              [matTooltip]="'Eliminar orden'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(r.orden.idOrden, nombrePaciente(r.orden.idPaciente))"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          } @else {
+            <button
+              matIconButton
+              type="button"
+              class="btn-reactivar"
+              [matTooltip]="'Reactivar'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(r.orden.idOrden)"
+            >
+              <mat-icon>restore_from_trash</mat-icon>
+            </button>
+          }
         </div>
       </a>
     }
 
     @if (ordenes().length === 0) {
       <div class="empty-state">
-        <mat-icon>biotech</mat-icon>
-        <p>No se encontraron órdenes{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        <mat-icon>{{ filtro() === 'activas' ? 'biotech' : 'delete_outline' }}</mat-icon>
+        <p>
+          @if (buscar()) {
+            No se encontraron órdenes{{ filtro() === 'eliminadas' ? ' eliminadas' : '' }} para "{{ buscar() }}".
+          } @else if (filtro() === 'eliminadas') {
+            No hay órdenes eliminadas.
+          } @else {
+            No se encontraron órdenes.
+          }
+        </p>
       </div>
     }
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MODAL: Historial general de Laboratorio
-       ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: Historial general de Laboratorio -->
   @if (historialAbierto()) {
     <div class="modal-overlay" (click)="cerrarHistorialGeneral()">
       <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">

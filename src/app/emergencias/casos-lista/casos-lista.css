@@ -590,3 +590,121 @@
     font-size: 15.5px;
   }
 }
+/* ═══════════════════════════════════════════════════════════════
+   TABS: Activas / Eliminadas
+   ═══════════════════════════════════════════════════════════════ */
+.tabs-filtro {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--c-border, #e5e7eb);
+  margin-bottom: 4px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-text-muted, #6b7280);
+  font-family: inherit;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab-btn:hover {
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+}
+
+.tab-btn mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.tab-btn.tab-activo {
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  border-bottom-color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Tarjeta eliminada: opacidad reducida + avatar gris
+   ═══════════════════════════════════════════════════════════════ */
+.caso-card.card-eliminada {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+  cursor: default;
+}
+
+.caso-card.card-eliminada:hover {
+  opacity: 0.85;
+  filter: grayscale(0.2);
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-color: var(--c-border);
+}
+
+.caso-card.card-eliminada .patient-avatar {
+  background: linear-gradient(135deg, #9e9e9e, #616161);
+}
+
+.caso-card.card-eliminada .triage-stripe {
+  opacity: 0.4;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Meta extra de "Eliminado por..."
+   ═══════════════════════════════════════════════════════════════ */
+.caso-meta.meta-eliminada {
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+  font-weight: 500;
+  margin-top: 2px;
+  white-space: normal;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Botones
+   ═══════════════════════════════════════════════════════════════ */
+.btn-reactivar {
+  color: color-mix(in srgb, #2e7d32 var(--c-keep), white) !important;
+  background: rgba(46, 125, 50, 0.08) !important;
+  border-radius: 50% !important;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.btn-reactivar:hover {
+  background: rgba(46, 125, 50, 0.18) !important;
+  transform: scale(1.08);
+}
+
+.btn-eliminar {
+  color: var(--c-text-soft) !important;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-eliminar:hover {
+  color: color-mix(in srgb, #c62828 var(--c-keep), white) !important;
+  background: rgba(198, 40, 40, 0.08) !important;
+}
+/* ═══════════════════════════════════════════════════════════════
+   Meta de auditoría (Creado por / Modificado por)
+   ═══════════════════════════════════════════════════════════════ */
+.caso-meta.meta-auditoria {
+  font-size: 11px;
+  color: var(--c-text-soft);
+  opacity: 0.85;
+  margin-top: 1px;
+  cursor: help;
+}
+
+.caso-meta.meta-auditoria mat-icon {
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+}

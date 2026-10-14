@@ -31,9 +31,30 @@
       @if (esWalkIn()) {
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Nombre del paciente (no registrado)</mat-label>
-          <input matInput formControlName="nombrePaciente" />
-          @if (form.controls.nombrePaciente.invalid && form.controls.nombrePaciente.touched) {
+          <input
+            matInput
+            formControlName="nombrePaciente"
+            placeholder="Ej: Juan Pérez"
+            maxlength="100"
+          />
+          <mat-hint align="end">{{ form.controls.nombrePaciente.value?.length ?? 0 }} / 100</mat-hint>
+          @if (
+            form.controls.nombrePaciente.hasError('required') &&
+            form.controls.nombrePaciente.touched
+          ) {
             <mat-error>Escribe el nombre del paciente</mat-error>
+          }
+          @if (
+            form.controls.nombrePaciente.hasError('minlength') &&
+            form.controls.nombrePaciente.touched
+          ) {
+            <mat-error>El nombre debe tener al menos 3 caracteres</mat-error>
+          }
+          @if (
+            form.controls.nombrePaciente.hasError('maxlength') &&
+            form.controls.nombrePaciente.touched
+          ) {
+            <mat-error>El nombre no puede superar 100 caracteres</mat-error>
           }
         </mat-form-field>
       }
@@ -82,9 +103,22 @@
       <!-- Motivo -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Motivo de consulta</mat-label>
-        <textarea matInput formControlName="motivo" rows="3"></textarea>
-        @if (form.controls.motivo.invalid && form.controls.motivo.touched) {
-          <mat-error>Escribe el motivo</mat-error>
+        <textarea
+          matInput
+          formControlName="motivo"
+          rows="3"
+          placeholder="Describe brevemente el motivo de la consulta"
+          maxlength="300"
+        ></textarea>
+        <mat-hint align="end">{{ form.controls.motivo.value?.length ?? 0 }} / 300</mat-hint>
+        @if (form.controls.motivo.hasError('required') && form.controls.motivo.touched) {
+          <mat-error>El motivo es obligatorio</mat-error>
+        }
+        @if (form.controls.motivo.hasError('minlength') && form.controls.motivo.touched) {
+          <mat-error>El motivo debe tener al menos 3 caracteres</mat-error>
+        }
+        @if (form.controls.motivo.hasError('maxlength') && form.controls.motivo.touched) {
+          <mat-error>El motivo no puede superar 300 caracteres</mat-error>
         }
       </mat-form-field>
     </div>
@@ -112,9 +146,7 @@
     </div>
   }
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MODAL: Historial del caso
-       ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: Historial del caso -->
   @if (historialAbierto()) {
     <div class="modal-overlay" (click)="cerrarHistorial()">
       <div class="modal-card modal-card-historial" (click)="$event.stopPropagation()">

@@ -2,24 +2,47 @@
   <div class="header-left">
     <button
       matIconButton
-      class="icon-btn"
+      class="icon-btn campana-btn"
       [matBadge]="contadorAlertas()"
       matBadgeColor="warn"
-      matBadgeSize="medium"
+      matBadgeSize="small"
       [matBadgeHidden]="alertas().length === 0"
       [matMenuTriggerFor]="alertasMenu"
+      [matTooltip]="moduloActual() ? 'Alertas · ' + moduloActual()!.title : 'Alertas'"
       aria-label="Alertas"
     >
       <mat-icon>notifications</mat-icon>
     </button>
-    <mat-menu #alertasMenu="matMenu">
-      <div class="alertas-titulo" (click)="$event.stopPropagation()">
-        Alertas{{ moduloActual() ? ' · ' + moduloActual()!.title : '' }}
+
+    <mat-menu
+      #alertasMenu="matMenu"
+      panelClass="alertas-menu-panel"
+      xPosition="after"
+      [hasBackdrop]="true"
+      backdropClass="alertas-backdrop"
+    >
+      <div class="alertas-header" (click)="$event.stopPropagation()">
+        <mat-icon class="alertas-header-icono">notifications_active</mat-icon>
+        <div class="alertas-header-texto">
+          <span class="alertas-header-titulo">Alertas</span>
+          <span class="alertas-header-modulo">
+            {{ moduloActual() ? moduloActual()!.title : 'Sin módulo activo' }}
+          </span>
+        </div>
+        @if (alertas().length > 0) {
+          <span class="alertas-header-badge">{{ contadorAlertas() }}</span>
+        }
       </div>
+
       @for (a of alertas(); track a.id) {
-        <a mat-menu-item [routerLink]="a.ruta" [queryParams]="a.queryParams" class="alerta-item">
-          <mat-icon [class]="'alerta-icono ' + a.severidad">
-            {{ a.severidad === 'alta' ? 'error' : 'warning' }}
+        <a
+          mat-menu-item
+          [routerLink]="a.ruta"
+          [queryParams]="a.queryParams"
+          class="alerta-item"
+        >
+          <mat-icon [class]="'alerta-icono alerta-icono--' + a.severidad">
+            {{ a.severidad === 'alta' ? 'error' : 'warning_amber' }}
           </mat-icon>
           <span class="alerta-texto">
             <span class="alerta-linea">{{ a.titulo }}</span>
@@ -28,7 +51,10 @@
         </a>
       } @empty {
         <div class="alertas-vacio" (click)="$event.stopPropagation()">
-          {{ moduloActual() ? 'Sin alertas en este módulo.' : 'Entra a un módulo para ver sus alertas.' }}
+          <mat-icon class="alertas-vacio-icono">check_circle</mat-icon>
+          <span class="alertas-vacio-texto">
+            {{ moduloActual() ? 'Todo en orden. Sin alertas en este módulo.' : 'Entra a un módulo para ver sus alertas.' }}
+          </span>
         </div>
       }
     </mat-menu>

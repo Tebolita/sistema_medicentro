@@ -18,13 +18,9 @@ import {
   OpcionCatalogo,
   UsuarioOpcion,
 } from '../compromisos-pago.service';
-import { TIPO_CONSENTIMIENTO_COMPROMISO_PAGO } from '../emergencias-catalogos';
 import { PacientesService } from '../../pacientes/pacientes.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
-/**
- * Toma un Date del datepicker y le añade la HORA ACTUAL.
- * Devuelve algo como "2026-10-06T17:52:30".
- */
 function toIsoDateTime(value: Date | string | null): string | null {
   if (!value) return null;
   if (typeof value === 'string') return value;
@@ -66,6 +62,7 @@ export class CompromisoFormulario {
   private router = inject(Router);
   private compromisosService = inject(CompromisosPagoService);
   private pacientesService = inject(PacientesService);
+  private notif = inject(NotificacionesService);
 
   pacientes = this.pacientesService.directorio;
 
@@ -80,45 +77,56 @@ export class CompromisoFormulario {
   guardando = signal(false);
   errorGuardar = signal<string | null>(null);
 
-  // ============================================================
-  // Historial de auditoría
-  // ============================================================
   historialAbierto = signal(false);
   bitacoraSignal = signal<BitacoraItem[]>([]);
   cargandoHistorial = signal(false);
 
+  // ✅ Validaciones agregadas: nombreResponsable y telefonoResponsable
   form = this.fb.nonNullable.group({
     idPaciente: this.fb.control<number | null>(null, Validators.required),
     idMedicoResponsable: this.fb.control<number | null>(null, Validators.required),
-    nombreResponsable: ['', Validators.required],
+    nombreResponsable: [
+      '',
+      [
+        Validators.required,
+        Validators.maxLength(100),
+        Validators.minLength(3),
+      ],
+    ],
     idParentescoResponsable: this.fb.control<number | null>(null, Validators.required),
-    telefonoResponsable: ['', Validators.required],
+    telefonoResponsable: [
+      '',
+      [
+        Validators.required,
+        // ✅ Acepta números, +, -, espacios y paréntesis, entre 8 y 20 caracteres
+        Validators.pattern(/^[0-9+\-\s()]{8,20}$/),
+      ],
+    ],
     fechaFirma: this.fb.control<Date | null>(null),
     idEstadoConsentimiento: this.fb.control<number | null>(null, Validators.required),
   });
 
   constructor() {
+    this.compromisosService.precargarCatalogos();
+
     this.compromisosService.RetornarMedicos().subscribe({
-      next: (m) => {
-        console.log('✅ [CompromisoFormulario] Médicos cargados:', m.length);
-        this.medicosSignal.set(m);
+      next: (m) => this.medicosSignal.set(m),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CompromisoFormulario] Error médicos:', err.status);
+        this.notif.error('No se pudieron cargar los médicos');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CompromisoFormulario] Error médicos:', err.status),
     });
 
     this.compromisosService.RetornarParentescos().subscribe({
-      next: (p) => {
-        console.log('✅ [CompromisoFormulario] Parentescos cargados:', p.length);
-        this.parentescosSignal.set(p);
+      next: (p) => this.parentescosSignal.set(p),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CompromisoFormulario] Error parentescos:', err.status);
+        this.notif.error('No se pudieron cargar los parentescos');
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CompromisoFormulario] Error parentescos:', err.status),
     });
 
     this.compromisosService.RetornarEstadosConsentimiento().subscribe({
       next: (e) => {
-        console.log('✅ [CompromisoFormulario] Estados cargados:', e.length);
         this.estadosSignal.set(e);
         if (this.esNuevo() && e.length > 0 && !this.form.controls.idEstadoConsentimiento.value) {
           const pendiente =
@@ -126,18 +134,16 @@ export class CompromisoFormulario {
           this.form.patchValue({ idEstadoConsentimiento: pendiente.id });
         }
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CompromisoFormulario] Error estados:', err.status),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CompromisoFormulario] Error estados:', err.status);
+      },
     });
 
-    // Cargar usuarios (para el nombre en la bitácora)
     this.compromisosService.RetornarUsuarios().subscribe({
-      next: (u) => {
-        console.log('✅ [CompromisoFormulario] Usuarios cargados:', u.length);
-        this.usuariosSignal.set(u);
+      next: (u) => this.usuariosSignal.set(u),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CompromisoFormulario] Error usuarios:', err.status);
       },
-      error: (err: HttpErrorResponse) =>
-        console.error('❌ [CompromisoFormulario] Error usuarios:', err.status),
     });
 
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -149,8 +155,10 @@ export class CompromisoFormulario {
       } else {
         this.compromisosService.obtenerDesdeApi(id).subscribe({
           next: (reg) => this.cargar(reg),
-          error: (err: HttpErrorResponse) =>
-            console.error('No se pudo cargar el compromiso', err),
+          error: (err: HttpErrorResponse) => {
+            console.error('No se pudo cargar el compromiso', err);
+            this.notif.error('No se pudo cargar el compromiso');
+          },
         });
       }
     } else {
@@ -179,6 +187,20 @@ export class CompromisoFormulario {
   guardar(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid) {
+      this.notif.error('Revisá los campos obligatorios');
+      return;
+    }
+
+    const idTipoConsentimiento =
+      this.compromisosService.idPorCodigo('TIPO_CONSENTIMIENTO', 'COMPROMISO_PAGO');
+
+    if (idTipoConsentimiento == null) {
+      console.error(
+        '❌ No se pudo resolver el ID de TIPO_CONSENTIMIENTO/COMPROMISO_PAGO desde el catálogo.',
+      );
+      this.notif.error(
+        'No se pudo guardar: falta cargar el catálogo de tipos de consentimiento.',
+      );
       return;
     }
 
@@ -189,7 +211,7 @@ export class CompromisoFormulario {
       consentimiento: {
         idConsentimiento,
         idPaciente: v.idPaciente!,
-        idTipoConsentimiento: TIPO_CONSENTIMIENTO_COMPROMISO_PAGO,
+        idTipoConsentimiento,
         idTratamiento: null,
         idMedicoResponsable: v.idMedicoResponsable!,
         idTestigo: null,
@@ -217,6 +239,11 @@ export class CompromisoFormulario {
     this.compromisosService.guardar(registro).subscribe({
       next: () => {
         this.guardando.set(false);
+        this.notif.exito(
+          this.esNuevo()
+            ? 'Compromiso de pago creado correctamente'
+            : 'Compromiso de pago actualizado correctamente',
+        );
         this.router.navigate(['/home/emergencias/compromisos']);
       },
       error: (err: HttpErrorResponse) => {
@@ -224,9 +251,10 @@ export class CompromisoFormulario {
         this.errorGuardar.set(
           err.status === 401
             ? 'Tu sesión expiró. Cierra sesión y vuelve a iniciarla.'
-            : 'No se pudo guardar el compromiso. Revisa la consola.',
+            : 'No se pudo guardar el compromiso. Intenta de nuevo.',
         );
         console.error('Error al guardar compromiso:', err);
+        this.notif.error('No se pudo guardar el compromiso');
       },
     });
   }
@@ -253,6 +281,7 @@ export class CompromisoFormulario {
         error: (err: HttpErrorResponse) => {
           console.error('❌ Error al cargar bitácora:', err.status);
           this.cargandoHistorial.set(false);
+          this.notif.error('No se pudo cargar la bitácora');
         },
       });
   }
@@ -262,7 +291,6 @@ export class CompromisoFormulario {
     this.bitacoraSignal.set([]);
   }
 
-  /** Traduce el id_tipo_accion a texto legible. */
   accionLabel(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'Creó';
     if (idTipoAccion === 80) return 'Modificó';
@@ -270,7 +298,6 @@ export class CompromisoFormulario {
     return 'Cambió';
   }
 
-  /** Clase CSS según el tipo de acción. */
   accionClase(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'accion-crear';
     if (idTipoAccion === 80) return 'accion-modificar';
@@ -278,7 +305,6 @@ export class CompromisoFormulario {
     return 'accion-default';
   }
 
-  /** Icono Material según el tipo de acción. */
   accionIcono(idTipoAccion: number): string {
     if (idTipoAccion === 79) return 'add_circle';
     if (idTipoAccion === 80) return 'edit';
@@ -286,17 +312,16 @@ export class CompromisoFormulario {
     return 'history';
   }
 
-  /** Traduce el id de usuario a nombre. */
   usuarioLabel(idUsuario: number | null): string {
     if (idUsuario == null) return 'Sistema';
     const u = this.usuariosSignal().find((x) => x.id === idUsuario);
     return u?.nombre ?? `Usuario ${idUsuario}`;
   }
 
-    formatFechaHora(iso: string): string {
+  formatFechaHora(iso: string): string {
     if (!iso) return '—';
-    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';  // ← AGREGAR ESTA LÍNEA
-    const fecha = new Date(isoConZona);                        // ← CAMBIAR esto
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
     if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleString('es-GT', {
       day: '2-digit',
@@ -307,7 +332,6 @@ export class CompromisoFormulario {
     });
   }
 
-  /** Devuelve la lista de campos que cambiaron entre valoresAnteriores y valoresNuevos. */
   camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
     try {
       const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
@@ -330,7 +354,6 @@ export class CompromisoFormulario {
         let a = antes[k];
         let d = despues[k];
 
-        // Parche: el backend guarda mal el IdConsentimiento. Usamos el ID real.
         if (k === 'IdConsentimiento' && idRegistroReal != null) {
           a = idRegistroReal;
           d = idRegistroReal;
@@ -345,7 +368,6 @@ export class CompromisoFormulario {
         });
       }
 
-      // Ordenar para que el ID quede primero
       cambios.sort((x, y) => {
         if (x.campo.toLowerCase().includes('id consentimiento')) return -1;
         if (y.campo.toLowerCase().includes('id consentimiento')) return 1;
@@ -369,7 +391,7 @@ export class CompromisoFormulario {
     if (valor === null || valor === undefined) return '—';
 
     if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
-      const fecha = new Date(valor);  // ← SIN la Z (correcto, ya está en local)
+      const fecha = new Date(valor);
       if (!isNaN(fecha.getTime())) {
         return fecha.toLocaleString('es-GT', {
           day: '2-digit',
