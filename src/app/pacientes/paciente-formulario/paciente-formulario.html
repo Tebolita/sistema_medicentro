@@ -21,6 +21,16 @@
           }
         }
       </p>
+      @if (registro()) {
+        <div class="hero-auditoria">
+          <app-auditoria-info
+            [fechaCreacion]="registro()!.fechaCreacion"
+            [idUsuarioCreacion]="registro()!.idUsuarioCreacion"
+            [fechaModificacion]="registro()!.fechaModificacion"
+            [idUsuarioModificacion]="registro()!.idUsuarioModificacion"
+          />
+        </div>
+      }
     </div>
     <a matButton routerLink="/home/pacientes" class="back-btn">
       <mat-icon>arrow_back</mat-icon>
@@ -40,38 +50,34 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Primer nombre</mat-label>
-              <input matInput formControlName="primerNombre" />
-              @if (datosGenerales.controls.primerNombre.invalid && datosGenerales.controls.primerNombre.touched) {
-                <mat-error>Requerido</mat-error>
-              }
+              <input matInput formControlName="primerNombre" [maxlength]="largos.NOMBRE" />
+              <mat-error>{{ error(datosGenerales.controls.primerNombre) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Segundo nombre</mat-label>
-              <input matInput formControlName="segundoNombre" />
+              <input matInput formControlName="segundoNombre" [maxlength]="largos.NOMBRE" />
+              <mat-error>{{ error(datosGenerales.controls.segundoNombre) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Primer apellido</mat-label>
-              <input matInput formControlName="primerApellido" />
-              @if (datosGenerales.controls.primerApellido.invalid && datosGenerales.controls.primerApellido.touched) {
-                <mat-error>Requerido</mat-error>
-              }
+              <input matInput formControlName="primerApellido" [maxlength]="largos.NOMBRE" />
+              <mat-error>{{ error(datosGenerales.controls.primerApellido) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Segundo apellido</mat-label>
-              <input matInput formControlName="segundoApellido" />
+              <input matInput formControlName="segundoApellido" [maxlength]="largos.NOMBRE" />
+              <mat-error>{{ error(datosGenerales.controls.segundoApellido) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha de nacimiento</mat-label>
-              <input matInput [matDatepicker]="pickerNac" formControlName="fechaNacimiento" />
+              <input matInput [matDatepicker]="pickerNac" [max]="hoy" formControlName="fechaNacimiento" />
               <mat-datepicker-toggle matIconSuffix [for]="pickerNac"></mat-datepicker-toggle>
               <mat-datepicker #pickerNac></mat-datepicker>
-              @if (datosGenerales.controls.fechaNacimiento.invalid && datosGenerales.controls.fechaNacimiento.touched) {
-                <mat-error>Requerido</mat-error>
-              }
+              <mat-error>{{ error(datosGenerales.controls.fechaNacimiento) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -94,7 +100,8 @@
 
             <mat-form-field appearance="outline">
               <mat-label>Número de documento</mat-label>
-              <input matInput formControlName="numeroDocumento" />
+              <input matInput formControlName="numeroDocumento" [maxlength]="largos.DOCUMENTO" />
+              <mat-error>{{ error(datosGenerales.controls.numeroDocumento) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -131,6 +138,7 @@
                   <mat-option [value]="e.id">{{ e.label }}</mat-option>
                 }
               </mat-select>
+              <mat-error>{{ error(datosGenerales.controls.idEstadoPaciente) }}</mat-error>
             </mat-form-field>
           </div>
         </div>
@@ -141,25 +149,26 @@
           <div class="form-grid">
             <mat-form-field appearance="outline">
               <mat-label>Teléfono principal</mat-label>
-              <input matInput formControlName="telefonoPrincipal" />
+              <input matInput formControlName="telefonoPrincipal" [maxlength]="largos.TELEFONO" placeholder="Ej. 5555-1234" />
+              <mat-error>{{ error(contacto.controls.telefonoPrincipal) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Teléfono secundario</mat-label>
-              <input matInput formControlName="telefonoSecundario" />
+              <input matInput formControlName="telefonoSecundario" [maxlength]="largos.TELEFONO" placeholder="Ej. 5555-1234" />
+              <mat-error>{{ error(contacto.controls.telefonoSecundario) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Correo electrónico</mat-label>
-              <input matInput type="email" formControlName="correo" />
-              @if (contacto.controls.correo.invalid && contacto.controls.correo.touched) {
-                <mat-error>Correo inválido</mat-error>
-              }
+              <input matInput type="email" formControlName="correo" [maxlength]="largos.CORREO" />
+              <mat-error>{{ error(contacto.controls.correo) }}</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="span-2">
               <mat-label>Dirección</mat-label>
-              <input matInput formControlName="direccion" />
+              <input matInput formControlName="direccion" [maxlength]="largos.DIRECCION" />
+              <mat-error>{{ error(contacto.controls.direccion) }}</mat-error>
             </mat-form-field>
           </div>
         </div>
@@ -172,7 +181,8 @@
               <div class="form-grid">
                 <mat-form-field appearance="outline">
                   <mat-label>Nombre completo</mat-label>
-                  <input matInput formControlName="nombreCompleto" />
+                  <input matInput formControlName="nombreCompleto" [maxlength]="largos.NOMBRE_COMPLETO" />
+                  <mat-error>{{ error(grupo.controls.nombreCompleto) }}</mat-error>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -186,12 +196,14 @@
 
                 <mat-form-field appearance="outline">
                   <mat-label>Teléfono</mat-label>
-                  <input matInput formControlName="telefono" />
+                  <input matInput formControlName="telefono" [maxlength]="largos.TELEFONO" placeholder="Ej. 5555-1234" />
+                  <mat-error>{{ error(grupo.controls.telefono) }}</mat-error>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Dirección</mat-label>
-                  <input matInput formControlName="direccion" />
+                  <input matInput formControlName="direccion" [maxlength]="largos.DIRECCION" />
+                  <mat-error>{{ error(grupo.controls.direccion) }}</mat-error>
                 </mat-form-field>
               </div>
               <button matIconButton type="button" class="remove-btn" (click)="quitarContacto($index)">
@@ -223,11 +235,13 @@
                       <mat-option [value]="t.id">{{ t.label }}</mat-option>
                     }
                   </mat-select>
+                  <mat-error>{{ error(grupo.controls.idTipoAlergia) }}</mat-error>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Descripción</mat-label>
-                  <input matInput formControlName="descripcion" placeholder="ej. Penicilina" />
+                  <input matInput formControlName="descripcion" placeholder="ej. Penicilina" [maxlength]="largos.DESCRIPCION_CORTA" />
+                  <mat-error>{{ error(grupo.controls.descripcion) }}</mat-error>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
@@ -237,13 +251,15 @@
                       <mat-option [value]="s.id">{{ s.label }}</mat-option>
                     }
                   </mat-select>
+                  <mat-error>{{ error(grupo.controls.idSeveridad) }}</mat-error>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha de diagnóstico</mat-label>
-                  <input matInput [matDatepicker]="pickerAlergia" formControlName="fechaDiagnostico" />
+                  <input matInput [matDatepicker]="pickerAlergia" [max]="hoy" formControlName="fechaDiagnostico" />
                   <mat-datepicker-toggle matIconSuffix [for]="pickerAlergia"></mat-datepicker-toggle>
                   <mat-datepicker #pickerAlergia></mat-datepicker>
+                  <mat-error>{{ error(grupo.controls.fechaDiagnostico) }}</mat-error>
                 </mat-form-field>
               </div>
               @if (grupo.controls.idSeveridad.value) {
@@ -280,18 +296,21 @@
                       <mat-option [value]="t.id">{{ t.label }}</mat-option>
                     }
                   </mat-select>
+                  <mat-error>{{ error(grupo.controls.idTipoAntecedente) }}</mat-error>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Fecha de registro</mat-label>
-                  <input matInput [matDatepicker]="pickerAntecedente" formControlName="fechaRegistro" />
+                  <input matInput [matDatepicker]="pickerAntecedente" [max]="hoy" formControlName="fechaRegistro" />
                   <mat-datepicker-toggle matIconSuffix [for]="pickerAntecedente"></mat-datepicker-toggle>
                   <mat-datepicker #pickerAntecedente></mat-datepicker>
+                  <mat-error>{{ error(grupo.controls.fechaRegistro) }}</mat-error>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="span-2">
                   <mat-label>Descripción</mat-label>
-                  <textarea matInput formControlName="descripcion" rows="2"></textarea>
+                  <textarea matInput formControlName="descripcion" rows="2" [maxlength]="largos.DESCRIPCION_LARGA"></textarea>
+                  <mat-error>{{ error(grupo.controls.descripcion) }}</mat-error>
                 </mat-form-field>
               </div>
               <button matIconButton type="button" class="remove-btn" (click)="quitarAntecedente($index)">
@@ -314,9 +333,9 @@
 
     <div class="form-footer">
       <a matButton routerLink="/home/pacientes">Cancelar</a>
-      <button matButton="filled" type="button" (click)="guardar()">
+      <button matButton="filled" type="button" (click)="guardar()" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar paciente
+        {{ guardando() ? 'Guardando...' : 'Guardar paciente' }}
       </button>
     </div>
   </div>

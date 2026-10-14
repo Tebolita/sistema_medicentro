@@ -10,6 +10,17 @@
     </a>
   </div>
 
+  <div class="tabs">
+    <button type="button" class="tab" [class.active]="vista() === 'activas'" (click)="verActivas()">
+      <mat-icon>event</mat-icon>
+      Activas
+    </button>
+    <button type="button" class="tab" [class.active]="vista() === 'eliminadas'" (click)="verEliminadas()">
+      <mat-icon>delete_outline</mat-icon>
+      Eliminadas
+    </button>
+  </div>
+
   <div class="search-bar">
     <mat-icon>search</mat-icon>
     <input
@@ -20,34 +31,64 @@
     />
   </div>
 
+  @if (errorCarga()) {
+    <p class="carga-error">{{ errorCarga() }}</p>
+  }
+
   <div class="consulta-grid">
     @for (c of consultas(); track c.idCita) {
-      <a class="consulta-card" [routerLink]="['/home/consultas', c.idCita]">
+      <a
+        class="consulta-card"
+        [class.inactivo]="vista() === 'eliminadas'"
+        [routerLink]="vista() === 'activas' ? ['/home/consultas', c.idCita] : null"
+      >
         <div class="patient-avatar">{{ iniciales(c.idPaciente) }}</div>
         <div class="consulta-info">
           <h2>{{ nombrePaciente(c.idPaciente) }}</h2>
           <span class="consulta-meta"><mat-icon>event</mat-icon>{{ formatFechaHora(c.fechaHoraInicio) }}</span>
           <span class="consulta-meta"><mat-icon>medical_services</mat-icon>{{ medicoLabel(c.idMedico) }}</span>
           <span class="consulta-meta">{{ tipoConsultaLabel(c.idTipoConsulta) }} · {{ c.motivoConsulta || 'Sin motivo especificado' }}</span>
+          @if (vista() === 'eliminadas') {
+            <span class="consulta-meta">
+              Dada de baja por {{ usuarioLabel(c.idUsuarioModificacion) }} el {{ formatFechaHora(c.fechaModificacion) }}
+            </span>
+          }
         </div>
         <div class="consulta-actions">
-          <span class="status-badge" [class]="estadoClase(c.idEstadoCita)">{{ estadoLabel(c.idEstadoCita) }}</span>
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Eliminar consulta'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c.idCita, nombrePaciente(c.idPaciente))"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
+          @if (vista() === 'activas') {
+            <span class="status-badge" [class]="estadoClase(c.idEstadoCita)">{{ estadoLabel(c.idEstadoCita) }}</span>
+            <button
+              matIconButton
+              type="button"
+              [matTooltip]="'Eliminar consulta'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(c)"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          } @else {
+            <button
+              matIconButton
+              type="button"
+              [matTooltip]="'Reactivar consulta'"
+              (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(c)"
+            >
+              <mat-icon>restore</mat-icon>
+            </button>
+          }
         </div>
       </a>
     }
 
-    @if (consultas().length === 0) {
+    @if (consultas().length === 0 && !cargando() && !errorCarga()) {
       <div class="empty-state">
-        <mat-icon>event_busy</mat-icon>
-        <p>No se encontraron consultas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        <mat-icon>{{ vista() === 'activas' ? 'event_busy' : 'delete_outline' }}</mat-icon>
+        <p>
+          @if (vista() === 'activas') {
+            No se encontraron consultas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          } @else {
+            No hay consultas eliminadas{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
+          }
+        </p>
       </div>
     }
   </div>

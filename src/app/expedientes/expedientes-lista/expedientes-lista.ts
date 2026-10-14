@@ -12,6 +12,8 @@ import { ExpedienteService } from '../../service/expediente.service';
 import { PacienteService } from '../../service/paciente.service';
 import { EmpleadoService } from '../../service/empleado.service';
 import { CatalogoService } from '../../service/catalogo.service';
+import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { HistorialClinico } from '../../models/tratamiento.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
@@ -22,6 +24,8 @@ interface OpcionCatalogo {
   id: number;
   label: string;
 }
+
+type Vista = 'activos' | 'eliminados';
 
 @Component({
   selector: 'app-expedientes-lista',
@@ -34,6 +38,8 @@ export class ExpedientesLista {
   private pacienteService = inject(PacienteService);
   private empleadoService = inject(EmpleadoService);
   private catalogoService = inject(CatalogoService);
+  private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
 
@@ -43,8 +49,17 @@ export class ExpedientesLista {
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
 
+  // Pestaña activa: registros activos o dados de baja.
+  vista = signal<Vista>('activos');
+  cargando = signal(false);
+  errorCarga = signal('');
+
   // Datos reales desde la API (ya no hay datos de ejemplo).
   private lista = signal<HistorialClinico[]>([]);
+  private eliminados = signal<HistorialClinico[]>([]);
+  private eliminadosCargados = false;
+  // Pacientes activos y eliminados, para mostrar el nombre aunque el paciente
+  // haya sido dado de baja.
   private pacientesApi = signal<PacienteListado[]>([]);
   private medicos = signal<Medico[]>([]);
   private tiposApi = signal<CatalogoOpcion[]>([]);
@@ -82,26 +97,67 @@ export class ExpedientesLista {
   }
 
   private cargar(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
     forkJoin({
       expedientes: this.expedienteService.RetornarExpedientes(),
       pacientes: this.pacienteService.RetornarPacientes(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
       medicos: this.empleadoService.RetornarMedicos(),
       tipos: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.TIPO_REGISTRO_CLINICO),
     }).subscribe({
       next: (r) => {
         this.lista.set(r.expedientes.datos ?? []);
-        this.pacientesApi.set(r.pacientes.datos ?? []);
+        this.pacientesApi.set([...(r.pacientes.datos ?? []), ...(r.pacientesEliminados.datos ?? [])]);
         this.medicos.set(r.medicos.datos ?? []);
         this.tiposApi.set(r.tipos.datos ?? []);
+        this.cargando.set(false);
       },
-      error: (err: Error) => alert('No se pudieron cargar los expedientes: ' + err.message),
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar los expedientes: ' + err.message);
+      },
     });
+  }
+
+  private cargarActivos(): void {
+    this.expedienteService.RetornarExpedientes().subscribe({
+      next: (resp) => this.lista.set(resp.datos ?? []),
+      error: (err: Error) => this.errorCarga.set('No se pudieron cargar los expedientes: ' + err.message),
+    });
+  }
+
+  private cargarEliminados(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
+    this.expedienteService.RetornarExpedientesEliminados().subscribe({
+      next: (resp) => {
+        this.eliminados.set(resp.datos ?? []);
+        this.eliminadosCargados = true;
+        this.cargando.set(false);
+      },
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar los registros eliminados: ' + err.message);
+      },
+    });
+  }
+
+  verActivos(): void {
+    this.vista.set('activos');
+  }
+
+  verEliminados(): void {
+    this.vista.set('eliminados');
+    if (!this.eliminadosCargados) {
+      this.cargarEliminados();
+    }
   }
 
   expedientes = computed(() => {
     const term = this.buscar().trim().toLowerCase();
     const tipo = this.filtroQuitado() ? null : this.tipoFiltro();
-    let lista = this.lista();
+    let lista = this.vista() === 'activos' ? this.lista() : this.eliminados();
     if (tipo != null) {
       lista = lista.filter((h) => h.idTipoRegistro === tipo);
     }
@@ -151,23 +207,55 @@ export class ExpedientesLista {
     return h.diagnostico || h.motivoConsulta || h.notas || 'Sin detalle registrado';
   }
 
-  formatFecha(iso: string): string {
-    const fecha = new Date(iso);
-    return fecha.toLocaleString('es-GT', {
+  formatFecha(iso: string | null): string {
+    if (!iso) {
+      return '—';
+    }
+    return new Date(iso).toLocaleString('es-GT', {
       day: '2-digit',
       month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
   }
 
-  eliminar(id: number, paciente: string): void {
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  eliminar(h: HistorialClinico): void {
+    const paciente = this.nombrePaciente(h.idPaciente);
     if (!confirm(`¿Eliminar el registro clínico de "${paciente}"?`)) {
       return;
     }
-    this.expedienteService.EliminarExpediente(id).subscribe({
-      next: () => this.lista.update((l) => l.filter((h) => h.idHistorial !== id)),
-      error: (err: Error) => alert('No se pudo eliminar el registro: ' + err.message),
+    this.expedienteService.EliminarExpediente(h.idHistorial).subscribe({
+      next: () => {
+        this.lista.update((l) => l.filter((x) => x.idHistorial !== h.idHistorial));
+        // Se vuelve a pedir la lista de eliminados la próxima vez que se abra
+        // la pestaña, para traer quién y cuándo lo dio de baja.
+        this.eliminadosCargados = false;
+        this.notificaciones.exito(`Registro clínico de "${paciente}" eliminado correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo eliminar el registro: ' + err.message),
+    });
+  }
+
+  reactivar(h: HistorialClinico): void {
+    const paciente = this.nombrePaciente(h.idPaciente);
+    if (!confirm(`¿Reactivar el registro clínico de "${paciente}"?`)) {
+      return;
+    }
+    this.expedienteService.ReactivarExpediente(h.idHistorial).subscribe({
+      next: () => {
+        this.eliminados.update((l) => l.filter((x) => x.idHistorial !== h.idHistorial));
+        this.cargarActivos();
+        this.notificaciones.exito(`Registro clínico de "${paciente}" reactivado correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo reactivar el registro: ' + err.message),
     });
   }
 }

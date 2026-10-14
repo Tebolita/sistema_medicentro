@@ -67,6 +67,21 @@ export class CitaService {
         )
     }
 
+        // GET /api/Citas/eliminadas
+    // Citas dadas de baja (activo = false), misma forma { cita, historial } que el listado normal.
+    RetornarCitasEliminadas(): Observable<ApiResponse<CitaCompleta[]>> {
+        return this.http.get<ApiResponse<CitaCompleta[]>>(`${this.apiUrl}/eliminadas`).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
+    // PUT /api/Citas/{id}/reactivar
+    // Deshace la baja lógica (activo = true).
+    ReactivarCita(idCita: number): Observable<ApiResponse<object>> {
+        return this.http.put<ApiResponse<object>>(`${this.apiUrl}/${idCita}/reactivar`, {}).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
     // GET /api/Citas/{id}/historial
     // Cambios de estado y reprogramaciones, del más reciente al más antiguo.
     RetornarHistorialCita(idCita: number): Observable<ApiResponse<CitaHistorial[]>> {

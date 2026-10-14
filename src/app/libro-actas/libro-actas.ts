@@ -1,6 +1,6 @@
-import { Component, PLATFORM_ID, inject, signal } from '@angular/core';
+import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -13,6 +13,10 @@ import { ActaService } from '../service/acta.service';
 import { PacienteService } from '../service/paciente.service';
 import { EmpleadoService } from '../service/empleado.service';
 import { PuestoService } from '../service/puesto.service';
+import { UsuariosService } from '../service/usuarios.service';
+import { NotificacionesService } from '../shared/notificaciones/notificaciones.service';
+import { AuditoriaInfo } from '../shared/auditoria-info/auditoria-info';
+import { mensajeError, requeridoSinEspacios } from '../shared/validadores';
 import { Acta, ActaRequest } from '../models/acta.model';
 import { PacienteListado } from '../models/paciente.model';
 
@@ -22,8 +26,14 @@ interface Recepcionista {
   nombre: string;
 }
 
+type Vista = 'activas' | 'eliminadas';
+
 // Nombre del puesto en la tabla `puestos` (se busca por nombre, no por id).
 const PUESTO_RECEPCION = 'recepcionista';
+
+// Largos que acepta el backend (ActaInputDto).
+const LARGO_MOTIVO = 500;
+const LARGO_OBSERVACIONES = 1000;
 
 // Fecha + hora LOCAL como 'YYYY-MM-DDTHH:mm:ss' (sin 'Z'): si no se manda,
 // el backend usa la hora UTC y el acta saldría 6 horas adelantada.
@@ -42,6 +52,7 @@ function toIsoDateTimeLocal(value: Date): string {
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    AuditoriaInfo,
   ],
   templateUrl: './libro-actas.html',
   styleUrl: './libro-actas.css',
@@ -52,23 +63,50 @@ export class LibroActas {
   private pacienteService = inject(PacienteService);
   private empleadoService = inject(EmpleadoService);
   private puestoService = inject(PuestoService);
+  private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
+
+  readonly largoMotivo = LARGO_MOTIVO;
+  readonly largoObservaciones = LARGO_OBSERVACIONES;
 
   mostrarFormulario = signal(false);
   guardando = signal(false);
+  cargando = signal(false);
+  errorCarga = signal('');
+
+  // Pestaña activa: actas activas o dadas de baja.
+  vista = signal<Vista>('activas');
+
+  // Acta que se está editando (null = nueva acta).
+  editando = signal<Acta | null>(null);
 
   // Datos reales desde la API (ya no hay datos de ejemplo).
-  pacientes = signal<PacienteListado[]>([]);
+  private pacientesActivos = signal<PacienteListado[]>([]);
+  private pacientesEliminados = signal<PacienteListado[]>([]);
   private recepcionistasApi = signal<Recepcionista[]>([]);
-  actas = signal<Acta[]>([]);
+  private actasActivas = signal<Acta[]>([]);
+  private actasEliminadas = signal<Acta[]>([]);
+  private eliminadasCargadas = false;
+
+  actas = computed(() => (this.vista() === 'activas' ? this.actasActivas() : this.actasEliminadas()));
+
+  // Para una acta nueva solo pacientes activos; al editar se agrega el paciente
+  // del acta si fue dado de baja, para que se vea su nombre.
+  pacientes = computed(() => {
+    const activos = this.pacientesActivos();
+    const idActual = this.editando()?.idPaciente;
+    const actualEliminado = this.pacientesEliminados().find((p) => p.idPaciente === idActual);
+    return actualEliminado ? [...activos, actualEliminado] : activos;
+  });
 
   get recepcionistas() { return this.recepcionistasApi(); }
 
   form = this.fb.nonNullable.group({
     idPaciente: this.fb.control<number | null>(null, Validators.required),
-    motivoIngreso: ['', Validators.required],
+    motivoIngreso: ['', [requeridoSinEspacios, Validators.maxLength(LARGO_MOTIVO)]],
     idAtendidoPor: this.fb.control<number | null>(null, Validators.required),
-    observaciones: [''],
+    observaciones: ['', Validators.maxLength(LARGO_OBSERVACIONES)],
   });
 
   constructor() {
@@ -78,25 +116,33 @@ export class LibroActas {
     }
   }
 
+  // Mensaje para mostrar en <mat-error> según el error del campo.
+  error(control: AbstractControl | null): string {
+    return mensajeError(control);
+  }
+
   private cargar(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
     forkJoin({
       actas: this.actaService.RetornarActas(),
       pacientes: this.pacienteService.RetornarPacientes(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
       puestos: this.puestoService.RetornarPuestos(),
     }).subscribe({
       next: (r) => {
-        this.actas.set(r.actas.datos ?? []);
-        this.pacientes.set(r.pacientes.datos ?? []);
+        this.actasActivas.set(r.actas.datos ?? []);
+        this.pacientesActivos.set(r.pacientes.datos ?? []);
+        this.pacientesEliminados.set(r.pacientesEliminados.datos ?? []);
+        this.cargando.set(false);
+        // Si no existe el puesto "Recepcionista" en la base, se listan todos los empleados activos.
         const puesto = (r.puestos.datos ?? []).find((p) => p.nombre.trim().toLowerCase() === PUESTO_RECEPCION);
-        if (puesto) {
-          this.cargarRecepcionistas(puesto.idPuesto);
-        } else {
-          // Sin el puesto en la base se muestran todos los empleados activos.
-          console.warn('No existe el puesto "Recepcionista" en la tabla puestos; se listan todos los empleados.');
-          this.cargarRecepcionistas();
-        }
+        this.cargarRecepcionistas(puesto?.idPuesto);
       },
-      error: (err: Error) => alert('No se pudo cargar el libro de actas: ' + err.message),
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudo cargar el libro de actas: ' + err.message);
+      },
     });
   }
 
@@ -109,12 +155,73 @@ export class LibroActas {
             nombre: [e.primerNombre, e.segundoNombre, e.primerApellido, e.segundoApellido].filter(Boolean).join(' '),
           })),
         ),
-      error: (err: Error) => alert('No se pudo cargar el personal de recepción: ' + err.message),
+      error: (err: Error) => this.notificaciones.error('No se pudo cargar el personal de recepción: ' + err.message),
     });
   }
 
+  private cargarActivas(): void {
+    this.actaService.RetornarActas().subscribe({
+      next: (resp) => this.actasActivas.set(resp.datos ?? []),
+      error: (err: Error) => this.errorCarga.set('No se pudo cargar el libro de actas: ' + err.message),
+    });
+  }
+
+  private cargarEliminadas(): void {
+    this.cargando.set(true);
+    this.errorCarga.set('');
+    this.actaService.RetornarActasEliminadas().subscribe({
+      next: (resp) => {
+        this.actasEliminadas.set(resp.datos ?? []);
+        this.eliminadasCargadas = true;
+        this.cargando.set(false);
+      },
+      error: (err: Error) => {
+        this.cargando.set(false);
+        this.errorCarga.set('No se pudieron cargar las actas eliminadas: ' + err.message);
+      },
+    });
+  }
+
+  verActivas(): void {
+    this.vista.set('activas');
+  }
+
+  verEliminadas(): void {
+    this.cerrarFormulario();
+    this.vista.set('eliminadas');
+    if (!this.eliminadasCargadas) {
+      this.cargarEliminadas();
+    }
+  }
+
   toggleFormulario(): void {
-    this.mostrarFormulario.update((v) => !v);
+    if (this.mostrarFormulario()) {
+      this.cerrarFormulario();
+    } else {
+      this.editando.set(null);
+      this.form.reset();
+      this.mostrarFormulario.set(true);
+    }
+  }
+
+  private cerrarFormulario(): void {
+    this.mostrarFormulario.set(false);
+    this.editando.set(null);
+    this.form.reset();
+  }
+
+  editar(a: Acta): void {
+    this.editando.set(a);
+    this.form.reset({
+      idPaciente: a.idPaciente,
+      motivoIngreso: a.motivoIngreso,
+      idAtendidoPor: a.idAtendidoPor,
+      observaciones: a.observaciones ?? '',
+    });
+    this.mostrarFormulario.set(true);
+    if (isPlatformBrowser(this.platformId)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   registrar(): void {
@@ -123,57 +230,108 @@ export class LibroActas {
     }
     this.form.markAllAsTouched();
     if (this.form.invalid) {
+      this.notificaciones.error('Revisa los campos marcados en rojo.');
       return;
     }
     const v = this.form.getRawValue();
+    const acta = this.editando();
     const request: ActaRequest = {
       idPaciente: v.idPaciente!,
-      motivoIngreso: v.motivoIngreso,
+      motivoIngreso: v.motivoIngreso.trim(),
       idAtendidoPor: v.idAtendidoPor!,
-      observaciones: v.observaciones || null,
-      fechaHora: toIsoDateTimeLocal(new Date()),
+      observaciones: v.observaciones.trim() || null,
+      // Al editar no se manda: el backend conserva la fecha/hora original del ingreso.
+      fechaHora: acta ? null : toIsoDateTimeLocal(new Date()),
     };
+    const paciente = this.nombrePaciente(request.idPaciente);
 
     this.guardando.set(true);
-    this.actaService.CrearActa(request).subscribe({
+    const peticion = acta ? this.actaService.ActualizarActa(acta.idActa, request) : this.actaService.CrearActa(request);
+    peticion.subscribe({
       next: (resp) => {
         this.guardando.set(false);
         if (resp.datos) {
-          // La más reciente va primero, igual que la lista del backend.
-          this.actas.update((l) => [resp.datos!, ...l]);
+          const guardada = resp.datos;
+          if (acta) {
+            this.actasActivas.update((l) => l.map((x) => (x.idActa === guardada.idActa ? guardada : x)));
+          } else {
+            // La más reciente va primero, igual que la lista del backend.
+            this.actasActivas.update((l) => [guardada, ...l]);
+          }
         }
-        this.form.reset();
-        this.mostrarFormulario.set(false);
+        this.cerrarFormulario();
+        this.notificaciones.exito(
+          acta ? `Acta de "${paciente}" actualizada correctamente` : `Acta de "${paciente}" registrada correctamente`,
+        );
       },
       error: (err: Error) => {
         this.guardando.set(false);
-        alert('No se pudo registrar el acta: ' + err.message);
+        this.notificaciones.error('No se pudo guardar el acta: ' + err.message);
       },
     });
   }
 
-  eliminar(id: number, nombre: string): void {
+  eliminar(a: Acta): void {
+    const nombre = this.nombrePaciente(a.idPaciente);
     if (!confirm(`¿Eliminar el acta de "${nombre}"?`)) {
       return;
     }
-    this.actaService.EliminarActa(id).subscribe({
-      next: () => this.actas.update((l) => l.filter((a) => a.idActa !== id)),
-      error: (err: Error) => alert('No se pudo eliminar el acta: ' + err.message),
+    this.actaService.EliminarActa(a.idActa).subscribe({
+      next: () => {
+        this.actasActivas.update((l) => l.filter((x) => x.idActa !== a.idActa));
+        if (this.editando()?.idActa === a.idActa) {
+          this.cerrarFormulario();
+        }
+        // Se vuelve a pedir la lista de eliminadas la próxima vez que se abra
+        // la pestaña, para traer quién y cuándo la dio de baja.
+        this.eliminadasCargadas = false;
+        this.notificaciones.exito(`Acta de "${nombre}" eliminada correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo eliminar el acta: ' + err.message),
     });
   }
 
-  formatFechaHora(iso: string): string {
-    const fecha = new Date(iso);
-    return fecha.toLocaleString('es-GT', {
+  reactivar(a: Acta): void {
+    const nombre = this.nombrePaciente(a.idPaciente);
+    if (!confirm(`¿Reactivar el acta de "${nombre}"?`)) {
+      return;
+    }
+    this.actaService.ReactivarActa(a.idActa).subscribe({
+      next: () => {
+        this.actasEliminadas.update((l) => l.filter((x) => x.idActa !== a.idActa));
+        this.cargarActivas();
+        this.notificaciones.exito(`Acta de "${nombre}" reactivada correctamente`);
+      },
+      error: (err: Error) => this.notificaciones.error('No se pudo reactivar el acta: ' + err.message),
+    });
+  }
+
+  formatFechaHora(iso: string | null): string {
+    if (!iso) {
+      return '—';
+    }
+    return new Date(iso).toLocaleString('es-GT', {
       day: '2-digit',
       month: 'short',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
   }
 
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  esPacienteDadoDeBaja(idPaciente: number): boolean {
+    return this.pacientesEliminados().some((p) => p.idPaciente === idPaciente);
+  }
+
   nombrePaciente(idPaciente: number): string {
-    const p = this.pacientes().find((pac) => pac.idPaciente === idPaciente);
+    const p = [...this.pacientesActivos(), ...this.pacientesEliminados()].find((pac) => pac.idPaciente === idPaciente);
     if (!p) {
       return 'Paciente no encontrado';
     }

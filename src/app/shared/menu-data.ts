@@ -66,28 +66,15 @@ export const MENU_SECTIONS: MenuSection[] = [
     route: '/home/expedientes',
     items: [
       {
-        icon: 'child_care',
-        label: 'Ficha de consulta pediátrica',
-        route: '/home/expedientes/nuevo',
-        queryParams: { tipo: 'FICHA_PEDIATRICA' },
-      },
-      {
-        icon: 'description',
-        label: 'Ficha de consulta externa',
-        route: '/home/expedientes/nuevo',
-        queryParams: { tipo: 'FICHA_EXTERNA' },
-      },
-      {
         icon: 'folder_open',
         label: 'Expediente de paciente ingresado',
         route: '/home/expedientes',
         queryParams: { tipo: 'INGRESADO' },
       },
       {
-        icon: 'monitor_heart',
-        label: 'Evolución y signos vitales',
+        icon: 'note_add',
+        label: 'Nuevo expediente',
         route: '/home/expedientes/nuevo',
-        queryParams: { tipo: 'EVOLUCION' },
       },
     ],
   },

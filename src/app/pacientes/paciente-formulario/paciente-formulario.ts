@@ -1,6 +1,7 @@
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,8 +15,22 @@ import { forkJoin } from 'rxjs';
 
 import { PacienteService } from '../../service/paciente.service';
 import { CatalogoService } from '../../service/catalogo.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 import {
+  LARGOS,
+  limpiarTextos,
+  mensajeError,
+  noFutura,
+  requeridoSinEspacios,
+  soloDigitos,
+  telefono,
+} from '../../shared/validadores';
+import {
+  Paciente,
   PacienteCompleto,
+  PacienteListado,
+  DatosPacienteRequest,
   CrearPacienteRequest,
   EditarPacienteRequest,
 } from '../../models/paciente.model';
@@ -26,6 +41,10 @@ interface OpcionCatalogo {
   id: number;
   label: string;
 }
+
+// Código del tipo de documento que exige 13 dígitos.
+const TIPO_DOCUMENTO_DPI = 'DPI';
+const LARGO_DPI = 13;
 
 function toIsoDate(value: Date | string | null): string | null {
   if (!value) {
@@ -62,6 +81,7 @@ function parseIsoDateLocal(iso: string): Date {
     MatDatepickerModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './paciente-formulario.html',
@@ -73,11 +93,15 @@ export class PacienteFormulario {
   private router = inject(Router);
   private pacienteService = inject(PacienteService);
   private catalogoService = inject(CatalogoService);
+  private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
 
+  // Largos máximos y fecha máxima para el HTML (maxlength y [max] del datepicker).
+  readonly largos = LARGOS;
+  readonly hoy = new Date();
+
   // ==================== CATÁLOGOS (desde /api/catalogos) ====================
-  // Se guardan crudos (con su `codigo`) y se exponen al HTML como { id, label }
-  // con los mismos nombres que antes, para no tener que cambiar el HTML.
+  // Se guardan crudos (con su `codigo`) y se exponen al HTML como { id, label }.
   private catalogos = signal<Record<string, CatalogoOpcion[]>>({});
 
   // Se calcula una sola vez cada que llegan los catálogos (no en cada refresco).
@@ -112,6 +136,13 @@ export class PacienteFormulario {
   esNuevo = computed(() => this.idPaciente() === 0);
   guardando = signal(false);
 
+  // Ficha cargada desde la API: se usa para mostrar quién la creó y modificó.
+  registro = signal<Paciente | null>(null);
+
+  // Todos los pacientes (activos y eliminados), para avisar antes de guardar
+  // si el número de documento ya está registrado.
+  private documentosRegistrados: PacienteListado[] = [];
+
   // Ids temporales negativos para filas nuevas de contactos/alergias/antecedentes.
   // El backend los interpreta como "insertar" (ver EditarPacienteRequest).
   private ultimoIdTemporal = 0;
@@ -122,14 +153,14 @@ export class PacienteFormulario {
 
   datosGenerales = this.fb.nonNullable.group({
     codigoExpediente: [{ value: '', disabled: true }],
-    primerNombre: ['', Validators.required],
-    segundoNombre: [''],
-    primerApellido: ['', Validators.required],
-    segundoApellido: [''],
-    fechaNacimiento: this.fb.control<Date | null>(null, Validators.required),
+    primerNombre: ['', [requeridoSinEspacios, Validators.maxLength(LARGOS.NOMBRE)]],
+    segundoNombre: ['', Validators.maxLength(LARGOS.NOMBRE)],
+    primerApellido: ['', [requeridoSinEspacios, Validators.maxLength(LARGOS.NOMBRE)]],
+    segundoApellido: ['', Validators.maxLength(LARGOS.NOMBRE)],
+    fechaNacimiento: this.fb.control<Date | null>(null, [Validators.required, noFutura]),
     idGenero: this.fb.control<number | null>(null),
     idTipoDocumento: this.fb.control<number | null>(null),
-    numeroDocumento: [''],
+    numeroDocumento: ['', Validators.maxLength(LARGOS.DOCUMENTO)],
     idEstadoCivil: this.fb.control<number | null>(null),
     idTipoSangre: this.fb.control<number | null>(null),
     idNivelConfidencialidad: this.fb.control<number | null>(null),
@@ -137,10 +168,10 @@ export class PacienteFormulario {
   });
 
   contacto = this.fb.nonNullable.group({
-    telefonoPrincipal: [''],
-    telefonoSecundario: [''],
-    correo: ['', Validators.email],
-    direccion: [''],
+    telefonoPrincipal: ['', [telefono, Validators.maxLength(LARGOS.TELEFONO)]],
+    telefonoSecundario: ['', [telefono, Validators.maxLength(LARGOS.TELEFONO)]],
+    correo: ['', [Validators.email, Validators.maxLength(LARGOS.CORREO)]],
+    direccion: ['', Validators.maxLength(LARGOS.DIRECCION)],
   });
 
   contactosEmergencia = this.fb.array<ReturnType<typeof this.crearContactoGroup>>([]);
@@ -157,6 +188,12 @@ export class PacienteFormulario {
       });
     }
 
+    // Al cambiar el tipo de documento cambian las reglas del número:
+    // con tipo elegido el número es obligatorio, y si es DPI deben ser 13 dígitos.
+    this.datosGenerales.controls.idTipoDocumento.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.actualizarReglasDocumento());
+
     // En el servidor (SSR) no hay sesión ni token: solo se consulta la API
     // desde el navegador.
     if (!isPlatformBrowser(this.platformId)) {
@@ -164,6 +201,7 @@ export class PacienteFormulario {
     }
 
     this.cargarCatalogos();
+    this.cargarDocumentosRegistrados();
 
     if (esEdicion) {
       this.pacienteService.RetornarPaciente(Number(idParam)).subscribe({
@@ -172,9 +210,28 @@ export class PacienteFormulario {
             this.cargar(resp.datos);
           }
         },
-        error: (err: Error) => alert('No se pudo cargar el paciente: ' + err.message),
+        error: (err: Error) => this.notificaciones.error('No se pudo cargar el paciente: ' + err.message),
       });
     }
+  }
+
+  // Mensaje para mostrar en <mat-error> según el error del campo.
+  error(control: AbstractControl | null): string {
+    return mensajeError(control);
+  }
+
+  private actualizarReglasDocumento(): void {
+    const dg = this.datosGenerales.controls;
+    const idTipo = dg.idTipoDocumento.value;
+    const validadores = [Validators.maxLength(LARGOS.DOCUMENTO)];
+    if (idTipo !== null) {
+      validadores.push(requeridoSinEspacios);
+    }
+    if (idTipo !== null && idTipo === this.idPorCodigo(CODIGOS_CATALOGO.TIPO_DOCUMENTO, TIPO_DOCUMENTO_DPI)) {
+      validadores.push(soloDigitos(LARGO_DPI));
+    }
+    dg.numeroDocumento.setValidators(validadores);
+    dg.numeroDocumento.updateValueAndValidity({ emitEvent: false });
   }
 
   private cargarCatalogos(): void {
@@ -194,6 +251,7 @@ export class PacienteFormulario {
           mapa[codigo] = resp.datos ?? [];
         }
         this.catalogos.set(mapa);
+        this.actualizarReglasDocumento();
 
         // Valores por defecto para un paciente nuevo, buscados por código
         // (los ids reales dependen de cada base de datos).
@@ -207,17 +265,44 @@ export class PacienteFormulario {
           }
         }
       },
-      error: (err: Error) => alert('No se pudieron cargar los catálogos: ' + err.message),
+      error: (err: Error) => this.notificaciones.error('No se pudieron cargar los catálogos: ' + err.message),
     });
+  }
+
+  private cargarDocumentosRegistrados(): void {
+    forkJoin({
+      activos: this.pacienteService.RetornarPacientes(),
+      eliminados: this.pacienteService.RetornarPacientesEliminados(),
+    }).subscribe({
+      next: (r) => (this.documentosRegistrados = [...(r.activos.datos ?? []), ...(r.eliminados.datos ?? [])]),
+      // Si falla, el backend igual rechaza el duplicado; solo se pierde el aviso previo.
+      error: () => (this.documentosRegistrados = []),
+    });
+  }
+
+  // Devuelve el paciente que ya tiene ese mismo documento, si existe.
+  private documentoRepetido(idTipo: number | null, numero: string): PacienteListado | null {
+    const buscado = numero.trim().toLowerCase();
+    if (!buscado) {
+      return null;
+    }
+    return (
+      this.documentosRegistrados.find(
+        (p) =>
+          p.idPaciente !== this.idPaciente() &&
+          p.idTipoDocumento === idTipo &&
+          (p.numeroDocumento ?? '').trim().toLowerCase() === buscado,
+      ) ?? null
+    );
   }
 
   private crearContactoGroup(c?: PacienteCompleto['contactos'][number]) {
     return this.fb.nonNullable.group({
       id: c?.idContactoEmergencia ?? this.generarIdTemporal(),
-      nombreCompleto: [c?.nombreCompleto ?? '', Validators.required],
+      nombreCompleto: [c?.nombreCompleto ?? '', [requeridoSinEspacios, Validators.maxLength(LARGOS.NOMBRE_COMPLETO)]],
       idParentesco: this.fb.control<number | null>(c?.idParentesco ?? null),
-      telefono: [c?.telefono ?? '', Validators.required],
-      direccion: [c?.direccion ?? ''],
+      telefono: [c?.telefono ?? '', [requeridoSinEspacios, telefono, Validators.maxLength(LARGOS.TELEFONO)]],
+      direccion: [c?.direccion ?? '', Validators.maxLength(LARGOS.DIRECCION)],
     });
   }
 
@@ -225,10 +310,11 @@ export class PacienteFormulario {
     return this.fb.nonNullable.group({
       id: a?.idAlergia ?? this.generarIdTemporal(),
       idTipoAlergia: this.fb.control<number | null>(a?.idTipoAlergia ?? null, Validators.required),
-      descripcion: [a?.descripcion ?? '', Validators.required],
+      descripcion: [a?.descripcion ?? '', [requeridoSinEspacios, Validators.maxLength(LARGOS.DESCRIPCION_CORTA)]],
       idSeveridad: this.fb.control<number | null>(a?.idSeveridad ?? null, Validators.required),
       fechaDiagnostico: this.fb.control<Date | null>(
         a?.fechaDiagnostico ? parseIsoDateLocal(a.fechaDiagnostico) : null,
+        noFutura,
       ),
     });
   }
@@ -237,9 +323,10 @@ export class PacienteFormulario {
     return this.fb.nonNullable.group({
       id: a?.idAntecedente ?? this.generarIdTemporal(),
       idTipoAntecedente: this.fb.control<number | null>(a?.idTipoAntecedente ?? null, Validators.required),
-      descripcion: [a?.descripcion ?? '', Validators.required],
+      descripcion: [a?.descripcion ?? '', [requeridoSinEspacios, Validators.maxLength(LARGOS.DESCRIPCION_LARGA)]],
       fechaRegistro: this.fb.control<Date | null>(
         a?.fechaRegistro ? parseIsoDateLocal(a.fechaRegistro) : new Date(),
+        [Validators.required, noFutura],
       ),
     });
   }
@@ -298,6 +385,7 @@ export class PacienteFormulario {
 
   private cargar(registro: PacienteCompleto): void {
     this.idPaciente.set(registro.paciente.idPaciente);
+    this.registro.set(registro.paciente);
     const p = registro.paciente;
     this.datosGenerales.patchValue({
       codigoExpediente: p.codigoExpediente,
@@ -329,6 +417,17 @@ export class PacienteFormulario {
     registro.antecedentes.forEach((a) => this.antecedentes.push(this.crearAntecedenteGroup(a)));
   }
 
+  // Pestañas que tienen algún campo con error, para decirle al usuario dónde revisar.
+  private pestaniasConError(): string[] {
+    const pestanias: string[] = [];
+    if (this.datosGenerales.invalid) pestanias.push('Datos generales');
+    if (this.contacto.invalid) pestanias.push('Contacto');
+    if (this.contactosEmergencia.invalid) pestanias.push('Contacto de emergencia');
+    if (this.alergias.invalid) pestanias.push('Alergias');
+    if (this.antecedentes.invalid) pestanias.push('Antecedentes');
+    return pestanias;
+  }
+
   guardar(): void {
     if (this.guardando()) {
       return;
@@ -340,57 +439,65 @@ export class PacienteFormulario {
     this.alergias.markAllAsTouched();
     this.antecedentes.markAllAsTouched();
 
-    if (
-      this.datosGenerales.invalid ||
-      this.contacto.invalid ||
-      this.contactosEmergencia.invalid ||
-      this.alergias.invalid ||
-      this.antecedentes.invalid
-    ) {
+    // Aviso de documento repetido antes de mandar nada al backend.
+    const dgControles = this.datosGenerales.controls;
+    const repetido = this.documentoRepetido(dgControles.idTipoDocumento.value, dgControles.numeroDocumento.value);
+    if (repetido) {
+      const estado = repetido.activo ? '' : ' (eliminado, se puede reactivar desde la pestaña Eliminados)';
+      dgControles.numeroDocumento.setErrors({
+        duplicado: `Ya está registrado en el expediente ${repetido.codigoExpediente}${estado}`,
+      });
+    }
+
+    const conError = this.pestaniasConError();
+    if (conError.length) {
+      this.notificaciones.error(`Revisa los campos marcados en: ${conError.join(', ')}.`);
       return;
     }
 
     const dg = this.datosGenerales.getRawValue();
     const ct = this.contacto.getRawValue();
 
-    // Campos de la ficha (iguales para crear y editar).
+    // Campos de la ficha (iguales para crear y editar), sin espacios sobrantes.
     const datos = {
-      primerNombre: dg.primerNombre,
-      segundoNombre: dg.segundoNombre || null,
-      primerApellido: dg.primerApellido,
-      segundoApellido: dg.segundoApellido || null,
+      ...limpiarTextos({
+        primerNombre: dg.primerNombre,
+        segundoNombre: dg.segundoNombre,
+        primerApellido: dg.primerApellido,
+        segundoApellido: dg.segundoApellido,
+        numeroDocumento: dg.numeroDocumento,
+        telefonoPrincipal: ct.telefonoPrincipal,
+        telefonoSecundario: ct.telefonoSecundario,
+        correo: ct.correo,
+        direccion: ct.direccion,
+      }),
       fechaNacimiento: toIsoDate(dg.fechaNacimiento)!,
       idGenero: dg.idGenero,
       idTipoDocumento: dg.idTipoDocumento,
-      numeroDocumento: dg.numeroDocumento || null,
       idEstadoCivil: dg.idEstadoCivil,
-      telefonoPrincipal: ct.telefonoPrincipal || null,
-      telefonoSecundario: ct.telefonoSecundario || null,
-      correo: ct.correo || null,
-      direccion: ct.direccion || null,
       idTipoSangre: dg.idTipoSangre,
       idNivelConfidencialidad: dg.idNivelConfidencialidad,
       idEstadoPaciente: dg.idEstadoPaciente!,
-    };
+    } as DatosPacienteRequest;
 
     const contactos = this.contactosEmergencia.getRawValue().map((c) => ({
       idContactoEmergencia: c.id,
-      nombreCompleto: c.nombreCompleto,
+      nombreCompleto: c.nombreCompleto.trim(),
       idParentesco: c.idParentesco,
-      telefono: c.telefono,
-      direccion: c.direccion || null,
+      telefono: c.telefono.trim(),
+      direccion: c.direccion.trim() || null,
     }));
     const alergias = this.alergias.getRawValue().map((a) => ({
       idAlergia: a.id,
       idTipoAlergia: a.idTipoAlergia!,
-      descripcion: a.descripcion,
+      descripcion: a.descripcion.trim(),
       idSeveridad: a.idSeveridad!,
       fechaDiagnostico: toIsoDate(a.fechaDiagnostico),
     }));
     const antecedentes = this.antecedentes.getRawValue().map((a) => ({
       idAntecedente: a.id,
       idTipoAntecedente: a.idTipoAntecedente!,
-      descripcion: a.descripcion,
+      descripcion: a.descripcion.trim(),
       fechaRegistro: toIsoDate(a.fechaRegistro) ?? toIsoDate(new Date())!,
     }));
 
@@ -408,12 +515,12 @@ export class PacienteFormulario {
         next: (resp) => {
           this.guardando.set(false);
           const nuevo = resp.datos!.paciente;
-          alert(`Paciente creado con expediente ${nuevo.codigoExpediente}`);
+          this.notificaciones.exito(`Paciente creado correctamente con expediente ${nuevo.codigoExpediente}`);
           this.router.navigate(['/home/pacientes', nuevo.idPaciente]);
         },
         error: (err: Error) => {
           this.guardando.set(false);
-          alert('No se pudo crear el paciente: ' + err.message);
+          this.notificaciones.error('No se pudo crear el paciente: ' + err.message);
         },
       });
     } else {
@@ -427,11 +534,11 @@ export class PacienteFormulario {
           if (resp.datos) {
             this.cargar(resp.datos);
           }
-          alert('Paciente actualizado correctamente');
+          this.notificaciones.exito('Paciente actualizado correctamente');
         },
         error: (err: Error) => {
           this.guardando.set(false);
-          alert('No se pudo actualizar el paciente: ' + err.message);
+          this.notificaciones.error('No se pudo actualizar el paciente: ' + err.message);
         },
       });
     }

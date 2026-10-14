@@ -5,6 +5,16 @@
       Seguros Médicos
     </a>
     <h1>{{ esNueva() ? 'Registrar póliza' : 'Editar póliza' }}</h1>
+    @if (registro()) {
+      <div class="auditoria">
+        <app-auditoria-info
+          [fechaCreacion]="registro()!.fechaCreacion"
+          [idUsuarioCreacion]="registro()!.idUsuarioCreacion"
+          [fechaModificacion]="registro()!.fechaModificacion"
+          [idUsuarioModificacion]="registro()!.idUsuarioModificacion"
+        />
+      </div>
+    }
   </div>
 
   <form [formGroup]="form" (ngSubmit)="guardar()" class="form-panel">
@@ -15,12 +25,13 @@
           @for (p of pacientes(); track p.idPaciente) {
             <mat-option [value]="p.idPaciente">
               {{ p.primerNombre }} {{ p.primerApellido }} · {{ p.codigoExpediente }}
+              @if (esPacienteDadoDeBaja(p.idPaciente)) {
+                (dado de baja)
+              }
             </mat-option>
           }
         </mat-select>
-        @if (form.controls.idPaciente.invalid && form.controls.idPaciente.touched) {
-          <mat-error>Selecciona un paciente</mat-error>
-        }
+        <mat-error>{{ error(form.controls.idPaciente) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -30,9 +41,7 @@
             <mat-option [value]="a.id">{{ a.nombre }}</mat-option>
           }
         </mat-select>
-        @if (form.controls.idAseguradora.invalid && form.controls.idAseguradora.touched) {
-          <mat-error>Selecciona la aseguradora</mat-error>
-        }
+        <mat-error>{{ error(form.controls.idAseguradora) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -42,9 +51,7 @@
             <mat-option [value]="r.id">{{ r.label }}</mat-option>
           }
         </mat-select>
-        @if (form.controls.idRamo.invalid && form.controls.idRamo.touched) {
-          <mat-error>Selecciona el ramo</mat-error>
-        }
+        <mat-error>{{ error(form.controls.idRamo) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -54,39 +61,43 @@
             <mat-option [value]="t.id">{{ t.label }}</mat-option>
           }
         </mat-select>
+        <mat-error>{{ error(form.controls.idTitularidad) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Número de póliza</mat-label>
-        <input matInput formControlName="numeroPoliza" />
-        @if (form.controls.numeroPoliza.invalid && form.controls.numeroPoliza.touched) {
-          <mat-error>Requerido</mat-error>
-        }
+        <input matInput formControlName="numeroPoliza" [maxlength]="largos.poliza" />
+        <mat-error>{{ error(form.controls.numeroPoliza) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Número de certificado</mat-label>
-        <input matInput formControlName="numeroCertificado" />
+        <input matInput formControlName="numeroCertificado" [maxlength]="largos.certificado" />
+        <mat-error>{{ error(form.controls.numeroCertificado) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Nombre del titular (si aplica)</mat-label>
-        <input matInput formControlName="nombreTitular" placeholder="Ej. jefe de familia" />
+        <input matInput formControlName="nombreTitular" placeholder="Ej. jefe de familia" [maxlength]="largos.titular" />
+        <mat-error>{{ error(form.controls.nombreTitular) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Código de autorización (Mi Cope)</mat-label>
-        <input matInput formControlName="codigoAutorizacion" />
+        <input matInput formControlName="codigoAutorizacion" [maxlength]="largos.autorizacion" />
+        <mat-error>{{ error(form.controls.codigoAutorizacion) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>% Copago</mat-label>
-        <input matInput type="number" min="0" max="100" formControlName="porcentajeCopago" />
+        <input matInput type="number" min="0" max="100" step="0.01" formControlName="porcentajeCopago" />
+        <mat-error>{{ error(form.controls.porcentajeCopago) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Monto de copago (Q)</mat-label>
-        <input matInput type="number" min="0" formControlName="montoCopago" />
+        <input matInput type="number" min="0" step="0.01" formControlName="montoCopago" />
+        <mat-error>{{ error(form.controls.montoCopago) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -94,13 +105,20 @@
         <input matInput [matDatepicker]="pickerInicio" formControlName="fechaInicioVigencia" />
         <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
         <mat-datepicker #pickerInicio></mat-datepicker>
+        <mat-error>{{ error(form.controls.fechaInicioVigencia) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Vigencia hasta</mat-label>
-        <input matInput [matDatepicker]="pickerFin" formControlName="fechaFinVigencia" />
+        <input
+          matInput
+          [matDatepicker]="pickerFin"
+          [min]="form.controls.fechaInicioVigencia.value"
+          formControlName="fechaFinVigencia"
+        />
         <mat-datepicker-toggle matIconSuffix [for]="pickerFin"></mat-datepicker-toggle>
         <mat-datepicker #pickerFin></mat-datepicker>
+        <mat-error>{{ error(form.controls.fechaFinVigencia) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -110,19 +128,21 @@
             <mat-option [value]="e.id">{{ e.label }}</mat-option>
           }
         </mat-select>
+        <mat-error>{{ error(form.controls.idEstadoPoliza) }}</mat-error>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Observaciones</mat-label>
-        <textarea matInput formControlName="observaciones" rows="2"></textarea>
+        <textarea matInput formControlName="observaciones" rows="2" [maxlength]="largos.observaciones"></textarea>
+        <mat-error>{{ error(form.controls.observaciones) }}</mat-error>
       </mat-form-field>
     </div>
 
     <div class="form-actions">
       <a matButton routerLink="/home/polizas">Cancelar</a>
-      <button matButton="filled" type="submit">
+      <button matButton="filled" type="submit" [disabled]="guardando()">
         <mat-icon>save</mat-icon>
-        Guardar póliza
+        {{ guardando() ? 'Guardando...' : 'Guardar póliza' }}
       </button>
     </div>
   </form>

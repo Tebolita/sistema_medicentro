@@ -56,4 +56,20 @@ export class ExpedienteService {
         )
     }
 
+    // GET /api/expedientes/eliminados
+    // Registros dados de baja (activo = false), misma forma que el listado normal.
+    RetornarExpedientesEliminados(): Observable<ApiResponse<HistorialClinico[]>> {
+        return this.http.get<ApiResponse<HistorialClinico[]>>(`${this.apiUrl}/eliminados`).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
+    // PUT /api/expedientes/{id}/reactivar
+    // Deshace la baja lógica (activo = true).
+    ReactivarExpediente(idHistorial: number): Observable<ApiResponse<object>> {
+        return this.http.put<ApiResponse<object>>(`${this.apiUrl}/${idHistorial}/reactivar`, {}).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
 }

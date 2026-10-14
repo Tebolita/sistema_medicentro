@@ -1,7 +1,7 @@
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -17,6 +17,9 @@ import { PacienteService } from '../../service/paciente.service';
 import { EmpleadoService } from '../../service/empleado.service';
 import { EspecialidadService } from '../../service/especialidad.service';
 import { CatalogoService } from '../../service/catalogo.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
+import { LARGOS, mensajeError, noFutura } from '../../shared/validadores';
 import { HistorialClinico, HistorialClinicoRequest } from '../../models/tratamiento.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
@@ -44,12 +47,20 @@ function parseIsoDateLocal(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// Largos de historial_clinico: motivo_consulta y diagnostico son nvarchar(500).
+const LARGO_MOTIVO = LARGOS.DESCRIPCION_LARGA;
+const LARGO_DIAGNOSTICO = LARGOS.DESCRIPCION_LARGA;
+
 // Códigos de TIPO_REGISTRO_CLINICO (los ids reales dependen de cada base).
 // El esquema no tiene columnas propias para pediatría/signos vitales/tipo de
-// consulta, así que esos datos extra viajan dentro de `notas` (con un prefijo).
+// consulta, así que esos datos extra viajan dentro de `notas`, cada uno en su
+// propia línea al inicio (ej. "Acompañante: Ana López"), para poder
+// separarlos otra vez al editar sin duplicarlos.
 const TIPO_PEDIATRICA = 'FICHA_PEDIATRICA';
 const TIPO_EXTERNA = 'FICHA_EXTERNA';
 const TIPO_SIGNOS_VITALES = 'EVOLUCION';
+const PREFIJO_ACOMPANANTE = 'Acompañante: ';
+const PREFIJO_TIPO_CONSULTA = 'Tipo de consulta: ';
 
 @Component({
   selector: 'app-expediente-formulario',
@@ -62,6 +73,7 @@ const TIPO_SIGNOS_VITALES = 'EVOLUCION';
     MatDatepickerModule,
     MatButtonModule,
     MatIconModule,
+    AuditoriaInfo,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './expediente-formulario.html',
@@ -76,12 +88,39 @@ export class ExpedienteFormulario {
   private empleadoService = inject(EmpleadoService);
   private especialidadService = inject(EspecialidadService);
   private catalogoService = inject(CatalogoService);
+  private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
 
+  // Largos máximos y fecha máxima para el HTML.
+  readonly largos = {
+    motivo: LARGO_MOTIVO,
+    diagnostico: LARGO_DIAGNOSTICO,
+    notas: LARGOS.NOTAS,
+    acompanante: LARGOS.NOMBRE_COMPLETO,
+  };
+  readonly hoy = new Date();
+
   // ==================== DATOS PARA LOS DROPDOWNS (desde la API) ====================
-  pacientes = signal<PacienteListado[]>([]);
+  private pacientesActivos = signal<PacienteListado[]>([]);
+  private pacientesEliminados = signal<PacienteListado[]>([]);
   private medicosApi = signal<OpcionMedico[]>([]);
   private catalogos = signal<Record<string, CatalogoOpcion[]>>({});
+
+  // Registro cargado (en edición): también sirve para mostrar quién lo creó y modificó.
+  registro = signal<HistorialClinico | null>(null);
+
+  // Para un registro nuevo solo se ofrecen pacientes activos. Al editar, si el
+  // paciente fue dado de baja, se agrega para que se vea su nombre.
+  pacientes = computed(() => {
+    const activos = this.pacientesActivos();
+    const idActual = this.registro()?.idPaciente;
+    const actualEliminado = this.pacientesEliminados().find((p) => p.idPaciente === idActual);
+    return actualEliminado ? [...activos, actualEliminado] : activos;
+  });
+
+  esPacienteDadoDeBaja(idPaciente: number): boolean {
+    return this.pacientesEliminados().some((p) => p.idPaciente === idPaciente);
+  }
 
   private opciones(codigo: string): OpcionCatalogo[] {
     return (this.catalogos()[codigo] ?? []).map((c) => ({ id: c.id, label: c.nombre }));
@@ -108,6 +147,11 @@ export class ExpedienteFormulario {
   private idTratamiento: number | null = null;
   private horaOriginal: Date | null = null;
 
+  // Notas tal como vienen de la base (con acompañante/tipo de consulta al
+  // inicio). Se separan cuando ya llegaron el registro y los catálogos.
+  private notasPendientes: string | null = null;
+  private catalogosCargados = false;
+
   // Tipo pedido desde el menú (?tipo=FICHA_PEDIATRICA), se aplica cuando llegan los catálogos.
   private codigoTipoPendiente: string | null = null;
 
@@ -115,14 +159,14 @@ export class ExpedienteFormulario {
     idPaciente: this.fb.control<number | null>(null, Validators.required),
     idMedico: this.fb.control<number | null>(null, Validators.required),
     idTipoRegistro: this.fb.control<number | null>(null, Validators.required),
-    fecha: this.fb.control<Date | null>(new Date(), Validators.required),
+    fecha: this.fb.control<Date | null>(new Date(), [Validators.required, noFutura]),
     idNivelConfidencialidad: this.fb.control<number | null>(null),
-    motivoConsulta: [''],
-    diagnostico: [''],
-    notas: [''],
+    motivoConsulta: ['', Validators.maxLength(LARGO_MOTIVO)],
+    diagnostico: ['', Validators.maxLength(LARGO_DIAGNOSTICO)],
+    notas: ['', Validators.maxLength(LARGOS.NOTAS)],
     // Campos que solo aplican según el tipo de ficha (pediátrica/externa);
     // se guardan dentro de `notas`, ver comentario junto a TIPO_PEDIATRICA.
-    acompanante: [''],
+    acompanante: ['', Validators.maxLength(LARGOS.NOMBRE_COMPLETO)],
     idTipoConsultaExterna: this.fb.control<number | null>(null),
   });
 
@@ -179,9 +223,14 @@ export class ExpedienteFormulario {
             this.cargar(resp.datos);
           }
         },
-        error: (err: Error) => alert('No se pudo cargar el registro clínico: ' + err.message),
+        error: (err: Error) => this.notificaciones.error('No se pudo cargar el registro clínico: ' + err.message),
       });
     }
+  }
+
+  // Mensaje para mostrar en <mat-error> según el error del campo.
+  error(control: AbstractControl | null): string {
+    return mensajeError(control);
   }
 
   private aplicarTipoPendiente(): void {
@@ -194,6 +243,7 @@ export class ExpedienteFormulario {
     const c = CODIGOS_CATALOGO;
     forkJoin({
       pacientes: this.pacienteService.RetornarPacientes(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
       medicos: this.empleadoService.RetornarMedicos(),
       especialidades: this.especialidadService.RetornarEspecialidades(),
       tipos: this.catalogoService.RetornarCatalogo(c.TIPO_REGISTRO_CLINICO),
@@ -202,7 +252,8 @@ export class ExpedienteFormulario {
     }).subscribe({
       next: (r) => {
         const especialidades = r.especialidades.datos ?? [];
-        this.pacientes.set(r.pacientes.datos ?? []);
+        this.pacientesActivos.set(r.pacientes.datos ?? []);
+        this.pacientesEliminados.set(r.pacientesEliminados.datos ?? []);
         this.medicosApi.set(
           (r.medicos.datos ?? []).map((m) => ({
             id: m.idEmpleado,
@@ -215,6 +266,7 @@ export class ExpedienteFormulario {
           [c.NIVEL_CONFIDENCIALIDAD]: r.niveles.datos ?? [],
           [c.TIPO_CONSULTA]: r.tiposConsulta.datos ?? [],
         });
+        this.catalogosCargados = true;
 
         if (this.esNuevo()) {
           this.aplicarTipoPendiente();
@@ -224,14 +276,16 @@ export class ExpedienteFormulario {
         } else {
           // Refresca la detección de pediátrica/externa ya con los catálogos cargados.
           this.tipoSeleccionado.set(this.form.controls.idTipoRegistro.value);
+          this.separarNotas();
         }
       },
-      error: (err: Error) => alert('No se pudieron cargar las listas del formulario: ' + err.message),
+      error: (err: Error) => this.notificaciones.error('No se pudieron cargar las listas del formulario: ' + err.message),
     });
   }
 
   private cargar(registro: HistorialClinico): void {
     this.idHistorial.set(registro.idHistorial);
+    this.registro.set(registro);
     this.idCita = registro.idCita;
     this.idTratamiento = registro.idTratamiento;
     this.horaOriginal = new Date(registro.fecha);
@@ -246,6 +300,53 @@ export class ExpedienteFormulario {
       notas: registro.notas ?? '',
     });
     this.tipoSeleccionado.set(registro.idTipoRegistro);
+    this.notasPendientes = registro.notas;
+    this.separarNotas();
+  }
+
+  // Al editar, saca el acompañante y el tipo de consulta del inicio de `notas`
+  // y los pone en sus campos, para que al guardar no se dupliquen.
+  // Entiende el formato actual (una línea por dato) y el anterior
+  // ("Acompañante: Ana. notas..." / "Control. notas...").
+  private separarNotas(): void {
+    if (this.notasPendientes === null || !this.catalogosCargados) {
+      return;
+    }
+    let resto = this.notasPendientes;
+    this.notasPendientes = null;
+    let acompanante = '';
+    let idTipoConsulta: number | null = null;
+
+    const lineas = resto.split('\n');
+    while (lineas.length) {
+      const linea = lineas[0];
+      if (linea.startsWith(PREFIJO_ACOMPANANTE)) {
+        acompanante = linea.slice(PREFIJO_ACOMPANANTE.length).trim();
+      } else if (linea.startsWith(PREFIJO_TIPO_CONSULTA)) {
+        const label = linea.slice(PREFIJO_TIPO_CONSULTA.length).trim();
+        idTipoConsulta = this.tiposConsulta.find((t) => t.label === label)?.id ?? null;
+      } else {
+        break;
+      }
+      lineas.shift();
+    }
+    resto = lineas.join('\n');
+
+    // Formato anterior, todo en una línea.
+    const viejoAcompanante = /^Acompañante: (.+?)\.(?: |$)/.exec(resto);
+    if (!acompanante && viejoAcompanante) {
+      acompanante = viejoAcompanante[1];
+      resto = resto.slice(viejoAcompanante[0].length);
+    }
+    if (idTipoConsulta === null) {
+      const viejoTipo = this.tiposConsulta.find((t) => resto === `${t.label}.` || resto.startsWith(`${t.label}. `));
+      if (viejoTipo) {
+        idTipoConsulta = viejoTipo.id;
+        resto = resto.slice(viejoTipo.label.length + 1).trimStart();
+      }
+    }
+
+    this.form.patchValue({ acompanante, idTipoConsultaExterna: idTipoConsulta, notas: resto });
   }
 
   guardar(): void {
@@ -254,24 +355,33 @@ export class ExpedienteFormulario {
     }
     this.form.markAllAsTouched();
     if (this.form.invalid) {
+      this.notificaciones.error('Revisa los campos marcados en rojo.');
       return;
     }
 
     const v = this.form.getRawValue();
+    const motivo = v.motivoConsulta.trim();
+    const diagnostico = v.diagnostico.trim();
+    const notasTexto = v.notas.trim();
+    if (!motivo && !diagnostico && !notasTexto) {
+      this.notificaciones.error('Escribe al menos el motivo de consulta, el diagnóstico o las notas.');
+      return;
+    }
 
     // El esquema no tiene columnas propias para acompañante/tipo de consulta,
-    // así que se anteponen a `notas` como un prefijo legible.
+    // así que se guardan al inicio de `notas`, cada uno en su propia línea.
     const prefijos: string[] = [];
-    if (this.esPediatrica() && v.acompanante) {
-      prefijos.push(`Acompañante: ${v.acompanante}.`);
+    const acompanante = v.acompanante.trim();
+    if (this.esPediatrica() && acompanante) {
+      prefijos.push(`${PREFIJO_ACOMPANANTE}${acompanante}`);
     }
     if (this.esExterna() && v.idTipoConsultaExterna) {
       const tipoConsultaLabel = this.tiposConsulta.find((t) => t.id === v.idTipoConsultaExterna)?.label;
       if (tipoConsultaLabel) {
-        prefijos.push(`${tipoConsultaLabel}.`);
+        prefijos.push(`${PREFIJO_TIPO_CONSULTA}${tipoConsultaLabel}`);
       }
     }
-    const notas = [...prefijos, v.notas].filter(Boolean).join(' ') || null;
+    const notas = [...prefijos, notasTexto].filter(Boolean).join('\n') || null;
 
     // La fecha del formulario + la hora (la original al editar, la actual al crear).
     const hora = this.horaOriginal ?? new Date();
@@ -286,25 +396,28 @@ export class ExpedienteFormulario {
       idTipoRegistro: v.idTipoRegistro!,
       idNivelConfidencialidad: v.idNivelConfidencialidad,
       fecha: toIsoDateTimeLocal(fecha),
-      motivoConsulta: v.motivoConsulta || null,
-      diagnostico: v.diagnostico || null,
+      motivoConsulta: motivo || null,
+      diagnostico: diagnostico || null,
       notas,
     };
 
+    const esNuevo = this.esNuevo();
     this.guardando.set(true);
-    const peticion = this.esNuevo()
+    const peticion = esNuevo
       ? this.expedienteService.CrearExpediente(request)
       : this.expedienteService.ActualizarExpediente(this.idHistorial(), request);
 
     peticion.subscribe({
       next: () => {
         this.guardando.set(false);
-        alert(this.esNuevo() ? 'Registro clínico creado correctamente' : 'Registro clínico actualizado correctamente');
+        this.notificaciones.exito(
+          esNuevo ? 'Registro clínico creado correctamente' : 'Registro clínico actualizado correctamente',
+        );
         this.router.navigate(['/home/expedientes']);
       },
       error: (err: Error) => {
         this.guardando.set(false);
-        alert('No se pudo guardar el registro clínico: ' + err.message);
+        this.notificaciones.error('No se pudo guardar el registro clínico: ' + err.message);
       },
     });
   }

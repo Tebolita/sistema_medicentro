@@ -71,4 +71,20 @@ export class PacienteService {
         )
     }
 
+    // GET /api/Pacientes/eliminados
+    // Pacientes dados de baja (activo = false), misma forma que el listado normal.
+    RetornarPacientesEliminados(): Observable<ApiResponse<PacienteListado[]>> {
+        return this.http.get<ApiResponse<PacienteListado[]>>(`${this.apiUrl}/eliminados`).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
+    // PUT /api/Pacientes/{id}/reactivar
+    // Deshace la baja lógica (activo = true).
+    ReactivarPaciente(idPaciente: number): Observable<ApiResponse<object>> {
+        return this.http.put<ApiResponse<object>>(`${this.apiUrl}/${idPaciente}/reactivar`, {}).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
 }
