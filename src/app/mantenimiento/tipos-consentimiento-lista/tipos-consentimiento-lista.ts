@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +23,7 @@ type Vista = 'activos' | 'eliminados';
 })
 export class TiposConsentimientoLista {
   private tiposService = inject(TiposConsentimientoService);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
@@ -123,24 +125,15 @@ export class TiposConsentimientoLista {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   tablaLabel(tabla: string): string {

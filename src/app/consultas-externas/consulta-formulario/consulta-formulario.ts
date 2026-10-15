@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser, NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -85,6 +86,7 @@ function formatoHora(fecha: Date): string {
 })
 export class ConsultaFormulario {
   private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private citaService = inject(CitaService);
@@ -443,24 +445,15 @@ export class ConsultaFormulario {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   usuarioLabel(idUsuario: number | null): string {

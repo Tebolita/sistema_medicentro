@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -48,6 +49,24 @@ function parseIsoDateLocal(iso: string): Date {
   return new Date(y, m - 1, d);
 }
 
+// Flujo de ESTADO_ORDEN_LABORATORIO: Pendiente -> En proceso -> Completada,
+// con Cancelada/Rechazada disponibles solo ANTES de completar. Una vez
+// Completada/Cancelada/Rechazada el estado ya no cambia (son finales) — así
+// no se puede, por ejemplo, pasar de Completada a Cancelada y volver.
+// Devuelve null cuando no hay restricción (orden nueva, o código
+// desconocido porque el catálogo todavía no cargó).
+function codigosEstadoPermitidos(codigoActual: string | null): string[] | null {
+  if (!codigoActual) return null;
+  if (codigoActual === 'PENDIENTE') {
+    return ['PENDIENTE', 'EN_PROCESO', 'COMPLETADA', 'CANCELADA', 'RECHAZADA'];
+  }
+  if (codigoActual === 'EN_PROCESO') {
+    return ['EN_PROCESO', 'COMPLETADA', 'CANCELADA', 'RECHAZADA'];
+  }
+  // COMPLETADA, CANCELADA, RECHAZADA (o cualquier código que no reconozcamos): final.
+  return [codigoActual];
+}
+
 @Component({
   selector: 'app-orden-formulario',
   imports: [
@@ -70,6 +89,7 @@ function parseIsoDateLocal(iso: string): Date {
 })
 export class OrdenFormulario {
   private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private laboratorioService = inject(LaboratorioService);
@@ -107,6 +127,24 @@ export class OrdenFormulario {
   cargandoTipos = signal(false);
   idOrden = signal(0);
   esNueva = computed(() => this.idOrden() === 0);
+
+  // Estado tal como estaba guardado al abrir la orden (no el que se vaya
+  // eligiendo en el <select> antes de guardar) — sobre eso se calcula qué
+  // transiciones son válidas.
+  private estadoOrdenOriginal = signal<number | null>(null);
+
+  estadosPermitidos = computed(() => {
+    const todos = this.estadosSignal();
+    if (this.esNueva()) {
+      return todos;
+    }
+    const codigoActual = todos.find((e) => e.id === this.estadoOrdenOriginal())?.codigo ?? null;
+    const codigosPermitidos = codigosEstadoPermitidos(codigoActual);
+    if (codigosPermitidos === null) {
+      return todos;
+    }
+    return todos.filter((e) => codigosPermitidos.includes(e.codigo));
+  });
 
   guardando = signal(false);
   errorGuardar = signal<string | null>(null);
@@ -192,30 +230,61 @@ export class OrdenFormulario {
       },
     });
 
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (idParam && idParam !== 'nueva') {
-      const id = Number(idParam);
-      const registro = this.laboratorioService.obtener(id);
-      if (registro) {
-        this.cargar(registro);
-      } else {
-        this.laboratorioService.obtenerDesdeApi(id).subscribe({
-          next: (reg) => this.cargar(reg),
-          error: (err: HttpErrorResponse) => {
-            console.error('No se pudo cargar la orden', err);
-            this.notif.error('No se pudo cargar la orden');
-          },
-        });
-      }
-      return;
-    }
+    // Angular reutiliza esta misma instancia del componente al navegar entre
+    // dos órdenes distintas sin salir de esta ruta (p. ej. desde la lista):
+    // leer el id solo del snapshot hacía que el formulario (y su historial)
+    // se quedaran pegados a la primera orden que se abrió en la sesión.
+    // Suscribirse a paramMap sí reacciona cuando cambia.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const idParam = params.get('id');
+      this.resetFormulario();
 
-    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      const idPacienteParam = params.get('paciente');
+      if (idParam && idParam !== 'nueva') {
+        const id = Number(idParam);
+        const registro = this.laboratorioService.obtener(id);
+        if (registro) {
+          this.cargar(registro);
+        } else {
+          this.laboratorioService.obtenerDesdeApi(id).subscribe({
+            next: (reg) => this.cargar(reg),
+            error: (err: HttpErrorResponse) => {
+              console.error('No se pudo cargar la orden', err);
+              this.notif.error('No se pudo cargar la orden');
+            },
+          });
+        }
+        return;
+      }
+
+      const idPacienteParam = this.route.snapshot.queryParamMap.get('paciente');
       if (idPacienteParam) {
         this.form.patchValue({ idPaciente: Number(idPacienteParam) });
       }
     });
+  }
+
+  // Deja el formulario (y el historial) como recién creados antes de cargar
+  // una orden distinta o una nueva: si no se limpia, la orden anterior se
+  // queda mezclada con la nueva (exámenes seleccionados, historial de la
+  // orden vieja todavía abierto, etc.).
+  private resetFormulario(): void {
+    this.idOrden.set(0);
+    this.form.reset({
+      idPaciente: null,
+      idMedico: null,
+      fecha: new Date(),
+      idPrioridad: null,
+      idEstadoOrden: null,
+      notas: '',
+    });
+    this.examenesSeleccionados.set(new Set());
+    this.detalleIdOriginal = new Map();
+    this.filtroExamen.set('');
+    this.seleccionInvalida.set(false);
+    this.errorGuardar.set(null);
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+    this.estadoOrdenOriginal.set(null);
   }
 
   toggleExamen(idTipoExamen: number): void {
@@ -243,6 +312,7 @@ export class OrdenFormulario {
 
   private cargar(registro: { orden: OrdenLaboratorio; detalles: OrdenDetalle[] }): void {
     this.idOrden.set(registro.orden.idOrden);
+    this.estadoOrdenOriginal.set(registro.orden.idEstadoOrden);
     this.form.patchValue({
       idPaciente: registro.orden.idPaciente,
       idMedico: registro.orden.idMedico,
@@ -353,24 +423,15 @@ export class OrdenFormulario {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   usuarioLabel(idUsuario: number | null): string {

@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
@@ -78,8 +79,8 @@ export class FacturasService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private catalogos = inject(CatalogosService);
-  private apiUrl = 'https://localhost:7086/api/facturas';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrl = `${environment.apiUrl}/api/facturas`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   private registros = signal<FacturaCompleta[]>([]);
   // El backend no tiene un listado global de pagos: se arma juntando los de

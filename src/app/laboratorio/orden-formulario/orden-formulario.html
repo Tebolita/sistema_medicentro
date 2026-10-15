@@ -64,13 +64,17 @@
 
       <mat-form-field appearance="outline">
         <mat-label>Estado</mat-label>
-        <mat-select formControlName="idEstadoOrden">
-          @for (e of estadosSignal(); track e.id + '-' + $index) {
+        <mat-select formControlName="idEstadoOrden" [disabled]="!esNueva() && estadosPermitidos().length <= 1">
+          @for (e of estadosPermitidos(); track e.id + '-' + $index) {
             <mat-option [value]="e.id">{{ e.label }}</mat-option>
           }
         </mat-select>
         @if (form.controls.idEstadoOrden.invalid && form.controls.idEstadoOrden.touched) {
           <mat-error>Selecciona el estado</mat-error>
+        } @else if (!esNueva() && estadosPermitidos().length <= 1) {
+          <mat-hint>Este estado ya es definitivo, no se puede cambiar.</mat-hint>
+        } @else if (!esNueva()) {
+          <mat-hint>Solo se muestran los estados a los que se puede avanzar desde aquí.</mat-hint>
         }
       </mat-form-field>
     </div>

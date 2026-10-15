@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
@@ -48,8 +49,8 @@ export interface BitacoraItem {
 export class InventarioFarmaciaService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
-  private apiUrl = 'https://localhost:7086/api/inventario-farmacia';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrl = `${environment.apiUrl}/api/inventario-farmacia`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   // Caché en memoria de la última lista traída del backend; las pantallas la
   // leen de acá y se refresca con cargar() o al crear/mover stock.

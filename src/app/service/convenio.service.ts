@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { catchError, Observable } from "rxjs";
@@ -18,7 +19,7 @@ import { ErrorService } from "./error.service";
     providedIn: 'root'
 })
 export class ConvenioService {
-    private apiUrl = 'https://localhost:7086/api/Convenios';
+    private apiUrl = `${environment.apiUrl}/api/Convenios`;
 
     constructor(
         private http: HttpClient,

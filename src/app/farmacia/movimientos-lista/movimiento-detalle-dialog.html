@@ -42,7 +42,7 @@
   <div mat-dialog-actions class="detalle-actions">
     <a matButton routerLink="/home/farmacia/movimiento-nuevo" (click)="cerrar()">
       <mat-icon>add</mat-icon>
-      Registrar otro movimiento
+      {{ data.esEntrada ? 'Registrar otra entrada' : 'Registrar otra salida' }}
     </a>
     <button matButton="filled" (click)="cerrar()">Cerrar</button>
   </div>

@@ -31,9 +31,10 @@
           }
         </mat-select>
         @if (form.controls.idCama.invalid && form.controls.idCama.touched) {
-          <mat-error>Selecciona una cama</mat-error>
-        }
-        @if (camasLibres().length === 0) {
+          <mat-error>
+            {{ camasLibres().length === 0 ? 'No hay camas disponibles.' : 'Selecciona una cama' }}
+          </mat-error>
+        } @else if (camasLibres().length === 0) {
           <mat-hint>No hay camas disponibles.</mat-hint>
         }
       </mat-form-field>

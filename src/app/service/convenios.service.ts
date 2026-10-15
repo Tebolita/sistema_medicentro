@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -85,8 +86,8 @@ export class ConveniosService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
-  private apiUrl = 'https://localhost:7086/api/convenios';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrl = `${environment.apiUrl}/api/convenios`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   // GET /api/convenios solo trae los activos (lo que hace falta para
   // "Eliminados" es lo mismo que en el resto de entidades: GET /eliminadas

@@ -29,6 +29,17 @@
   color-scheme: dark;
 }
 
+/* Los campos de Angular Material (mat-form-field, etc.) ya toman Roboto de
+   sus propios estilos, pero el texto plano (h1, p, botones y tablas hechos
+   a mano en vez de con componentes de Material) no tenía ningún
+   font-family declarado, así que cada pantalla caía al serif por defecto
+   del navegador en vez de la fuente del resto del sistema. El link de
+   Roboto en index.html usa display=optional a propósito (ver comentario
+   ahí) — esto no lo toca, solo define el fallback para cuando sí cargó. */
+body {
+  font-family: Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
 /* =========================================================================
    Estilos del calendario (datepicker) — SOLO para panelClass="datepicker-azul"
    Aplica únicamente a los formularios de Laboratorio, Emergencias y Hospitalización.

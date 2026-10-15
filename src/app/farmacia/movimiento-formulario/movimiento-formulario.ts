@@ -120,7 +120,13 @@ export class MovimientoFormulario {
       const tipoParam = params.get('tipo');
       if (tipoParam === 'venta') {
         this.esVenta.set(true);
-        this.form.patchValue({ idTipoMovimiento: TIPO_MOVIMIENTO_SALIDA, motivo: 'Venta directa' });
+        // Prefiere el id real de SALIDA (por código) sobre el de ejemplo —
+        // si el catálogo ya cargó para cuando se procesa este query param,
+        // usar el fijo aquí pisaría el valor correcto que ya había puesto
+        // el effect() de arriba.
+        const idSalida =
+          this.catalogos.idPorCodigo('TIPO_MOVIMIENTO_INVENTARIO', 'SALIDA') ?? TIPO_MOVIMIENTO_SALIDA;
+        this.form.patchValue({ idTipoMovimiento: idSalida, motivo: 'Venta directa' });
       }
     });
   }

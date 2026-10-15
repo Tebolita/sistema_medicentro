@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -52,6 +53,7 @@ function fechaHoraLocal(d: Date = new Date()): string {
 })
 export class CasoFormulario {
   private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private casosService = inject(CasosEmergenciaService);
@@ -147,22 +149,50 @@ export class CasoFormulario {
       .pipe(takeUntilDestroyed())
       .subscribe((id) => this.idPacienteSeleccionado.set(id));
 
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (idParam && idParam !== 'nuevo') {
-      const id = Number(idParam);
-      const registro = this.casosService.obtener(id);
-      if (registro) {
-        this.cargar(registro);
-      } else {
-        this.casosService.obtenerDesdeApi(id).subscribe({
-          next: (reg) => this.cargar(reg),
-          error: (err: HttpErrorResponse) => {
-            console.error('No se pudo cargar el caso', err);
-            this.notif.error('No se pudo cargar el caso');
-          },
-        });
+    // Angular reutiliza esta misma instancia del componente al navegar entre
+    // dos casos distintos sin salir de esta ruta: leer el id solo del
+    // snapshot hacía que el formulario (y su historial) se quedaran pegados
+    // al primer caso que se abrió en la sesión. Suscribirse a paramMap sí
+    // reacciona cuando cambia.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const idParam = params.get('id');
+      this.resetFormulario();
+
+      if (idParam && idParam !== 'nuevo') {
+        const id = Number(idParam);
+        const registro = this.casosService.obtener(id);
+        if (registro) {
+          this.cargar(registro);
+        } else {
+          this.casosService.obtenerDesdeApi(id).subscribe({
+            next: (reg) => this.cargar(reg),
+            error: (err: HttpErrorResponse) => {
+              console.error('No se pudo cargar el caso', err);
+              this.notif.error('No se pudo cargar el caso');
+            },
+          });
+        }
       }
-    }
+    });
+  }
+
+  // Deja el formulario (y el historial) como recién creados antes de cargar
+  // un caso distinto o uno nuevo: si no se limpia, el caso anterior se queda
+  // mezclado con el nuevo (historial del caso viejo todavía abierto, etc.).
+  private resetFormulario(): void {
+    this.idCaso.set(0);
+    this.form.reset({
+      idPaciente: null,
+      nombrePaciente: '',
+      idMedico: null,
+      idNivelTriage: null,
+      idEstadoCaso: null,
+      motivo: '',
+    });
+    this.idPacienteSeleccionado.set(null);
+    this.errorGuardar.set(null);
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
   }
 
   private cargar(registro: CasoEmergencia): void {
@@ -268,24 +298,15 @@ export class CasoFormulario {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   usuarioLabel(idUsuario: number | null): string {

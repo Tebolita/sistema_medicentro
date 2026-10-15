@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { catchError, Observable } from "rxjs";
@@ -11,7 +12,7 @@ import { ErrorService } from "./error.service";
     providedIn: 'root'
 })
 export class SalaService {
-    private apiUrl = 'https://localhost:7086/api/Salas';
+    private apiUrl = `${environment.apiUrl}/api/Salas`;
 
     constructor(
         private http: HttpClient,

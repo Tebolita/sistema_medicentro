@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
@@ -36,8 +37,8 @@ export interface BitacoraItem {
 export class MedicamentosService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
-  private apiUrl = 'https://localhost:7086/api/medicamentos';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrl = `${environment.apiUrl}/api/medicamentos`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   private registros = signal<Medicamento[]>([]);
   cargando = signal(false);

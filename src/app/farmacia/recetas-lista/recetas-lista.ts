@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -13,6 +14,7 @@ import { ESTADOS_RECETA } from '../farmacia-catalogos';
 import { MedicosService } from '../../service/medicos.service';
 import { PacientesService } from '../../service/pacientes.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { CatalogosService } from '../../service/catalogos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
@@ -23,12 +25,14 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
 })
 export class RecetasLista {
   private recetasService = inject(RecetasService);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private medicamentosService = inject(MedicamentosService);
   private pacientesService = inject(PacientesService);
   private medicosService = inject(MedicosService);
   private route = inject(ActivatedRoute);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private catalogos = inject(CatalogosService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -101,11 +105,25 @@ export class RecetasLista {
       .join(', ');
   }
 
+  // ESTADO_RECETA real si el catálogo existe en la base (id_valor_catalogo
+  // cambia en cada base de datos: en esta, Surtida/Cancelada son 102/103,
+  // no 2/3); si el catálogo no cargó, cae a la lista de ejemplo.
+  private estadosRecetaApi = this.catalogos.obtener('ESTADO_RECETA');
+
   estadoLabel(idEstadoReceta: number): string {
+    const api = this.estadosRecetaApi();
+    if (api.length) {
+      return api.find((e) => e.id === idEstadoReceta)?.nombre ?? '—';
+    }
     return ESTADOS_RECETA.find((e) => e.id === idEstadoReceta)?.label ?? '—';
   }
 
   estadoClase(idEstadoReceta: number): string {
+    const codigo = this.catalogos.codigoPorId('ESTADO_RECETA', idEstadoReceta);
+    if (codigo === 'SURTIDA') return 'estado-surtida';
+    if (codigo === 'CANCELADA') return 'estado-cancelada';
+    if (codigo === 'EMITIDA') return 'estado-emitida';
+    // Catálogo todavía sin cargar: usa los ids de ejemplo como último recurso.
     if (idEstadoReceta === 2) return 'estado-surtida';
     if (idEstadoReceta === 3) return 'estado-cancelada';
     return 'estado-emitida';
@@ -161,24 +179,15 @@ export class RecetasLista {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   tablaLabel(tabla: string): string {

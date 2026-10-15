@@ -103,6 +103,9 @@
             <mat-form-field appearance="outline">
               <mat-label>Duración</mat-label>
               <input matInput formControlName="duracion" placeholder="Ej. 7 días" />
+              @if (grupo.controls.duracion.invalid && grupo.controls.duracion.touched) {
+                <mat-error>Requerido</mat-error>
+              }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">

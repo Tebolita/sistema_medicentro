@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -27,7 +28,7 @@ export class PolizasDirectorioService {
   cargar(): void {
     this.cargando.set(true);
     this.errorCarga.set('');
-    this.http.get<ApiResponse<PolizaSeguro[]>>('https://localhost:7086/api/Polizas').subscribe({
+    this.http.get<ApiResponse<PolizaSeguro[]>>(`${environment.apiUrl}/api/Polizas`).subscribe({
       next: (resp) => {
         this.registros.set(resp.datos ?? []);
         this.cargando.set(false);

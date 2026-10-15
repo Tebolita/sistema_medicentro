@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -43,8 +44,8 @@ export class EspecialidadesService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
-  private apiUrl = 'https://localhost:7086/api/especialidades';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrl = `${environment.apiUrl}/api/especialidades`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   private registros = signal<Especialidad[]>([]);
   cargando = signal(false);

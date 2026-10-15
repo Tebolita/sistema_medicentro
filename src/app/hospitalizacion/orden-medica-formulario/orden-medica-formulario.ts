@@ -96,10 +96,17 @@ export class OrdenMedicaFormulario {
       next: (t) => {
         this.tiposOrdenSignal.set(t);
 
+        // El query param "tipo" viaja como código (p. ej. "MEDICA"), no como
+        // id_valor_catalogo: ese id lo genera IDENTITY y cambia en cada base
+        // de datos, así que un número fijo en el link del menú podía apuntar
+        // a otro catálogo por completo en otra base.
         const tipoParam = this.route.snapshot.queryParamMap.get('tipo');
         if (tipoParam && !this.form.controls.idTipoOrden.value) {
-          const tipoId = Number(tipoParam);
-          if (t.some((x) => x.id === tipoId)) {
+          const tipoId = this.hospitalizacionesService.idPorCodigo(
+            'TIPO_ORDEN_HOSPITALIZACION',
+            tipoParam,
+          );
+          if (tipoId != null && t.some((x) => x.id === tipoId)) {
             this.form.patchValue({ idTipoOrden: tipoId });
           }
         }

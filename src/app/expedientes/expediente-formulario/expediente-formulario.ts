@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser, NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,7 +23,7 @@ import { CatalogoService } from '../../service/catalogo.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
-import { LARGOS, mensajeError, noFutura } from '../../shared/validadores';
+import { LARGOS, mensajeError, noFutura, requeridoSinEspacios } from '../../shared/validadores';
 import { HistorialClinico, HistorialClinicoRequest } from '../../models/tratamiento.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
@@ -86,6 +87,7 @@ const PREFIJO_TIPO_CONSULTA = 'Tipo de consulta: ';
 })
 export class ExpedienteFormulario {
   private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private expedienteService = inject(ExpedienteService);
@@ -174,8 +176,8 @@ export class ExpedienteFormulario {
     idTipoRegistro: this.fb.control<number | null>(null, Validators.required),
     fecha: this.fb.control<Date | null>(new Date(), [Validators.required, noFutura]),
     idNivelConfidencialidad: this.fb.control<number | null>(null),
-    motivoConsulta: ['', Validators.maxLength(LARGO_MOTIVO)],
-    diagnostico: ['', Validators.maxLength(LARGO_DIAGNOSTICO)],
+    motivoConsulta: ['', [requeridoSinEspacios, Validators.maxLength(LARGO_MOTIVO)]],
+    diagnostico: ['', [requeridoSinEspacios, Validators.maxLength(LARGO_DIAGNOSTICO)]],
     notas: ['', Validators.maxLength(LARGOS.NOTAS)],
     // Campos que solo aplican según el tipo de ficha (pediátrica/externa);
     // se guardan dentro de `notas`, ver comentario junto a TIPO_PEDIATRICA.
@@ -376,10 +378,6 @@ export class ExpedienteFormulario {
     const motivo = v.motivoConsulta.trim();
     const diagnostico = v.diagnostico.trim();
     const notasTexto = v.notas.trim();
-    if (!motivo && !diagnostico && !notasTexto) {
-      this.notificaciones.error('Escribe al menos el motivo de consulta, el diagnóstico o las notas.');
-      return;
-    }
 
     // El esquema no tiene columnas propias para acompañante/tipo de consulta,
     // así que se guardan al inicio de `notas`, cada uno en su propia línea.
@@ -466,24 +464,15 @@ export class ExpedienteFormulario {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   usuarioLabel(idUsuario: number | null): string {

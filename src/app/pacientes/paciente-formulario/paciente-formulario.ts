@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser, NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -27,6 +28,7 @@ import {
   noFutura,
   requeridoSinEspacios,
   soloDigitos,
+  soloLetras,
   telefono,
 } from '../../shared/validadores';
 import {
@@ -94,6 +96,7 @@ function parseIsoDateLocal(iso: string): Date {
 })
 export class PacienteFormulario {
   private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private pacienteService = inject(PacienteService);
@@ -166,10 +169,10 @@ export class PacienteFormulario {
 
   datosGenerales = this.fb.nonNullable.group({
     codigoExpediente: [{ value: '', disabled: true }],
-    primerNombre: ['', [requeridoSinEspacios, Validators.maxLength(LARGOS.NOMBRE)]],
-    segundoNombre: ['', Validators.maxLength(LARGOS.NOMBRE)],
-    primerApellido: ['', [requeridoSinEspacios, Validators.maxLength(LARGOS.NOMBRE)]],
-    segundoApellido: ['', Validators.maxLength(LARGOS.NOMBRE)],
+    primerNombre: ['', [requeridoSinEspacios, soloLetras, Validators.maxLength(LARGOS.NOMBRE)]],
+    segundoNombre: ['', [soloLetras, Validators.maxLength(LARGOS.NOMBRE)]],
+    primerApellido: ['', [requeridoSinEspacios, soloLetras, Validators.maxLength(LARGOS.NOMBRE)]],
+    segundoApellido: ['', [soloLetras, Validators.maxLength(LARGOS.NOMBRE)]],
     fechaNacimiento: this.fb.control<Date | null>(null, [Validators.required, noFutura]),
     idGenero: this.fb.control<number | null>(null),
     idTipoDocumento: this.fb.control<number | null>(null),
@@ -312,7 +315,10 @@ export class PacienteFormulario {
   private crearContactoGroup(c?: PacienteCompleto['contactos'][number]) {
     return this.fb.nonNullable.group({
       id: c?.idContactoEmergencia ?? this.generarIdTemporal(),
-      nombreCompleto: [c?.nombreCompleto ?? '', [requeridoSinEspacios, Validators.maxLength(LARGOS.NOMBRE_COMPLETO)]],
+      nombreCompleto: [
+        c?.nombreCompleto ?? '',
+        [requeridoSinEspacios, soloLetras, Validators.maxLength(LARGOS.NOMBRE_COMPLETO)],
+      ],
       idParentesco: this.fb.control<number | null>(c?.idParentesco ?? null),
       telefono: [c?.telefono ?? '', [requeridoSinEspacios, telefono, Validators.maxLength(LARGOS.TELEFONO)]],
       direccion: [c?.direccion ?? '', Validators.maxLength(LARGOS.DIRECCION)],
@@ -588,24 +594,15 @@ export class PacienteFormulario {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   usuarioLabel(idUsuario: number | null): string {

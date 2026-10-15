@@ -68,6 +68,7 @@ import { InteraccionesLista } from './mantenimiento/interacciones-lista/interacc
 import { InteraccionFormulario } from './mantenimiento/interaccion-formulario/interaccion-formulario';
 import { BitacoraLista } from './mantenimiento/bitacora-lista/bitacora-lista';
 import { permisosGuard } from './service/permisos.guard';
+import { authGuard } from './service/auth.guard';
 
 export const routes: Routes = [
 
@@ -83,7 +84,7 @@ export const routes: Routes = [
 
         component: Home,
 
-        canActivate: [],
+        canActivate: [authGuard],
         canActivateChild: [permisosGuard],
 
         children: [

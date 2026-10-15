@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -57,7 +58,7 @@ export class PacientesService {
   cargarDirectorio(): void {
     this.directorioCargando.set(true);
     this.directorioError.set('');
-    this.http.get<ApiResponse<(Paciente & { edad: number })[]>>('https://localhost:7086/api/Pacientes').subscribe({
+    this.http.get<ApiResponse<(Paciente & { edad: number })[]>>(`${environment.apiUrl}/api/Pacientes`).subscribe({
       next: (resp) => {
         this.directorioRegistros.set(resp.datos ?? []);
         this.directorioCargando.set(false);

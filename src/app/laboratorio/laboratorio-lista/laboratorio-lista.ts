@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -28,6 +29,7 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
 })
 export class LaboratorioLista {
   private laboratorioService = inject(LaboratorioService);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
   private notif = inject(NotificacionesService);
@@ -267,15 +269,45 @@ export class LaboratorioLista {
     this.bitacoraSignal.set([]);
     this.filtroHistorial.set('todas');
 
+    // "Todas" solo tenía sentido como pestaña distinta de "Órdenes de
+    // laboratorio" si de verdad trae más de una tabla — antes solo se
+    // pedía ordenes_laboratorio, así que las dos pestañas mostraban
+    // exactamente lo mismo. orden_detalle (el detalle de exámenes de cada
+    // orden) también tiene sus propias entradas de auditoría.
+    let itemsOrdenes: BitacoraItem[] = [];
+    let itemsDetalle: BitacoraItem[] = [];
+    let pendientes = 2;
+
+    const finalizar = () => {
+      pendientes--;
+      if (pendientes <= 0) {
+        const todos = [...itemsOrdenes, ...itemsDetalle].sort((a, b) =>
+          b.fechaHora.localeCompare(a.fechaHora),
+        );
+        this.bitacoraSignal.set(todos);
+        this.cargandoHistorial.set(false);
+      }
+    };
+
     this.laboratorioService.RetornarBitacoraGeneral('ordenes_laboratorio').subscribe({
       next: (items) => {
-        this.bitacoraSignal.set(items);
-        this.cargandoHistorial.set(false);
+        itemsOrdenes = items;
+        finalizar();
       },
       error: (err: HttpErrorResponse) => {
         console.error('❌ Error bitácora laboratorio:', err.status);
-        this.cargandoHistorial.set(false);
-        this.notif.error('No se pudo cargar la bitácora');
+        finalizar();
+      },
+    });
+
+    this.laboratorioService.RetornarBitacoraGeneral('orden_detalle').subscribe({
+      next: (items) => {
+        itemsDetalle = items;
+        finalizar();
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error bitácora detalle de orden:', err.status);
+        finalizar();
       },
     });
   }
@@ -286,24 +318,15 @@ export class LaboratorioLista {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   tablaLabel(tabla: string): string {

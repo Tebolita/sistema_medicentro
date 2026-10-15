@@ -1,5 +1,7 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -58,6 +60,7 @@ function parseIsoDateLocal(iso: string): Date {
 })
 export class CompromisoFormulario {
   private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private compromisosService = inject(CompromisosPagoService);
@@ -146,27 +149,56 @@ export class CompromisoFormulario {
       },
     });
 
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (idParam && idParam !== 'nuevo') {
-      const id = Number(idParam);
-      const registro = this.compromisosService.obtener(id);
-      if (registro) {
-        this.cargar(registro);
+    // Angular reutiliza esta misma instancia del componente al navegar entre
+    // dos compromisos distintos sin salir de esta ruta: leer el id solo del
+    // snapshot hacía que el formulario (y su historial) se quedaran pegados
+    // al primer compromiso que se abrió en la sesión. Suscribirse a paramMap
+    // sí reacciona cuando cambia.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const idParam = params.get('id');
+      this.resetFormulario();
+
+      if (idParam && idParam !== 'nuevo') {
+        const id = Number(idParam);
+        const registro = this.compromisosService.obtener(id);
+        if (registro) {
+          this.cargar(registro);
+        } else {
+          this.compromisosService.obtenerDesdeApi(id).subscribe({
+            next: (reg) => this.cargar(reg),
+            error: (err: HttpErrorResponse) => {
+              console.error('No se pudo cargar el compromiso', err);
+              this.notif.error('No se pudo cargar el compromiso');
+            },
+          });
+        }
       } else {
-        this.compromisosService.obtenerDesdeApi(id).subscribe({
-          next: (reg) => this.cargar(reg),
-          error: (err: HttpErrorResponse) => {
-            console.error('No se pudo cargar el compromiso', err);
-            this.notif.error('No se pudo cargar el compromiso');
-          },
-        });
+        const idPacienteParam = this.route.snapshot.queryParamMap.get('paciente');
+        if (idPacienteParam) {
+          this.form.patchValue({ idPaciente: Number(idPacienteParam) });
+        }
       }
-    } else {
-      const idPacienteParam = this.route.snapshot.queryParamMap.get('paciente');
-      if (idPacienteParam) {
-        this.form.patchValue({ idPaciente: Number(idPacienteParam) });
-      }
-    }
+    });
+  }
+
+  // Deja el formulario (y el historial) como recién creados antes de cargar
+  // un compromiso distinto o uno nuevo: si no se limpia, el compromiso
+  // anterior se queda mezclado con el nuevo (historial del viejo todavía
+  // abierto, etc.).
+  private resetFormulario(): void {
+    this.idConsentimiento.set(0);
+    this.form.reset({
+      idPaciente: null,
+      idMedicoResponsable: null,
+      nombreResponsable: '',
+      idParentescoResponsable: null,
+      telefonoResponsable: '',
+      fechaFirma: null,
+      idEstadoConsentimiento: null,
+    });
+    this.errorGuardar.set(null);
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
   }
 
   private cargar(registro: CompromisoPago): void {
@@ -292,24 +324,15 @@ export class CompromisoFormulario {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   usuarioLabel(idUsuario: number | null): string {

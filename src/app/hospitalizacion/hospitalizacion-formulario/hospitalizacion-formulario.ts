@@ -1,3 +1,4 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -64,6 +65,7 @@ function parseIsoDateLocal(iso: string): Date {
 })
 export class HospitalizacionFormulario {
   private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private hospitalizacionesService = inject(HospitalizacionesService);
@@ -162,13 +164,43 @@ export class HospitalizacionFormulario {
       },
     });
 
-    this.route.queryParamMap.subscribe(() => {
-      const idParam = this.route.snapshot.paramMap.get('id');
+    // Angular reutiliza esta misma instancia del componente al navegar entre
+    // dos hospitalizaciones distintas sin salir de esta ruta: suscribirse
+    // solo a queryParamMap (leyendo el id del snapshot adentro) no reacciona
+    // si lo único que cambia es el :id del path, así que el formulario (y su
+    // historial) se quedaban pegados a la primera hospitalización abierta.
+    // Suscribirse directo a paramMap sí reacciona cuando cambia.
+    this.route.paramMap.subscribe((params) => {
+      const idParam = params.get('id');
+      this.resetFormulario();
       if (!idParam || idParam === 'nuevo') return;
 
       const id = Number(idParam);
       this.cargarDesdeBackend(id);
     });
+  }
+
+  // Deja el formulario (y el historial) como recién creados antes de cargar
+  // una hospitalización distinta o una nueva: si no se limpia, la anterior
+  // se queda mezclada con la nueva (cama, historial abierto, etc.).
+  private resetFormulario(): void {
+    this.idHospitalizacion.set(0);
+    this.registro.set(undefined);
+    this.form.reset({
+      idPaciente: null,
+      idCama: null,
+      idMedicoResponsable: null,
+      fechaIngreso: new Date(),
+      motivoIngreso: '',
+      idEstadoHospitalizacion: null,
+      fechaEgreso: null,
+      diagnosticoEgreso: '',
+    });
+    this.ordenEditando.set(null);
+    this.errorGuardar.set(null);
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+    this.registroHistorial.set(null);
   }
 
   private actualizarCamasLibres(): void {
@@ -473,24 +505,15 @@ export class HospitalizacionFormulario {
   }
 
   accionLabel(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'Creó';
-    if (idTipoAccion === 80) return 'Modificó';
-    if (idTipoAccion === 81) return 'Eliminó';
-    return 'Cambió';
+    return this.accionAuditoria.label(idTipoAccion);
   }
 
   accionClase(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'accion-crear';
-    if (idTipoAccion === 80) return 'accion-modificar';
-    if (idTipoAccion === 81) return 'accion-eliminar';
-    return 'accion-default';
+    return this.accionAuditoria.clase(idTipoAccion);
   }
 
   accionIcono(idTipoAccion: number): string {
-    if (idTipoAccion === 79) return 'add_circle';
-    if (idTipoAccion === 80) return 'edit';
-    if (idTipoAccion === 81) return 'delete';
-    return 'history';
+    return this.accionAuditoria.icono(idTipoAccion);
   }
 
   usuarioLabel(idUsuario: number | null): string {

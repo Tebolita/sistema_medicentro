@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -48,8 +49,8 @@ export class TiposExamenService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
-  private apiUrl = 'https://localhost:7086/api/tipos-examen';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrl = `${environment.apiUrl}/api/tipos-examen`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   private registros = signal<TipoExamen[]>([]);
   cargando = signal(false);

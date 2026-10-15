@@ -121,7 +121,9 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'assignment',
         label: 'Órdenes médicas',
         route: '/home/hospitalizacion/orden-nueva',
-        queryParams: { tipo: '1' },
+        // Código real de TIPO_ORDEN_HOSPITALIZACION (no el id_valor_catalogo:
+        // ese es distinto en cada base de datos porque se genera con IDENTITY).
+        queryParams: { tipo: 'MEDICA' },
       },
     ],
   },

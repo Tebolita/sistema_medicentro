@@ -43,6 +43,9 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
+# Reportes de auditoría externa (no son parte del código, no deben subirse).
+/auditoria del sistema/
+
 # Comprobantes de pago subidos desde el formulario de factura (server.ts).
 # Fuera de /public a propósito: Vite vigila esa carpeta como "directorio
 # público" y recarga la página entera cada vez que algo cambia ahí adentro,

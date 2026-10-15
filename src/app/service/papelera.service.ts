@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map } from 'rxjs';
@@ -244,7 +245,7 @@ export const RECURSOS_SOLO_LECTURA = new Set(['hospitalizaciones']);
 export class PapeleraService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
-  private apiUrl = 'https://localhost:7086/api';
+  private apiUrl = `${environment.apiUrl}/api`;
 
   listar(recurso: RecursoPapelera): Observable<RegistroEliminado[]> {
     return this.http.get<ApiResponse<unknown[]>>(`${this.apiUrl}/${recurso.recurso}/${recurso.sufijoLista}`).pipe(

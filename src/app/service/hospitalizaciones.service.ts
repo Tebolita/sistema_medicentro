@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
@@ -57,13 +58,13 @@ interface ApiResponse<T> {
 
 @Injectable({ providedIn: 'root' })
 export class HospitalizacionesService {
-  private apiUrl = 'https://localhost:7086/api/Hospitalizaciones';
-  private apiUrlCamas = 'https://localhost:7086/api/Camas';
-  private apiUrlHabitaciones = 'https://localhost:7086/api/Habitaciones';
-  private apiUrlMedicos = 'https://localhost:7086/api/empleados/medicos';
-  private apiUrlCatalogos = 'https://localhost:7086/api/catalogos';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
-  private apiUrlUsuarios = 'https://localhost:7086/api/Usuarios';
+  private apiUrl = `${environment.apiUrl}/api/Hospitalizaciones`;
+  private apiUrlCamas = `${environment.apiUrl}/api/Camas`;
+  private apiUrlHabitaciones = `${environment.apiUrl}/api/Habitaciones`;
+  private apiUrlMedicos = `${environment.apiUrl}/api/empleados/medicos`;
+  private apiUrlCatalogos = `${environment.apiUrl}/api/catalogos`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
+  private apiUrlUsuarios = `${environment.apiUrl}/api/Usuarios`;
 
   private registros = signal<HospitalizacionCompleta[]>([]);
   private esNavegador: boolean;
@@ -190,7 +191,7 @@ export class HospitalizacionesService {
         headers: this.getHeaders(),
       }),
       eliminados: this.http.get<ApiResponse<any[]>>(
-        'https://localhost:7086/api/hospitalizaciones/eliminadas',
+        `${environment.apiUrl}/api/hospitalizaciones/eliminadas`,
         { headers: this.getHeaders() },
       ),
     }).subscribe({

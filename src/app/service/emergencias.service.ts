@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { catchError, Observable } from "rxjs";
@@ -48,8 +49,8 @@ export type NuevoCompromisoPago = Omit<CompromisoPago, 'idConsentimiento'>;
     providedIn: 'root'
 })
 export class EmergenciaService {
-    private apiUrl = 'https://localhost:7086/api/casos-emergencia';
-    private apiUrlCompromisos = 'https://localhost:7086/api/compromisos-pago';
+    private apiUrl = `${environment.apiUrl}/api/casos-emergencia`;
+    private apiUrlCompromisos = `${environment.apiUrl}/api/compromisos-pago`;
 
     constructor(
         private http: HttpClient,

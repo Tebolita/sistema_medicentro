@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
 import { catchError, map, Observable } from "rxjs";
@@ -27,8 +28,8 @@ export interface BitacoraItem {
     providedIn: 'root'
 })
 export class PolizaService {
-    private apiUrl = 'https://localhost:7086/api/Polizas';
-    private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+    private apiUrl = `${environment.apiUrl}/api/Polizas`;
+    private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
     constructor(
         private http: HttpClient,

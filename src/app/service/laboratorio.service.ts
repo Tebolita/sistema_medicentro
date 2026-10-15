@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
@@ -22,6 +23,7 @@ export interface TipoExamen {
 export interface OpcionCatalogo {
   id: number;
   label: string;
+  codigo: string;
 }
 
 export interface MedicoOpcion {
@@ -61,12 +63,12 @@ interface ApiResponse<T> {
 
 @Injectable({ providedIn: 'root' })
 export class LaboratorioService {
-  private apiUrl = 'https://localhost:7086/api/laboratorio';
-  private apiUrlTiposExamen = 'https://localhost:7086/api/tipos-examen';
-  private apiUrlMedicos = 'https://localhost:7086/api/empleados/medicos';
-  private apiUrlCatalogos = 'https://localhost:7086/api/catalogos';
-  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
-  private apiUrlUsuarios = 'https://localhost:7086/api/Usuarios';
+  private apiUrl = `${environment.apiUrl}/api/laboratorio`;
+  private apiUrlTiposExamen = `${environment.apiUrl}/api/tipos-examen`;
+  private apiUrlMedicos = `${environment.apiUrl}/api/empleados/medicos`;
+  private apiUrlCatalogos = `${environment.apiUrl}/api/catalogos`;
+  private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
+  private apiUrlUsuarios = `${environment.apiUrl}/api/Usuarios`;
 
   private registros = signal<OrdenCompleta[]>([]);
   private esNavegador: boolean;
@@ -349,6 +351,7 @@ export class LaboratorioService {
         (resp.datos ?? []).map((c: any) => ({
           id: c.id ?? c.idValorCatalogo ?? c.id_valor_catalogo,
           label: c.nombre,
+          codigo: c.codigo ?? '',
         })),
       ),
     );

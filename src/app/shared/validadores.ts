@@ -31,6 +31,18 @@ export function requeridoSinEspacios(control: AbstractControl): ValidationErrors
   return null;
 }
 
+// Solo letras (incluye tildes, ñ y diéresis), espacios, apóstrofes y
+// guiones — para nombres y apellidos compuestos (ej. "José María",
+// "O'Brien", "Pérez-Gómez"). Un campo vacío no es error acá (para eso
+// está requeridoSinEspacios, aparte).
+export function soloLetras(control: AbstractControl): ValidationErrors | null {
+  const valor = (control.value ?? '').toString().trim();
+  if (!valor) {
+    return null;
+  }
+  return /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]+$/.test(valor) ? null : { soloLetras: true };
+}
+
 // Solo dígitos, con un largo exacto (ej. DPI de 13 dígitos).
 export function soloDigitos(largo: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -107,6 +119,7 @@ export function mensajeError(control: AbstractControl | null): string {
   const e = control?.errors;
   if (!e) return '';
   if (e['required']) return 'Requerido';
+  if (e['soloLetras']) return 'Solo letras';
   if (e['maxlength']) return `Máximo ${e['maxlength'].requiredLength} caracteres`;
   if (e['digitos']) return `Debe tener ${e['digitos'].largo} dígitos`;
   if (e['telefono']) return 'Teléfono inválido (8 dígitos)';

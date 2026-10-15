@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
@@ -26,7 +27,7 @@ interface ApiResponse<T> {
 
 @Injectable({ providedIn: 'root' })
 export class LaboratorioService {
-  private apiUrl = 'https://localhost:7086/api/laboratorio';
+  private apiUrl = `${environment.apiUrl}/api/laboratorio`;
 
   private registros = signal<OrdenCompleta[]>([]);
   private esNavegador: boolean;

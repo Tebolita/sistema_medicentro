@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map } from 'rxjs';
@@ -25,7 +26,7 @@ export interface RegistroBitacora {
 export class BitacoraService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
-  private apiUrl = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrl = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   listar(filtros: { tablaAfectada?: string; idUsuario?: number }): Observable<RegistroBitacora[]> {
     let params = new HttpParams();

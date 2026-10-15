@@ -1,3 +1,4 @@
+import { environment } from '../../environments/environment';
 import { Injectable, PLATFORM_ID, Signal, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -54,7 +55,7 @@ export class CatalogosService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
-  private apiUrl = 'https://localhost:7086/api/catalogos';
+  private apiUrl = `${environment.apiUrl}/api/catalogos`;
 
   private cache = new Map<string, ReturnType<typeof signal<CatalogoValor[]>>>();
 
@@ -186,5 +187,14 @@ export class CatalogosService {
   // no cargó o el código no existe: el llamador decide el valor por defecto).
   idPorCodigo(codigoTipo: string, codigoValor: string): number | undefined {
     return this.obtener(codigoTipo)().find((v) => v.codigo === codigoValor)?.id;
+  }
+
+  // Inverso de idPorCodigo: el código del valor que tiene ese id. Sirve para
+  // ids que SÍ vienen fijos desde otro lado (p. ej. idTipoAccion en la
+  // bitácora de auditoría) y hay que traducirlos de vuelta a su código real
+  // en vez de comparar contra un número quemado en el componente, que varía
+  // de una base de datos a otra.
+  codigoPorId(codigoTipo: string, id: number): string | undefined {
+    return this.obtener(codigoTipo)().find((v) => v.id === id)?.codigo;
   }
 }
