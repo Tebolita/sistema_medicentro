@@ -96,7 +96,6 @@ export class HospitalizacionFormulario {
   cargandoHistorial = signal(false);
   registroHistorial = signal<{ tabla: string; id: number; titulo: string } | null>(null);
 
-  // ✅ Validaciones agregadas: motivoIngreso y diagnosticoEgreso
   form = this.fb.nonNullable.group({
     idPaciente: this.fb.control<number | null>(null, Validators.required),
     idCama: this.fb.control<number | null>(null, Validators.required),
@@ -116,10 +115,8 @@ export class HospitalizacionFormulario {
   });
 
   constructor() {
-    // ✅ Precargar catálogos para idPorCodigo
     this.hospitalizacionesService.precargarCatalogosCamas();
 
-    // 1) Camas
     this.hospitalizacionesService.RetornarCamas().subscribe({
       next: (camas) => {
         this.camasTodas.set(camas);
@@ -131,7 +128,6 @@ export class HospitalizacionFormulario {
       },
     });
 
-    // 2) Médicos
     this.hospitalizacionesService.RetornarMedicos().subscribe({
       next: (m) => this.medicosSignal.set(m),
       error: (err: HttpErrorResponse) => {
@@ -139,7 +135,6 @@ export class HospitalizacionFormulario {
       },
     });
 
-    // 3) Estados
     this.hospitalizacionesService.RetornarEstadosHospitalizacion().subscribe({
       next: (e) => {
         this.estadosSignal.set(e);
@@ -153,7 +148,6 @@ export class HospitalizacionFormulario {
       },
     });
 
-    // 4) Tipos de orden
     this.hospitalizacionesService.RetornarTiposOrden().subscribe({
       next: (t) => this.tiposOrdenSignal.set(t),
       error: (err: HttpErrorResponse) => {
@@ -161,7 +155,6 @@ export class HospitalizacionFormulario {
       },
     });
 
-    // 5) Usuarios
     this.hospitalizacionesService.RetornarUsuarios().subscribe({
       next: (u) => this.usuariosSignal.set(u),
       error: (err: HttpErrorResponse) => {
@@ -169,7 +162,6 @@ export class HospitalizacionFormulario {
       },
     });
 
-    // 6) Refrescar detalle si hay id
     this.route.queryParamMap.subscribe(() => {
       const idParam = this.route.snapshot.paramMap.get('id');
       if (!idParam || idParam === 'nuevo') return;
@@ -179,9 +171,6 @@ export class HospitalizacionFormulario {
     });
   }
 
-  /**
-   * ✅ CORREGIDO: ahora usa 'LIBRE' en vez de 'DISPONIBLE'.
-   */
   private actualizarCamasLibres(): void {
     const todas = this.camasTodas();
     const idCamaActual = this.form.controls.idCama.value;
@@ -190,8 +179,6 @@ export class HospitalizacionFormulario {
 
     const idLibre = this.hospitalizacionesService.idPorCodigo('ESTADO_CAMA', 'LIBRE');
 
-    // Si aún no se ha cargado el catálogo, no filtramos (mostramos todas)
-    // para no dejar el dropdown vacío.
     if (idLibre == null) {
       this.camasLibres.set(todas);
       return;
@@ -386,9 +373,6 @@ export class HospitalizacionFormulario {
     });
   }
 
-  /**
-   * ✅ CORREGIDO: ahora usa 'LIBRE' (código real en la BD) en vez de 'DISPONIBLE'.
-   */
   private aplicarCambioDeCama(
     camaAnterior: CamaOpcion | null,
     camaNueva: CamaOpcion | null,
@@ -398,15 +382,12 @@ export class HospitalizacionFormulario {
     const idLibre = this.hospitalizacionesService.idPorCodigo('ESTADO_CAMA', 'LIBRE');
     const idActiva = this.hospitalizacionesService.idPorCodigo('ESTADO_HOSPITALIZACION', 'ACTIVA');
 
-    // ⚠️ Si no se pudieron resolver los IDs, abortamos con error visible
-    // en vez de escribir IDs incorrectos.
     if (idOcupada == null || idLibre == null || idActiva == null) {
       this.guardando.set(false);
-      console.error('❌ No se pudieron resolver los IDs de catálogo (ESTADO_CAMA / ESTADO_HOSPITALIZACION)');
+      console.error('❌ No se pudieron resolver los IDs de catálogo');
       this.notif.error(
         'No se pudo actualizar el estado de las camas. Verificá los catálogos.',
       );
-      // Igual navegamos para no dejar al usuario atrapado
       this.router.navigate(['/home/hospitalizacion', idHospitalizacion]);
       return;
     }
@@ -465,10 +446,6 @@ export class HospitalizacionFormulario {
     };
     siguiente();
   }
-
-  // ============================================================
-  // HISTORIAL DE AUDITORÍA
-  // ============================================================
 
   abrirHistorial(tabla: string, id: number, titulo: string): void {
     this.registroHistorial.set({ tabla, id, titulo });
@@ -547,7 +524,8 @@ export class HospitalizacionFormulario {
         'IdUsuarioCreacion',
       ]);
 
-      const idRegistroReal = this.registroHistorial()?.id ?? null;
+      // ✅ idRegistroAfectado viene directo del backend y NO está corrupto.
+      const idReal = item.idRegistroAfectado;
 
       const cambios: Array<{ campo: string; antes: string; despues: string }> = [];
       const claves = new Set([...Object.keys(antes), ...Object.keys(despues)]);
@@ -558,9 +536,12 @@ export class HospitalizacionFormulario {
         let a = antes[k];
         let d = despues[k];
 
-        if (k === 'IdHospitalizacion' && idRegistroReal != null) {
-          a = idRegistroReal;
-          d = idRegistroReal;
+        // ✅ FIX: para IdOrdenMedica, reemplazamos el valor corrupto
+        //    con el id real. "antes" como null, "después" como id real,
+        //    así NUNCA son iguales y siempre se muestra.
+        if (k === 'IdOrdenMedica' && idReal != null) {
+          a = null;
+          d = String(idReal);
         }
 
         if (JSON.stringify(a) === JSON.stringify(d)) continue;
@@ -573,8 +554,8 @@ export class HospitalizacionFormulario {
       }
 
       cambios.sort((x, y) => {
-        if (x.campo.toLowerCase().includes('id hospitalizacion')) return -1;
-        if (y.campo.toLowerCase().includes('id hospitalizacion')) return 1;
+        if (x.campo.toLowerCase().includes('id orden')) return -1;
+        if (y.campo.toLowerCase().includes('id orden')) return 1;
         return x.campo.localeCompare(y.campo);
       });
 
@@ -593,6 +574,11 @@ export class HospitalizacionFormulario {
 
   private formatearValor(valor: any, nombreCampo: string = ''): string {
     if (valor === null || valor === undefined) return '—';
+
+    if (/id ?medico/i.test(nombreCampo) && valor != null) {
+      const nombre = this.medicoLabel(Number(valor));
+      if (nombre && nombre !== '—') return nombre;
+    }
 
     if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
       const isoConZona = valor.endsWith('Z') ? valor : valor + 'Z';
