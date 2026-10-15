@@ -1,6 +1,6 @@
 import { computed, inject } from '@angular/core';
 import { Alerta, FabricaAlertas } from './alerta.model';
-import { CasosEmergenciaService } from '../emergencias/casos-emergencia.service';
+import { CasosEmergenciaService } from '../service/casos-emergencia.service';
 
 // Milisegundos por hora — para calcular antigüedad de los casos.
 const MS_POR_HORA = 60 * 60 * 1000;

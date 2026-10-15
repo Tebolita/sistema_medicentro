@@ -26,12 +26,30 @@ export interface TipoExamenInput {
   descripcion: string | null;
 }
 
+// Bitácora de auditoría (patrón igual a SalasService/CompromisosPagoService):
+// el endpoint real es /api/bitacora-auditoria?tablaAfectada=... y siempre
+// devuelve todos los registros de esa tabla, así que el filtrado por
+// registro se hace en el frontend.
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TiposExamenService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
   private apiUrl = 'https://localhost:7086/api/tipos-examen';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
 
   private registros = signal<TipoExamen[]>([]);
   cargando = signal(false);
@@ -146,5 +164,31 @@ export class TiposExamenService {
         ? lista.map((x) => (x.idTipoExamen === t.idTipoExamen ? t : x))
         : [...lista, t],
     );
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  RetornarBitacoraPorRegistro(tablaAfectada: string, idRegistro: number): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(`${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`)
+      .pipe(
+        map((resp) =>
+          (resp.datos ?? [])
+            .filter((b) => b.idRegistroAfectado === idRegistro)
+            .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+        ),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(`${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`)
+      .pipe(
+        map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+        catchError(this.errorService.handleError),
+      );
   }
 }

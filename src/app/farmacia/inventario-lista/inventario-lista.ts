@@ -1,11 +1,13 @@
 import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
+import { BitacoraItem, InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { ESTADOS_ITEM_INVENTARIO, UNIDADES_MEDIDA } from '../farmacia-catalogos';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
@@ -17,7 +19,7 @@ type Vista = 'activos' | 'eliminados';
 
 @Component({
   selector: 'app-inventario-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './inventario-lista.html',
   styleUrl: './inventario-lista.css',
 })
@@ -61,6 +63,13 @@ export class InventarioLista {
 
   cargando = computed(() => (this.vista() === 'activos' ? this.inventarioService.cargando() : this.cargandoEliminados()));
   errorCarga = computed(() => (this.vista() === 'activos' ? this.inventarioService.errorCarga() : this.errorEliminados()));
+
+  // ============================================================
+  // Historial general de Items de Inventario
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
 
   constructor() {
     // Solo en el navegador: durante el prerender no hay backend ni sesión.
@@ -165,5 +174,77 @@ export class InventarioLista {
   porcentajeStock(stockActual: number, stockMinimo: number): number {
     const referencia = stockMinimo * 3 || 1;
     return Math.min(100, Math.round((stockActual / referencia) * 100));
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.inventarioService.RetornarBitacoraGeneral('items_inventario').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error bitácora inventario:', err.status);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'items_inventario') return 'Item de inventario';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'items_inventario') return 'medication';
+    return 'description';
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 }

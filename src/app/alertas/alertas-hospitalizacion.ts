@@ -1,6 +1,6 @@
 import { computed, inject } from '@angular/core';
 import { Alerta, FabricaAlertas } from './alerta.model';
-import { HospitalizacionesService } from '../hospitalizacion/hospitalizaciones.service';
+import { HospitalizacionesService } from '../service/hospitalizaciones.service';
 
 // Milisegundos por día — para calcular antigüedad de las hospitalizaciones.
 const MS_POR_DIA = 24 * 60 * 60 * 1000;

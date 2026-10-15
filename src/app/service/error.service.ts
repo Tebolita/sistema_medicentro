@@ -9,7 +9,7 @@ export class ErrorService {
   public handleError(error: HttpErrorResponse): Observable<never> {
     let errorMessage = 'Ocurrió un error inesperado en el servidor';
 
-    if (error.error instanceof ErrorEvent) {
+    if (typeof ErrorEvent !== 'undefined' && error.error instanceof ErrorEvent) {
     // Ocurrió un error del lado del cliente (ej. se cortó el internet)
     errorMessage = error.error.message;
     } else {

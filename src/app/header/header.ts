@@ -12,7 +12,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { FormsModule } from '@angular/forms';
-import { AlertasService } from '../alertas/alertas.service';
+import { AlertasService } from '../service/alertas.service';
 import { TemaService } from '../service/tema.service';
 import { AuthService } from '../service/auth.service';
 

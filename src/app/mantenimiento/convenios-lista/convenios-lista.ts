@@ -1,28 +1,38 @@
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ConveniosService } from '../../service/convenios.service';
+import { BitacoraItem, ConveniosService } from '../../service/convenios.service';
 import { AseguradorasService } from '../../service/aseguradoras.service';
+import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-convenios-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './convenios-lista.html',
   styleUrl: './convenios-lista.css',
 })
 export class ConveniosLista {
   private conveniosService = inject(ConveniosService);
   private aseguradorasService = inject(AseguradorasService);
+  private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
 
   buscar = signal('');
   errorAccion = signal('');
   cargando = this.conveniosService.cargando;
   errorCarga = this.conveniosService.errorCarga;
+
+  // ============================================================
+  // Historial general de Convenios
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
 
   constructor() {
     // Solo en el navegador: durante el prerender no hay backend ni sesión.
@@ -70,6 +80,83 @@ export class ConveniosLista {
     this.conveniosService.eliminar(id).subscribe({
       next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
+    });
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.conveniosService.RetornarBitacoraGeneral('convenios').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: Error) => {
+        console.error('❌ Error bitácora convenios:', err);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'convenios') return 'Convenio';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'convenios') return 'handshake';
+    return 'description';
+  }
+
+  usuarioLabel(idUsuario: number | null): string {
+    if (idUsuario == null) return 'Sistema';
+    return this.usuariosService.obtener(idUsuario)?.nombreUsuario ?? `Usuario #${idUsuario}`;
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 }

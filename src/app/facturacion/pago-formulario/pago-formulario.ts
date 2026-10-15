@@ -8,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { FacturasService } from '../../service/facturas.service';
 import { FORMAS_PAGO } from '../facturacion-catalogos';
-import { PacientesService } from '../../pacientes/pacientes.service';
+import { PacientesService } from '../../service/pacientes.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 

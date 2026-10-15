@@ -1,6 +1,6 @@
 import { computed, inject } from '@angular/core';
 import { FacturasService } from '../service/facturas.service';
-import { PacientesService } from '../pacientes/pacientes.service';
+import { PacientesService } from '../service/pacientes.service';
 import { ESTADOS_FACTURA } from '../facturacion/facturacion-catalogos';
 import { CatalogosService } from '../service/catalogos.service';
 import { Alerta, FabricaAlertas } from './alerta.model';

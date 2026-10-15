@@ -1,17 +1,34 @@
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { catchError, Observable } from "rxjs";
+import { catchError, map, Observable } from "rxjs";
 
 import { PolizaSeguro, PolizaRequest } from "../models/seguro.model";
 
 import { ApiResponse } from "../models/api-response.model";
 import { ErrorService } from "./error.service";
 
+// BitacoraDto real (BitacoraAuditoriaController), igual que en los demás
+// servicios que ya muestran historial de auditoría (compromisos de pago,
+// hospitalizaciones, laboratorio, usuarios).
+export interface BitacoraItem {
+    idBitacora: number;
+    idUsuario: number | null;
+    idTipoAccion: number;
+    tablaAfectada: string;
+    idRegistroAfectado: number | null;
+    valoresAnteriores: string | null;
+    valoresNuevos: string | null;
+    ipOrigen: string | null;
+    fechaHora: string;
+    activo: boolean;
+}
+
 @Injectable({
     providedIn: 'root'
 })
 export class PolizaService {
     private apiUrl = 'https://localhost:7086/api/Polizas';
+    private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
 
     constructor(
         private http: HttpClient,
@@ -70,6 +87,39 @@ export class PolizaService {
         return this.http.put<ApiResponse<object>>(`${this.apiUrl}/${idPoliza}/reactivar`, {}).pipe(
             catchError(this.errorService.handleError)
         )
+    }
+
+    // =============================================================
+    // BITÁCORA DE AUDITORÍA
+    // =============================================================
+
+    // GET /api/bitacora-auditoria?tablaAfectada=polizas_seguro
+    // Todos los cambios (crear/modificar/eliminar) de la tabla, del más reciente al más antiguo.
+    RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+        return this.http
+            .get<ApiResponse<BitacoraItem[]>>(
+                `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+            )
+            .pipe(
+                map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+                catchError(this.errorService.handleError),
+            );
+    }
+
+    // Igual que RetornarBitacoraGeneral, pero filtrado a un solo registro (para el historial del formulario).
+    RetornarBitacoraPorRegistro(tablaAfectada: string, idRegistro: number): Observable<BitacoraItem[]> {
+        return this.http
+            .get<ApiResponse<BitacoraItem[]>>(
+                `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+            )
+            .pipe(
+                map((resp) =>
+                    (resp.datos ?? [])
+                        .filter((b) => b.idRegistroAfectado === idRegistro)
+                        .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+                ),
+                catchError(this.errorService.handleError),
+            );
     }
 
 }

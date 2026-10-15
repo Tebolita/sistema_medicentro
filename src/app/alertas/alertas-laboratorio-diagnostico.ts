@@ -1,6 +1,6 @@
 import { computed, inject } from '@angular/core';
 import { Alerta, FabricaAlertas } from './alerta.model';
-import { LaboratorioService } from '../laboratorio/laboratorio.service';
+import { LaboratorioService } from '../service/laboratorio.service';
 
 // Milisegundos en un día — para calcular antigüedad de las órdenes.
 const MS_POR_DIA = 24 * 60 * 60 * 1000;

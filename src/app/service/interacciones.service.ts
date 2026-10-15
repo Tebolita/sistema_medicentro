@@ -30,12 +30,28 @@ export interface InteraccionInput {
   descripcion: string;
 }
 
+// Fila de bitacora_auditoria (ver compromisos-pago.service.ts / medicamentos.service.ts).
+// Se usa para armar el historial general (lista) y el historial por registro (formulario).
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class InteraccionesService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
   private apiUrl = 'https://localhost:7086/api/interacciones-medicamentos';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
 
   private registros = signal<Interaccion[]>([]);
   cargando = signal(false);
@@ -148,5 +164,31 @@ export class InteraccionesService {
         ? lista.map((x) => (x.idInteraccion === i.idInteraccion ? i : x))
         : [...lista, i],
     );
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  RetornarBitacoraPorRegistro(tablaAfectada: string, idRegistro: number): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(`${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`)
+      .pipe(
+        map((resp) =>
+          (resp.datos ?? [])
+            .filter((b) => b.idRegistroAfectado === idRegistro)
+            .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+        ),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(`${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`)
+      .pipe(
+        map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+        catchError(this.errorService.handleError),
+      );
   }
 }

@@ -13,8 +13,8 @@ import {
   HospitalizacionesService,
   MedicoOpcion,
   OpcionCatalogo,
-} from '../hospitalizaciones.service';
-import { PacientesService } from '../../pacientes/pacientes.service';
+} from '../../service/hospitalizaciones.service';
+import { PacientesService } from '../../service/pacientes.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 function fechaHoraLocal(d: Date = new Date()): string {

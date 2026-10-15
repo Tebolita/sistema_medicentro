@@ -4,15 +4,15 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { MENU_SECTIONS } from '../shared/menu-data';
-import { Alerta, FabricaAlertas, ProveedorAlertas } from './alerta.model';
-import { alertasRecepcion } from './alertas-recepcion';
-import { alertasSegurosMedicos } from './alertas-seguros-medicos';
-import { alertasExpedientesClinicos } from './alertas-expedientes-clinicos';
-import { alertasLaboratorioDiagnostico } from './alertas-laboratorio-diagnostico';
-import { alertasEmergencias } from './alertas-emergencias';
-import { alertasHospitalizacion } from './alertas-hospitalizacion';
-import { alertasFarmacia } from './alertas-farmacia';
-import { alertasFacturacion } from './alertas-facturacion';
+import { Alerta, FabricaAlertas, ProveedorAlertas } from '../alertas/alerta.model';
+import { alertasRecepcion } from '../alertas/alertas-recepcion';
+import { alertasSegurosMedicos } from '../alertas/alertas-seguros-medicos';
+import { alertasExpedientesClinicos } from '../alertas/alertas-expedientes-clinicos';
+import { alertasLaboratorioDiagnostico } from '../alertas/alertas-laboratorio-diagnostico';
+import { alertasEmergencias } from '../alertas/alertas-emergencias';
+import { alertasHospitalizacion } from '../alertas/alertas-hospitalizacion';
+import { alertasFarmacia } from '../alertas/alertas-farmacia';
+import { alertasFacturacion } from '../alertas/alertas-facturacion';
 
 // Una entrada por categoría del menú (slug de MENU_SECTIONS). Para agregar
 // alertas a otra categoría solo hay que implementar su archivo.

@@ -1,20 +1,23 @@
 import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RecetaCompleta, RecetasService } from '../../service/recetas.service';
+import { BitacoraItem, RecetaCompleta, RecetasService } from '../../service/recetas.service';
 import { MedicamentosService } from '../../service/medicamentos.service';
 import { ESTADOS_RECETA } from '../farmacia-catalogos';
 import { MedicosService } from '../../service/medicos.service';
-import { PacientesService } from '../../pacientes/pacientes.service';
+import { PacientesService } from '../../service/pacientes.service';
+import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 @Component({
   selector: 'app-recetas-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './recetas-lista.html',
   styleUrl: './recetas-lista.css',
 })
@@ -24,6 +27,7 @@ export class RecetasLista {
   private pacientesService = inject(PacientesService);
   private medicosService = inject(MedicosService);
   private route = inject(ActivatedRoute);
+  private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
@@ -35,6 +39,13 @@ export class RecetasLista {
   cargando = this.recetasService.cargando;
   errorCarga = this.recetasService.errorCarga;
   errorAccion = signal('');
+
+  // ============================================================
+  // Historial general de Recetas
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
 
   constructor() {
     afterNextRender(() => {
@@ -112,6 +123,85 @@ export class RecetasLista {
     this.recetasService.eliminar(id).subscribe({
       next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
+    });
+  }
+
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.recetasService.RetornarBitacoraGeneral('recetas').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error bitácora recetas:', err.status);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'recetas') return 'Receta';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'recetas') return 'receipt_long';
+    return 'description';
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 }

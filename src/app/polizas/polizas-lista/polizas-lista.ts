@@ -1,5 +1,5 @@
 import { Component, ElementRef, PLATFORM_ID, computed, inject, signal, viewChild } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 
-import { PolizaService } from '../../service/poliza.service';
+import { PolizaService, BitacoraItem } from '../../service/poliza.service';
 import { AseguradoraService } from '../../service/aseguradora.service';
 import { PacienteService } from '../../service/paciente.service';
 import { CatalogoService } from '../../service/catalogo.service';
@@ -23,7 +23,7 @@ type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-polizas-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './polizas-lista.html',
   styleUrl: './polizas-lista.css',
 })
@@ -36,6 +36,13 @@ export class PolizasLista {
   private notificaciones = inject(NotificacionesService);
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
+
+  // ============================================================
+  // Historial general de Pólizas
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -239,6 +246,78 @@ export class PolizasLista {
         this.notificaciones.exito(`Póliza ${p.numeroPoliza} reactivada correctamente`);
       },
       error: (err: Error) => this.notificaciones.error('No se pudo reactivar la póliza: ' + err.message),
+    });
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.polizaService.RetornarBitacoraGeneral('polizas_seguro').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: Error) => {
+        console.error('❌ Error bitácora pólizas:', err);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'polizas_seguro') return 'Póliza';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'polizas_seguro') return 'policy';
+    return 'description';
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 }

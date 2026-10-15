@@ -1,1 +1,7 @@
 @import '../mantenimiento.css';
+
+/* Alinea el botón "Ver historial de este convenio" con el resto del
+   formulario (mismo ancho que .form-page en mantenimiento.css). */
+.historial-btn-wrap {
+  justify-content: flex-end;
+}

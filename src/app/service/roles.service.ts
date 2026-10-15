@@ -28,12 +28,29 @@ export interface RolPermiso {
   nombre: string;
 }
 
+// BitacoraDto real (BitacoraAuditoriaController), igual que en los demás
+// servicios que ya muestran historial de auditoría (compromisos de pago,
+// hospitalizaciones, laboratorio).
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RolesService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
   private apiUrl = 'https://localhost:7086/api/roles';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
 
   private registros = signal<Rol[]>([]);
   cargando = signal(false);
@@ -117,6 +134,36 @@ export class RolesService {
     return this.http
       .delete<ApiResponse<unknown>>(`${this.apiUrl}/${idRol}/permisos/${idPermiso}`)
       .pipe(catchError(this.errorService.handleError));
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(
+        `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      )
+      .pipe(
+        map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  RetornarBitacoraPorRegistro(tablaAfectada: string, idRegistro: number): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(
+        `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      )
+      .pipe(
+        map((resp) =>
+          (resp.datos ?? [])
+            .filter((b) => b.idRegistroAfectado === idRegistro)
+            .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+        ),
+        catchError(this.errorService.handleError),
+      );
   }
 
   private guardarEnCache(r: Rol): void {

@@ -1,6 +1,7 @@
 import { Component, ElementRef, PLATFORM_ID, computed, inject, signal, viewChild } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
 
-import { ExpedienteService } from '../../service/expediente.service';
+import { BitacoraItem, ExpedienteService } from '../../service/expediente.service';
 import { PacienteService } from '../../service/paciente.service';
 import { EmpleadoService } from '../../service/empleado.service';
 import { CatalogoService } from '../../service/catalogo.service';
@@ -29,7 +30,7 @@ type Vista = 'activos' | 'eliminados';
 
 @Component({
   selector: 'app-expedientes-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './expedientes-lista.html',
   styleUrl: './expedientes-lista.css',
 })
@@ -73,6 +74,13 @@ export class ExpedientesLista {
     return this.tiposApi().find((t) => t.codigo === codigo)?.id ?? null;
   });
   private filtroQuitado = signal(false);
+
+  // ============================================================
+  // Historial general de Expedientes (tabla real: historial_clinico)
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
 
   get tiposRegistro(): OpcionCatalogo[] {
     return this.tiposApi().map((t) => ({ id: t.id, label: t.nombre }));
@@ -256,6 +264,78 @@ export class ExpedientesLista {
         this.notificaciones.exito(`Registro clínico de "${paciente}" reactivado correctamente`);
       },
       error: (err: Error) => this.notificaciones.error('No se pudo reactivar el registro: ' + err.message),
+    });
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.expedienteService.RetornarBitacoraGeneral('historial_clinico').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error bitácora expedientes:', err.status);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'historial_clinico') return 'Expediente clínico';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'historial_clinico') return 'folder_shared';
+    return 'description';
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 }

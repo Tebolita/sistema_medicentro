@@ -14,8 +14,8 @@ import {
   MedicoOpcion,
   OpcionCatalogo,
   UsuarioOpcion,
-} from '../hospitalizaciones.service';
-import { PacientesService } from '../../pacientes/pacientes.service';
+} from '../../service/hospitalizaciones.service';
+import { PacientesService } from '../../service/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 

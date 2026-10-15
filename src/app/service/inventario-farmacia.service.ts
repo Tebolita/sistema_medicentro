@@ -28,11 +28,28 @@ export interface EditarItemFarmacia {
   idEstadoItem: number;
 }
 
+// Fila de bitacora_auditoria (ver compromisos-pago.service.ts). Se usa para
+// armar el historial general (lista) y el historial por registro (formulario)
+// tanto de items_inventario como de movimientos_inventario.
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class InventarioFarmaciaService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private apiUrl = 'https://localhost:7086/api/inventario-farmacia';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
 
   // Caché en memoria de la última lista traída del backend; las pantallas la
   // leen de acá y se refresca con cargar() o al crear/mover stock.
@@ -224,6 +241,34 @@ export class InventarioFarmaciaService {
             map(() => actualizado),
           ),
         ),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+  // Sirve tanto para items_inventario como para movimientos_inventario:
+  // tablaAfectada se pasa como parámetro, no está fijo.
+
+  RetornarBitacoraPorRegistro(tablaAfectada: string, idRegistro: number): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(`${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`)
+      .pipe(
+        map((resp) =>
+          (resp.datos ?? [])
+            .filter((b) => b.idRegistroAfectado === idRegistro)
+            .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+        ),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(`${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`)
+      .pipe(
+        map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
         catchError(this.errorService.handleError),
       );
   }

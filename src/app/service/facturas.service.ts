@@ -51,6 +51,22 @@ export interface RegistrarPago {
   observaciones: string | null;
 }
 
+// BitacoraDto real (BitacoraAuditoriaController), igual que en los demás
+// servicios que ya muestran historial de auditoría (compromisos de pago,
+// hospitalizaciones, laboratorio).
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
 // Código real que usa el backend para el estado de pago que cuenta para el
 // total cobrado (Servicios/FacturasService.cs: ESTADO_PAGO/"APLICADO"). Si el
 // catálogo aún no cargó se usa 1 como último recurso.
@@ -63,6 +79,7 @@ export class FacturasService {
   private errorService = inject(ErrorService);
   private catalogos = inject(CatalogosService);
   private apiUrl = 'https://localhost:7086/api/facturas';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
 
   private registros = signal<FacturaCompleta[]>([]);
   // El backend no tiene un listado global de pagos: se arma juntando los de
@@ -243,6 +260,36 @@ export class FacturasService {
 
   private reemplazarPagosDe(idFactura: number, pagos: Pago[]): void {
     this.pagos.update((lista) => [...lista.filter((p) => p.idFactura !== idFactura), ...pagos]);
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(
+        `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      )
+      .pipe(
+        map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  RetornarBitacoraPorRegistro(tablaAfectada: string, idRegistro: number): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(
+        `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      )
+      .pipe(
+        map((resp) =>
+          (resp.datos ?? [])
+            .filter((b) => b.idRegistroAfectado === idRegistro)
+            .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+        ),
+        catchError(this.errorService.handleError),
+      );
   }
 
   private guardarEnCache(factura: FacturaCompleta): void {

@@ -17,8 +17,8 @@ import {
   MedicoOpcion,
   OpcionCatalogo,
   UsuarioOpcion,
-} from '../compromisos-pago.service';
-import { PacientesService } from '../../pacientes/pacientes.service';
+} from '../../service/compromisos-pago.service';
+import { PacientesService } from '../../service/pacientes.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 function toIsoDateTime(value: Date | string | null): string | null {

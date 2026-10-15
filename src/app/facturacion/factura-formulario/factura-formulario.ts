@@ -11,11 +11,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FacturaDetalle } from '../../models';
-import { FacturaCompleta, FacturaInput, FacturasService } from '../../service/facturas.service';
+import { NgClass } from '@angular/common';
+import { BitacoraItem, FacturaCompleta, FacturaInput, FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA, FORMAS_PAGO, TASA_IVA, TIPOS_ITEM_FACTURA } from '../facturacion-catalogos';
 import { CatalogosService } from '../../service/catalogos.service';
 import { PolizasDirectorioService } from '../../service/polizas-directorio.service';
-import { PacientesService } from '../../pacientes/pacientes.service';
+import { PacientesService } from '../../service/pacientes.service';
 import { ComprobantesService } from '../../service/comprobantes.service';
 import { ConveniosService } from '../../service/convenios.service';
 import { UsuariosService } from '../../service/usuarios.service';
@@ -25,6 +26,7 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
 @Component({
   selector: 'app-factura-formulario',
   imports: [
+    NgClass,
     ReactiveFormsModule,
     RouterLink,
     MatFormFieldModule,
@@ -135,6 +137,13 @@ export class FacturaFormulario {
   guardando = signal(false);
   errorMsg = signal('');
   errorPago = signal('');
+
+  // ============================================================
+  // HISTORIAL DE AUDITORÍA
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
 
   // Comprobante de pago (foto de recibo/voucher, opcional). El archivo NO se
   // sube al elegirlo: se guarda localmente (vista previa con un blob: URL) y
@@ -512,5 +521,150 @@ export class FacturaFormulario {
         },
         error: (err: Error) => this.errorPago.set(err.message),
       });
+  }
+
+  // ============================================================
+  // HISTORIAL DE AUDITORÍA
+  // ============================================================
+
+  abrirHistorial(): void {
+    const id = this.idFactura();
+    if (id === 0) return;
+
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.facturasService.RetornarBitacoraPorRegistro('facturas', id).subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: Error) => {
+        console.error('❌ Error al cargar bitácora:', err);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorial(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  formatFechaHora(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
+    try {
+      const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
+      const despues = item.valoresNuevos ? JSON.parse(item.valoresNuevos) : {};
+
+      const camposIgnorados = new Set([
+        'IdUsuarioModificacion',
+        'FechaModificacion',
+        'IdUsuarioCreacion',
+      ]);
+
+      const idRegistroReal = this.idFactura();
+
+      const cambios: Array<{ campo: string; antes: string; despues: string }> = [];
+      const claves = new Set([...Object.keys(antes), ...Object.keys(despues)]);
+
+      for (const k of claves) {
+        if (camposIgnorados.has(k)) continue;
+
+        let a = antes[k];
+        let d = despues[k];
+
+        if (k === 'IdFactura' && idRegistroReal != null) {
+          a = idRegistroReal;
+          d = idRegistroReal;
+        }
+
+        if (JSON.stringify(a) === JSON.stringify(d)) continue;
+
+        cambios.push({
+          campo: this.formatearNombreCampo(k),
+          antes: this.formatearValor(a, k),
+          despues: this.formatearValor(d, k),
+        });
+      }
+
+      cambios.sort((x, y) => {
+        if (x.campo.toLowerCase().includes('id factura')) return -1;
+        if (y.campo.toLowerCase().includes('id factura')) return 1;
+        return x.campo.localeCompare(y.campo);
+      });
+
+      return cambios;
+    } catch {
+      return [];
+    }
+  }
+
+  private formatearNombreCampo(campo: string): string {
+    return campo
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (c) => c.toUpperCase())
+      .trim();
+  }
+
+  private formatearValor(valor: any, nombreCampo: string = ''): string {
+    if (valor === null || valor === undefined) return '—';
+
+    if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
+      const fecha = new Date(valor);
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toLocaleString('es-GT', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+    }
+
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    return String(valor);
+  }
+
+  private esCampoFecha(nombreCampo: string): boolean {
+    return /fecha|fechahora|creacion|modificacion/i.test(nombreCampo);
   }
 }

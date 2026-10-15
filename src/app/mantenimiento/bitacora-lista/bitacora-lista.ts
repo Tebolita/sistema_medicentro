@@ -1,5 +1,5 @@
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -42,7 +42,7 @@ export interface CambioCampo {
 
 @Component({
   selector: 'app-bitacora-lista',
-  imports: [FormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, DatePipe],
+  imports: [FormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, DatePipe, NgClass],
   templateUrl: './bitacora-lista.html',
   styleUrl: './bitacora-lista.css',
 })
@@ -104,6 +104,35 @@ export class BitacoraLista {
 
   accionLabel(idTipoAccion: number): string {
     return this.acciones().find((a) => a.id === idTipoAccion)?.label ?? `Acción #${idTipoAccion}`;
+  }
+
+  // Mismo lenguaje visual que el modal "Historial general" de Laboratorio/
+  // Emergencias/Hospitalización (badges tipo pill por acción) — acá se
+  // deriva del texto de la etiqueta en vez de un id fijo porque la bitácora
+  // cubre acciones de TODOS los módulos, no solo las 3 de un catálogo local.
+  accionClase(idTipoAccion: number): string {
+    const label = this.accionLabel(idTipoAccion).toLowerCase();
+    if (label.includes('crear')) return 'accion-crear';
+    if (label.includes('modific') || label.includes('actualiz')) return 'accion-modificar';
+    if (label.includes('eliminar')) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    const label = this.accionLabel(idTipoAccion).toLowerCase();
+    if (label.includes('crear')) return 'add_circle';
+    if (label.includes('modific') || label.includes('actualiz')) return 'edit';
+    if (label.includes('eliminar')) return 'delete';
+    return 'history';
+  }
+
+  // Nombres de tabla "humanizados": snake_case -> palabras separadas,
+  // primera letra mayúscula (p. ej. "ordenes_laboratorio" -> "Ordenes
+  // laboratorio"). Sin diccionario fijo por tabla como en los módulos
+  // individuales, porque acá puede aparecer cualquier tabla del sistema.
+  tablaLabel(tabla: string): string {
+    const texto = tabla.replace(/_/g, ' ');
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
   usuarioNombre(idUsuario: number | null): string {

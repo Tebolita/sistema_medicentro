@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { HabitacionesService } from '../../service/habitaciones.service';
+import { BitacoraItem, HabitacionesService, UsuarioOpcion } from '../../service/habitaciones.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_HABITACION, ESTADOS_HABITACION } from '../habitaciones-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
@@ -13,7 +14,7 @@ type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-habitaciones-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './habitaciones-lista.html',
   styleUrl: './habitaciones-lista.css',
 })
@@ -36,6 +37,14 @@ export class HabitacionesLista {
   buscar = signal('');
   errorAccion = signal('');
 
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
+  usuariosSignal = signal<UsuarioOpcion[]>([]);
+
   // Pestaña "Eliminadas": por ahora cualquiera con sesión la puede ver.
   // TODO: restringir a admin cuando exista control de roles en el frontend.
   vista = signal<Vista>('activas');
@@ -48,6 +57,13 @@ export class HabitacionesLista {
   errorCarga = computed(() =>
     this.vista() === 'activas' ? this.habitacionesService.errorCarga() : this.errorEliminadas(),
   );
+
+  constructor() {
+    this.habitacionesService.RetornarUsuarios().subscribe({
+      next: (u) => this.usuariosSignal.set(u),
+      error: (err: Error) => console.error('❌ [HabitacionesLista] Error usuarios:', err.message),
+    });
+  }
 
   verActivas(): void {
     this.vista.set('activas');
@@ -100,6 +116,84 @@ export class HabitacionesLista {
     this.habitacionesService.reactivar(id).subscribe({
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
+    });
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.habitacionesService.RetornarBitacoraGeneral('habitaciones').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: Error) => {
+        console.error('❌ Error bitácora habitaciones:', err.message);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'habitaciones') return 'Habitación';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'habitaciones') return 'bed';
+    return 'description';
+  }
+
+  usuarioLabel(idUsuario: number | null): string {
+    if (idUsuario == null) return 'Sistema';
+    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
+    return u?.nombre ?? `Usuario #${idUsuario}`;
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 }

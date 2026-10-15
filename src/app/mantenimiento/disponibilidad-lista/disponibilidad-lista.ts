@@ -1,10 +1,16 @@
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DIAS_SEMANA, DisponibilidadesService } from '../../service/disponibilidades.service';
+import {
+  BitacoraItem,
+  DIAS_SEMANA,
+  DisponibilidadesService,
+  UsuarioOpcion,
+} from '../../service/disponibilidades.service';
 import { MedicosService } from '../../service/medicos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
@@ -12,7 +18,7 @@ type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-disponibilidad-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './disponibilidad-lista.html',
   styleUrl: './disponibilidad-lista.css',
 })
@@ -33,8 +39,23 @@ export class DisponibilidadLista {
   cargando = computed(() => (this.vista() === 'activas' ? this.disponibilidadesService.cargando() : this.cargandoEliminadas()));
   errorCarga = computed(() => (this.vista() === 'activas' ? this.disponibilidadesService.errorCarga() : this.errorEliminadas()));
 
+  // ============================================================
+  // Historial general de Disponibilidad Médica
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
+  usuariosSignal = signal<UsuarioOpcion[]>([]);
+
   constructor() {
     afterNextRender(() => this.medicosService.cargar());
+
+    this.disponibilidadesService.RetornarUsuarios().subscribe({
+      next: (u) => this.usuariosSignal.set(u),
+      error: (err) => {
+        console.error('❌ [DisponibilidadLista] Error usuarios:', err);
+      },
+    });
   }
 
   verActivas(): void {
@@ -87,5 +108,83 @@ export class DisponibilidadLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.disponibilidadesService.RetornarBitacoraGeneral('disponibilidad_medico').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err) => {
+        console.error('❌ Error bitácora disponibilidad:', err);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'disponibilidad_medico') return 'Disponibilidad médica';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'disponibilidad_medico') return 'event_available';
+    return 'description';
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  usuarioLabel(idUsuario: number | null): string {
+    if (idUsuario == null) return 'Sistema';
+    const u = this.usuariosSignal().find((x) => x.id === idUsuario);
+    return u?.nombre ?? `Usuario #${idUsuario}`;
   }
 }

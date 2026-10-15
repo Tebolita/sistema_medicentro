@@ -46,12 +46,33 @@ export interface CamaInput {
   idEstadoCama: number;
 }
 
+// Bitácora de auditoría (patrón replicado de Emergencias/Compromisos de pago).
+export interface BitacoraItem {
+  idBitacora: number;
+  idUsuario: number | null;
+  idTipoAccion: number;
+  tablaAfectada: string;
+  idRegistroAfectado: number | null;
+  valoresAnteriores: string | null;
+  valoresNuevos: string | null;
+  ipOrigen: string | null;
+  fechaHora: string;
+  activo: boolean;
+}
+
+export interface UsuarioOpcion {
+  id: number;
+  nombre: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class HabitacionesService {
   private http = inject(HttpClient);
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
   private apiUrl = 'https://localhost:7086/api/habitaciones';
+  private apiUrlBitacora = 'https://localhost:7086/api/bitacora-auditoria';
+  private apiUrlUsuarios = 'https://localhost:7086/api/Usuarios';
 
   private registros = signal<HabitacionCompleta[]>([]);
   cargando = signal(false);
@@ -220,6 +241,51 @@ export class HabitacionesService {
           ? { ...r, camas: r.camas.filter((c) => c.idCama !== idCama) }
           : r,
       ),
+    );
+  }
+
+  // =============================================================
+  // BITÁCORA DE AUDITORÍA
+  // =============================================================
+
+  RetornarBitacoraPorRegistro(
+    tablaAfectada: string,
+    idRegistro: number,
+  ): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(
+        `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      )
+      .pipe(
+        map((resp) =>
+          (resp.datos ?? [])
+            .filter((b) => b.idRegistroAfectado === idRegistro)
+            .sort((a, b) => b.fechaHora.localeCompare(a.fechaHora)),
+        ),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  RetornarBitacoraGeneral(tablaAfectada: string): Observable<BitacoraItem[]> {
+    return this.http
+      .get<ApiResponse<BitacoraItem[]>>(
+        `${this.apiUrlBitacora}?tablaAfectada=${encodeURIComponent(tablaAfectada)}`,
+      )
+      .pipe(
+        map((resp) => (resp.datos ?? []).sort((a, b) => b.fechaHora.localeCompare(a.fechaHora))),
+        catchError(this.errorService.handleError),
+      );
+  }
+
+  RetornarUsuarios(): Observable<UsuarioOpcion[]> {
+    return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios).pipe(
+      map((resp) =>
+        (resp.datos ?? []).map((u: any) => ({
+          id: u.idUsuario ?? u.id_usuario,
+          nombre: u.nombreUsuario ?? u.nombre_usuario ?? '',
+        })),
+      ),
+      catchError(this.errorService.handleError),
     );
   }
 }

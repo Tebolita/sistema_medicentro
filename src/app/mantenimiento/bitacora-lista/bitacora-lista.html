@@ -37,18 +37,27 @@
     <p class="carga-error">{{ errorCarga() }}</p>
   }
 
-  <div class="bitacora-tabla">
+  <div class="historial-lista">
     @for (r of registros(); track r.idBitacora) {
-      <div class="bitacora-fila">
-        <button type="button" class="bitacora-resumen" (click)="toggleDetalle(r.idBitacora)">
+      <div class="historial-item">
+        <button type="button" class="historial-resumen" (click)="toggleDetalle(r.idBitacora)">
           <mat-icon class="bitacora-chevron" [class.abierto]="expandidos().has(r.idBitacora)">chevron_right</mat-icon>
-          <span class="bitacora-accion" [class]="'accion-' + r.idTipoAccion">{{ accionLabel(r.idTipoAccion) }}</span>
-          <span class="bitacora-tabla-nombre">{{ r.tablaAfectada }}</span>
-          @if (r.idRegistroAfectado != null) {
-            <span class="item-meta">#{{ r.idRegistroAfectado }}</span>
-          }
-          <span class="item-meta">{{ usuarioNombre(r.idUsuario) }}</span>
-          <span class="item-meta bitacora-fecha">{{ r.fechaHora | date: 'd MMM y, HH:mm' }}</span>
+          <div class="historial-item-left">
+            <span class="historial-tabla-badge">
+              <mat-icon>description</mat-icon>
+              {{ tablaLabel(r.tablaAfectada) }}
+              @if (r.idRegistroAfectado != null) {
+                #{{ r.idRegistroAfectado }}
+              }
+            </span>
+            <span class="historial-badge" [ngClass]="accionClase(r.idTipoAccion)">
+              <mat-icon>{{ accionIcono(r.idTipoAccion) }}</mat-icon>
+              {{ accionLabel(r.idTipoAccion) }}
+            </span>
+          </div>
+          <span class="historial-meta">
+            {{ usuarioNombre(r.idUsuario) }} · {{ r.fechaHora | date: 'd MMM y, HH:mm' }}
+          </span>
         </button>
 
         @if (expandidos().has(r.idBitacora)) {

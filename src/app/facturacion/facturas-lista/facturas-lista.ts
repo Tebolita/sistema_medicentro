@@ -1,13 +1,14 @@
 import { Component, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FacturasService } from '../../service/facturas.service';
+import { BitacoraItem, FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA } from '../facturacion-catalogos';
-import { PacientesService } from '../../pacientes/pacientes.service';
+import { PacientesService } from '../../service/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
@@ -17,7 +18,7 @@ type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-facturas-lista',
-  imports: [FormsModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './facturas-lista.html',
   styleUrl: './facturas-lista.css',
 })
@@ -48,6 +49,13 @@ export class FacturasLista {
 
   cargando = computed(() => (this.vista() === 'activas' ? this.facturasService.cargando() : this.cargandoEliminadas()));
   errorCarga = computed(() => (this.vista() === 'activas' ? this.facturasService.errorCarga() : this.errorEliminadas()));
+
+  // ============================================================
+  // Historial general de Facturas
+  // ============================================================
+  historialAbierto = signal(false);
+  cargandoHistorial = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
 
   constructor() {
     // Solo en el navegador: durante el prerender no hay backend ni sesión.
@@ -157,6 +165,78 @@ export class FacturasLista {
     this.facturasService.reactivar(id).subscribe({
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
+    });
+  }
+
+  // ============================================================
+  // HISTORIAL GENERAL
+  // ============================================================
+
+  abrirHistorialGeneral(): void {
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.facturasService.RetornarBitacoraGeneral('facturas').subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: Error) => {
+        console.error('❌ Error bitácora facturas:', err);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorialGeneral(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'Creó';
+    if (idTipoAccion === 80) return 'Modificó';
+    if (idTipoAccion === 81) return 'Eliminó';
+    return 'Cambió';
+  }
+
+  accionClase(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'accion-crear';
+    if (idTipoAccion === 80) return 'accion-modificar';
+    if (idTipoAccion === 81) return 'accion-eliminar';
+    return 'accion-default';
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    if (idTipoAccion === 79) return 'add_circle';
+    if (idTipoAccion === 80) return 'edit';
+    if (idTipoAccion === 81) return 'delete';
+    return 'history';
+  }
+
+  tablaLabel(tabla: string): string {
+    if (tabla === 'facturas') return 'Factura';
+    return tabla;
+  }
+
+  tablaIcono(tabla: string): string {
+    if (tabla === 'facturas') return 'receipt_long';
+    return 'description';
+  }
+
+  formatFechaHoraUTC(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
 }
