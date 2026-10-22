@@ -11,6 +11,7 @@ import { BitacoraItem, MedicamentosService } from '../../service/medicamentos.se
 import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -26,6 +27,7 @@ export class MedicamentosLista {
   private inventarioService = inject(InventarioFarmaciaService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -87,7 +89,7 @@ export class MedicamentosLista {
     return { total: items.reduce((suma, i) => suma + i.stockActual, 0), items: items.map((i) => i.nombre) };
   }
 
-  eliminar(id: number, nombre: string): void {
+  async eliminar(id: number, nombre: string): Promise<void> {
     const { total, items } = this.stockVinculado(id);
     const mensaje =
       total > 0
@@ -96,7 +98,7 @@ export class MedicamentosLista {
           `¿Seguro que deseas darlo de baja de todos modos?`
         : `¿Dar de baja el medicamento "${nombre}"?`;
 
-    if (!confirm(mensaje)) {
+    if (!(await this.confirmacion.confirmar(mensaje))) {
       return;
     }
     this.errorAccion.set('');
@@ -117,8 +119,8 @@ export class MedicamentosLista {
     return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar el medicamento "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el medicamento "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

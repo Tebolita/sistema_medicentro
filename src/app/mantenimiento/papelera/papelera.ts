@@ -16,6 +16,7 @@ import {
 import { UsuariosService } from '../../service/usuarios.service';
 import { nombreGrupo } from '../../shared/menu-data';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 interface GrupoDeRecursos {
   nombre: string;
@@ -40,6 +41,7 @@ export class Papelera {
   private papeleraService = inject(PapeleraService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   // Agrupados igual que el menú/Catálogos (mismo "grupo" que ya usan los
   // demás módulos), para que el selector no sea una lista plana de 30.
@@ -131,12 +133,12 @@ export class Papelera {
     });
   }
 
-  reactivar(registro: RegistroEliminado): void {
+  async reactivar(registro: RegistroEliminado): Promise<void> {
     const recurso = this.recursoSeleccionado();
     if (!recurso) {
       return;
     }
-    if (!confirm(`¿Reactivar "${registro.titulo}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar "${registro.titulo}"?`))) {
       return;
     }
     this.errorAccion.set('');

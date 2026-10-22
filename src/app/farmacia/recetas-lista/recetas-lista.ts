@@ -16,6 +16,7 @@ import { PacientesService } from '../../service/pacientes.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-recetas-lista',
@@ -33,6 +34,7 @@ export class RecetasLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -133,8 +135,8 @@ export class RecetasLista {
     return new Date(iso).toLocaleString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
 
-  eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Eliminar la receta de "${paciente}"?`)) {
+  async eliminar(id: number, paciente: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar la receta de "${paciente}"?`))) {
       return;
     }
     this.errorAccion.set('');

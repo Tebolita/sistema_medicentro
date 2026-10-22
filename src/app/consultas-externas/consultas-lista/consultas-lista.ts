@@ -21,6 +21,7 @@ import { Cita } from '../../models/cita.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 // La tabla `citas` no tiene columna de tipo de consulta (Primera vez /
 // Reconsulta): el formulario lo guarda al inicio de `notas` con este prefijo.
@@ -56,6 +57,7 @@ export class ConsultasLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
 
@@ -246,9 +248,9 @@ export class ConsultasLista {
     return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
-  eliminar(c: ConsultaFila): void {
+  async eliminar(c: ConsultaFila): Promise<void> {
     const paciente = this.nombrePaciente(c.idPaciente);
-    if (!confirm(`¿Eliminar la consulta de "${paciente}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar la consulta de "${paciente}"?`))) {
       return;
     }
     this.citaService.EliminarCita(c.idCita).subscribe({
@@ -263,9 +265,9 @@ export class ConsultasLista {
     });
   }
 
-  reactivar(c: ConsultaFila): void {
+  async reactivar(c: ConsultaFila): Promise<void> {
     const paciente = this.nombrePaciente(c.idPaciente);
-    if (!confirm(`¿Reactivar la consulta de "${paciente}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la consulta de "${paciente}"?`))) {
       return;
     }
     this.citaService.ReactivarCita(c.idCita).subscribe({

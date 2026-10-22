@@ -14,6 +14,7 @@ import { MedicamentosService } from '../../service/medicamentos.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -39,6 +40,7 @@ export class InteraccionesLista {
   private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private severidadApi = this.catalogos.obtener('SEVERIDAD');
   private severidades = computed(() => {
     const api = this.severidadApi();
@@ -101,8 +103,8 @@ export class InteraccionesLista {
     );
   });
 
-  eliminar(id: number, etiqueta: string): void {
-    if (!confirm(`¿Dar de baja la interacción "${etiqueta}"?`)) {
+  async eliminar(id: number, etiqueta: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja la interacción "${etiqueta}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -112,8 +114,8 @@ export class InteraccionesLista {
     });
   }
 
-  reactivar(id: number, etiqueta: string): void {
-    if (!confirm(`¿Reactivar la interacción "${etiqueta}"?`)) {
+  async reactivar(id: number, etiqueta: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la interacción "${etiqueta}"?`))) {
       return;
     }
     this.errorAccion.set('');

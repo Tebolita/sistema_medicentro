@@ -58,7 +58,10 @@ export class AlertasService {
 
   alertas = computed<Alerta[]>(() => {
     const slug = this.moduloActual()?.slug;
-    return slug ? this.proveedores[slug].alertas() : [];
+    // No todos los módulos con "route" necesitan alertas propias (p. ej.
+    // Reportes) — sin el ?. esto tronaba en cualquier módulo nuevo que no
+    // tuviera todavía su entrada en FABRICAS.
+    return slug ? (this.proveedores[slug]?.alertas() ?? []) : [];
   });
 
   private cargados = new Set<string>();
@@ -71,7 +74,7 @@ export class AlertasService {
         return;
       }
       this.cargados.add(slug);
-      this.proveedores[slug].cargar();
+      this.proveedores[slug]?.cargar();
     });
   }
 }

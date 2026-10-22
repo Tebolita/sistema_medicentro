@@ -12,6 +12,7 @@ import { BitacoraItem, ConveniosService } from '../../service/convenios.service'
 import { AseguradorasService } from '../../service/aseguradoras.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-convenios-lista',
@@ -25,6 +26,7 @@ export class ConveniosLista {
   private aseguradorasService = inject(AseguradorasService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -76,8 +78,8 @@ export class ConveniosLista {
     return new Date(y, m - 1, d).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja el convenio "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja el convenio "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

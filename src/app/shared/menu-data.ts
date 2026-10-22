@@ -259,6 +259,15 @@ export const MENU_SECTIONS: MenuSection[] = [
       { icon: 'delete_outline', label: 'Papelera', route: '/home/mantenimiento/papelera', grupo: 'General' },
     ],
   },
+  {
+    slug: 'reportes',
+    title: 'Reportes y Estadísticas',
+    icon: 'insights',
+    description: 'Indicadores clínicos y financieros del sistema, por mes.',
+    color: '#1565c0',
+    route: '/home/reportes',
+    items: [],
+  },
 ];
 
 // Código del valor de catálogo MODULO_SISTEMA (scripts/sembrar_catalogos.sql)
@@ -276,6 +285,7 @@ export const CODIGO_MODULO_A_SLUG: Record<string, string> = {
   FARMACIA: 'farmacia',
   FACTURACION_COBROS: 'facturacion-cobros',
   MANTENIMIENTO: 'mantenimiento',
+  REPORTES: 'reportes',
 };
 
 // Primer segmento de ruta (después de "/home/") -> slug de la MenuSection

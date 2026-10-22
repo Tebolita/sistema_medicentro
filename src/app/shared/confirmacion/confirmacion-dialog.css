@@ -1,0 +1,67 @@
+.confirmacion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 4px 0;
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.confirmacion-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  background: color-mix(in srgb, var(--c-accent) 14%, var(--c-surface));
+  color: var(--c-accent);
+}
+
+.confirmacion-icono mat-icon {
+  font-size: 26px;
+  width: 26px;
+  height: 26px;
+}
+
+.confirmacion.peligroso .confirmacion-icono {
+  background: color-mix(in srgb, #c62828 16%, var(--c-surface));
+  color: #c62828;
+}
+
+.confirmacion h2 {
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.confirmacion p {
+  margin: 0;
+  padding: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--c-text-muted);
+}
+
+.confirmacion-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 0 0 4px;
+  width: 100%;
+}
+
+.boton-confirmar {
+  background-color: var(--c-accent) !important;
+  color: #fff !important;
+}
+
+.peligroso .boton-confirmar {
+  background-color: #c62828 !important;
+  color: #fff !important;
+}

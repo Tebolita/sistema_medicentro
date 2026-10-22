@@ -19,6 +19,7 @@ import {
 import { PacientesService } from '../../service/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-hospitalizaciones-lista',
@@ -32,6 +33,7 @@ export class HospitalizacionesLista {
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
   private notif = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -213,14 +215,14 @@ export class HospitalizacionesLista {
     return u?.nombre ?? `Usuario #${idUsuario}`;
   }
 
-  eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Eliminar el registro de hospitalización de "${paciente}"?`)) return;
+  async eliminar(id: number, paciente: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar el registro de hospitalización de "${paciente}"?`))) return;
     this.hospitalizacionesService.eliminar(id);
     this.notif.exito('Ingreso hospitalario eliminado correctamente');
   }
 
-  reactivar(id: number): void {
-    if (!confirm('¿Reactivar este ingreso hospitalario?')) return;
+  async reactivar(id: number): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Reactivar este ingreso hospitalario?'))) return;
 
     this.hospitalizacionesService.reactivar(id).subscribe({
       next: () => {

@@ -21,6 +21,7 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
 import { PolizaSeguro, AseguradoraListado } from '../../models/seguro.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -40,6 +41,7 @@ export class PolizasLista {
   private notificaciones = inject(NotificacionesService);
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
+  private confirmacion = inject(ConfirmacionService);
 
   // ============================================================
   // Historial general de Pólizas
@@ -228,9 +230,9 @@ export class PolizasLista {
     return new Date(iso).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  eliminar(p: PolizaSeguro): void {
+  async eliminar(p: PolizaSeguro): Promise<void> {
     const paciente = this.nombrePaciente(p.idPaciente);
-    if (!confirm(`¿Eliminar la póliza ${p.numeroPoliza} de "${paciente}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar la póliza ${p.numeroPoliza} de "${paciente}"?`))) {
       return;
     }
     this.polizaService.EliminarPoliza(p.idPoliza).subscribe({
@@ -245,9 +247,9 @@ export class PolizasLista {
     });
   }
 
-  reactivar(p: PolizaSeguro): void {
+  async reactivar(p: PolizaSeguro): Promise<void> {
     const paciente = this.nombrePaciente(p.idPaciente);
-    if (!confirm(`¿Reactivar la póliza ${p.numeroPoliza} de "${paciente}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la póliza ${p.numeroPoliza} de "${paciente}"?`))) {
       return;
     }
     this.polizaService.ReactivarPoliza(p.idPoliza).subscribe({

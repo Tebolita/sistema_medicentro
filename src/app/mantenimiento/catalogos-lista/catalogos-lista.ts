@@ -10,6 +10,7 @@ import { TIPOS_CATALOGO_CONOCIDOS, TipoCatalogoConocido } from '../mantenimiento
 import { TipoCatalogoDialog } from '../tipo-catalogo-dialog/tipo-catalogo-dialog';
 import { ValorCatalogoDialog } from '../valor-catalogo-dialog/valor-catalogo-dialog';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-catalogos-lista',
@@ -22,6 +23,7 @@ export class CatalogosLista {
   private usuariosService = inject(UsuariosService);
   private dialog = inject(MatDialog);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   constructor() {
     // CatalogosService (como el resto de servicios "singleton" de la app)
@@ -175,14 +177,14 @@ export class CatalogosLista {
     });
   }
 
-  eliminarValor(idValor: number, nombre: string): void {
+  async eliminarValor(idValor: number, nombre: string): Promise<void> {
     const codigoTipo = this.tipoSeleccionado();
     if (!codigoTipo) {
       return;
     }
     // El backend no tiene forma de reactivar un valor dado de baja (el GET
     // solo trae los activos): aviso explícito de que no es reversible acá.
-    if (!confirm(`¿Dar de baja el valor "${nombre}"? No se puede deshacer desde esta pantalla.`)) {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja el valor "${nombre}"? No se puede deshacer desde esta pantalla.`))) {
       return;
     }
     this.errorAccion.set('');

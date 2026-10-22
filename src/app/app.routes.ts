@@ -67,6 +67,7 @@ import { DisponibilidadFormulario } from './mantenimiento/disponibilidad-formula
 import { InteraccionesLista } from './mantenimiento/interacciones-lista/interacciones-lista';
 import { InteraccionFormulario } from './mantenimiento/interaccion-formulario/interaccion-formulario';
 import { BitacoraLista } from './mantenimiento/bitacora-lista/bitacora-lista';
+import { ReportesLista } from './reportes/reportes-lista/reportes-lista';
 import { permisosGuard } from './service/permisos.guard';
 import { authGuard } from './service/auth.guard';
 
@@ -181,6 +182,7 @@ export const routes: Routes = [
             {path: 'mantenimiento/interacciones/nueva',component: InteraccionFormulario,},
             {path: 'mantenimiento/interacciones/:id',component: InteraccionFormulario,},
             {path: 'mantenimiento/bitacora',component: BitacoraLista,},
+            {path: 'reportes',component: ReportesLista,},
         ],
     }
 

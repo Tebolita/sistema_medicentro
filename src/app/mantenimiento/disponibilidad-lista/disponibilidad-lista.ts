@@ -16,6 +16,7 @@ import {
 } from '../../service/disponibilidades.service';
 import { MedicosService } from '../../service/medicos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -30,6 +31,7 @@ export class DisponibilidadLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private medicosService = inject(MedicosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -92,8 +94,8 @@ export class DisponibilidadLista {
     );
   });
 
-  eliminar(id: number, etiqueta: string): void {
-    if (!confirm(`¿Dar de baja la disponibilidad de "${etiqueta}"?`)) {
+  async eliminar(id: number, etiqueta: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja la disponibilidad de "${etiqueta}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -103,8 +105,8 @@ export class DisponibilidadLista {
     });
   }
 
-  reactivar(id: number, etiqueta: string): void {
-    if (!confirm(`¿Reactivar la disponibilidad de "${etiqueta}"?`)) {
+  async reactivar(id: number, etiqueta: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la disponibilidad de "${etiqueta}"?`))) {
       return;
     }
     this.errorAccion.set('');

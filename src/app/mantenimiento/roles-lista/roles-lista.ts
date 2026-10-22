@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BitacoraItem, RolesService } from '../../service/roles.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-roles-lista',
@@ -24,6 +25,7 @@ export class RolesLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -51,8 +53,8 @@ export class RolesLista {
     return lista.filter((r) => [r.nombre, r.descripcion].filter(Boolean).join(' ').toLowerCase().includes(term));
   });
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja el rol "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja el rol "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

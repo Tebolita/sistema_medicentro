@@ -13,6 +13,7 @@ import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { TIPOS_SALA, ESTADOS_SALA } from '../salas-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -29,6 +30,7 @@ export class SalasLista {
   private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private tiposApi = this.catalogos.obtener('TIPO_SALA');
   private tipos = computed(() => {
     const api = this.tiposApi();
@@ -102,8 +104,8 @@ export class SalasLista {
     return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja la sala "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja la sala "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -113,8 +115,8 @@ export class SalasLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar la sala "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la sala "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

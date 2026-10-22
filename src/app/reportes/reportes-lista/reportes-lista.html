@@ -1,0 +1,240 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Reportes y Estadísticas</h1>
+      <p>Indicadores clínicos y financieros del sistema, por mes.</p>
+    </div>
+  </div>
+
+  <div class="filtros">
+    <mat-form-field appearance="outline">
+      <mat-label>Desde</mat-label>
+      <input matInput [matDatepicker]="pickerDesde" [ngModel]="desde()" (ngModelChange)="desde.set($event)" />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+      <mat-datepicker #pickerDesde></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Hasta</mat-label>
+      <input matInput [matDatepicker]="pickerHasta" [ngModel]="hasta()" (ngModelChange)="hasta.set($event)" />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+      <mat-datepicker #pickerHasta></mat-datepicker>
+    </mat-form-field>
+
+    <button matButton="filled" type="button" (click)="buscar()" [disabled]="cargando()">
+      <mat-icon>search</mat-icon>
+      {{ cargando() ? 'Cargando...' : 'Buscar' }}
+    </button>
+    <button matButton type="button" (click)="limpiarFiltro()">Últimos 6 meses</button>
+  </div>
+
+  <!-- ============================================================
+       INDICADORES CLÍNICOS
+       ============================================================ -->
+  <section class="reporte-seccion">
+    <div class="seccion-header">
+      <h2><mat-icon>event_available</mat-icon> Indicadores clínicos</h2>
+      @if (!errorClinicos() && barrasClinicas().length > 0) {
+        <button matButton type="button" (click)="mostrarTablaClinicos.set(!mostrarTablaClinicos())">
+          <mat-icon>{{ mostrarTablaClinicos() ? 'bar_chart' : 'table_rows' }}</mat-icon>
+          {{ mostrarTablaClinicos() ? 'Ver gráfico' : 'Ver tabla' }}
+        </button>
+      }
+    </div>
+
+    <div class="stat-tiles">
+      <div class="stat-tile">
+        <span class="stat-label">Total de citas en el rango</span>
+        <span class="stat-valor">{{ totalCitas() | number }}</span>
+      </div>
+    </div>
+
+    <div class="reporte-card">
+      @if (cargando()) {
+        <p class="estado-vacio">Cargando...</p>
+      } @else if (errorClinicos()) {
+        <div class="estado-error">
+          <mat-icon>info</mat-icon>
+          <p>{{ errorClinicos() }}</p>
+        </div>
+      } @else if (barrasClinicas().length === 0) {
+        <p class="estado-vacio">No hay citas registradas en este rango.</p>
+      } @else if (mostrarTablaClinicos()) {
+        <table class="tabla-datos">
+          <thead>
+            <tr>
+              <th>Mes</th>
+              @for (s of seriesClinicas(); track s.codigo) {
+                <th>{{ etiquetaEstado(s.codigo) }}</th>
+              }
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of barrasClinicas(); track b.mes) {
+              <tr>
+                <td>{{ b.etiqueta }}</td>
+                @for (s of seriesClinicas(); track s.codigo) {
+                  <td>{{ (b.segmentos | find: s.codigo) ?? 0 }}</td>
+                }
+                <td class="col-total">{{ b.total }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <div class="grafico-wrap">
+          <svg class="grafico-svg" [attr.viewBox]="viewBoxClinicos()" preserveAspectRatio="xMinYMin meet">
+            @for (marca of marcasEje(techoClinicos()); track marca) {
+              <line
+                class="linea-guia"
+                x1="0"
+                [attr.x2]="svgClinicos().length * anchoSlot"
+                [attr.y1]="yEje(marca, techoClinicos())"
+                [attr.y2]="yEje(marca, techoClinicos())"
+              />
+            }
+            @for (barra of svgClinicos(); track barra.mes) {
+              <g [matTooltip]="barra.etiqueta + ': ' + barra.total + ' citas'">
+                @for (seg of barra.segmentosSvg; track seg.codigo) {
+                  <rect
+                    class="barra-segmento"
+                    [class.tope]="seg.esTope"
+                    [attr.x]="barra.x"
+                    [attr.y]="seg.y"
+                    [attr.width]="barra.ancho"
+                    [attr.height]="seg.alto"
+                    [attr.rx]="seg.esTope ? 4 : 0"
+                    [style.--color-claro]="seg.color" [style.--color-oscuro]="seg.colorOscuro"
+                  />
+                }
+              </g>
+            }
+          </svg>
+          <div class="eje-x">
+            @for (barra of svgClinicos(); track barra.mes) {
+              <span class="eje-x-etiqueta" [style.width.px]="anchoSlot">{{ barra.etiqueta }}</span>
+            }
+          </div>
+        </div>
+        <div class="leyenda">
+          @for (s of seriesClinicas(); track s.codigo) {
+            <span class="leyenda-item">
+              <span class="leyenda-swatch" [style.--color-claro]="s.color" [style.--color-oscuro]="s.colorOscuro"></span>
+              {{ etiquetaEstado(s.codigo) }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ============================================================
+       INDICADORES FINANCIEROS
+       ============================================================ -->
+  <section class="reporte-seccion">
+    <div class="seccion-header">
+      <h2><mat-icon>payments</mat-icon> Indicadores financieros</h2>
+      @if (!errorFinancieros() && barrasFinancieras().length > 0) {
+        <button matButton type="button" (click)="mostrarTablaFinancieros.set(!mostrarTablaFinancieros())">
+          <mat-icon>{{ mostrarTablaFinancieros() ? 'bar_chart' : 'table_rows' }}</mat-icon>
+          {{ mostrarTablaFinancieros() ? 'Ver gráfico' : 'Ver tabla' }}
+        </button>
+      }
+    </div>
+
+    <div class="stat-tiles">
+      <div class="stat-tile">
+        <span class="stat-label">Total facturado</span>
+        <span class="stat-valor">{{ formatQ(totalFacturado()) }}</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-label">Facturas en el rango</span>
+        <span class="stat-valor">{{ totalFacturas() | number }}</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-label">Ticket promedio</span>
+        <span class="stat-valor">{{ formatQ(ticketPromedio()) }}</span>
+      </div>
+    </div>
+
+    <div class="reporte-card">
+      @if (cargando()) {
+        <p class="estado-vacio">Cargando...</p>
+      } @else if (errorFinancieros()) {
+        <div class="estado-error">
+          <mat-icon>info</mat-icon>
+          <p>{{ errorFinancieros() }}</p>
+        </div>
+      } @else if (barrasFinancieras().length === 0) {
+        <p class="estado-vacio">No hay facturas registradas en este rango.</p>
+      } @else if (mostrarTablaFinancieros()) {
+        <table class="tabla-datos">
+          <thead>
+            <tr>
+              <th>Mes</th>
+              @for (s of seriesFinancieras(); track s.codigo) {
+                <th>{{ etiquetaEstado(s.codigo) }}</th>
+              }
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of barrasFinancieras(); track b.mes) {
+              <tr>
+                <td>{{ b.etiqueta }}</td>
+                @for (s of seriesFinancieras(); track s.codigo) {
+                  <td>{{ formatQ((b.segmentos | find: s.codigo) ?? 0) }}</td>
+                }
+                <td class="col-total">{{ formatQ(b.total) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <div class="grafico-wrap">
+          <svg class="grafico-svg" [attr.viewBox]="viewBoxFinancieros()" preserveAspectRatio="xMinYMin meet">
+            @for (marca of marcasEje(techoFinancieros()); track marca) {
+              <line
+                class="linea-guia"
+                x1="0"
+                [attr.x2]="svgFinancieros().length * anchoSlot"
+                [attr.y1]="yEje(marca, techoFinancieros())"
+                [attr.y2]="yEje(marca, techoFinancieros())"
+              />
+            }
+            @for (barra of svgFinancieros(); track barra.mes) {
+              <g [matTooltip]="barra.etiqueta + ': ' + formatQ(barra.total)">
+                @for (seg of barra.segmentosSvg; track seg.codigo) {
+                  <rect
+                    class="barra-segmento"
+                    [class.tope]="seg.esTope"
+                    [attr.x]="barra.x"
+                    [attr.y]="seg.y"
+                    [attr.width]="barra.ancho"
+                    [attr.height]="seg.alto"
+                    [attr.rx]="seg.esTope ? 4 : 0"
+                    [style.--color-claro]="seg.color" [style.--color-oscuro]="seg.colorOscuro"
+                  />
+                }
+              </g>
+            }
+          </svg>
+          <div class="eje-x">
+            @for (barra of svgFinancieros(); track barra.mes) {
+              <span class="eje-x-etiqueta" [style.width.px]="anchoSlot">{{ barra.etiqueta }}</span>
+            }
+          </div>
+        </div>
+        <div class="leyenda">
+          @for (s of seriesFinancieras(); track s.codigo) {
+            <span class="leyenda-item">
+              <span class="leyenda-swatch" [style.--color-claro]="s.color" [style.--color-oscuro]="s.colorOscuro"></span>
+              {{ etiquetaEstado(s.codigo) }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </section>
+</div>

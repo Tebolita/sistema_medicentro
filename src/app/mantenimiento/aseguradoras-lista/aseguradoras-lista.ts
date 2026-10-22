@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BitacoraItem, AseguradorasService } from '../../service/aseguradoras.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -25,6 +26,7 @@ export class AseguradorasLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -72,8 +74,8 @@ export class AseguradorasLista {
     );
   });
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja la aseguradora "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja la aseguradora "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -83,8 +85,8 @@ export class AseguradorasLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar la aseguradora "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la aseguradora "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

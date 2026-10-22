@@ -14,6 +14,7 @@ import {
   UsuarioOpcion,
 } from '../../service/tipos-consentimiento.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -27,6 +28,7 @@ export class TiposConsentimientoLista {
   private tiposService = inject(TiposConsentimientoService);
   private accionAuditoria = inject(AuditoriaAccionService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -77,8 +79,8 @@ export class TiposConsentimientoLista {
     return lista.filter((t) => [t.nombre, t.codigo].join(' ').toLowerCase().includes(term));
   });
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja el tipo de consentimiento "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja el tipo de consentimiento "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -88,8 +90,8 @@ export class TiposConsentimientoLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar el tipo de consentimiento "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el tipo de consentimiento "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

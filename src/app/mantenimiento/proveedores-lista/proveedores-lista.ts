@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BitacoraItem, ProveedoresService } from '../../service/proveedores.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-proveedores-lista',
@@ -23,6 +24,7 @@ export class ProveedoresLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -55,8 +57,8 @@ export class ProveedoresLista {
     );
   });
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja al proveedor "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja al proveedor "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

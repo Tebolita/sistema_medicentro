@@ -22,6 +22,7 @@ import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_HABITACION, ESTADOS_HABITACION, ESTADOS_CAMA } from '../habitaciones-catalogos';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-habitacion-formulario',
@@ -49,6 +50,7 @@ export class HabitacionFormulario {
   private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private tiposApi = this.catalogos.obtener('TIPO_HABITACION');
   tipos = computed(() => {
     const api = this.tiposApi();
@@ -212,8 +214,8 @@ export class HabitacionFormulario {
     });
   }
 
-  eliminarCama(cama: Cama): void {
-    if (!confirm(`¿Quitar la cama "${cama.numeroCama}" de esta habitación?`)) {
+  async eliminarCama(cama: Cama): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Quitar la cama "${cama.numeroCama}" de esta habitación?`))) {
       return;
     }
     this.errorCamas.set('');

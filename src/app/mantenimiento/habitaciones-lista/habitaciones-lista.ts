@@ -12,6 +12,7 @@ import { BitacoraItem, HabitacionesService, UsuarioOpcion } from '../../service/
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_HABITACION, ESTADOS_HABITACION } from '../habitaciones-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -27,6 +28,7 @@ export class HabitacionesLista {
   private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private tiposApi = this.catalogos.obtener('TIPO_HABITACION');
   private tipos = computed(() => {
     const api = this.tiposApi();
@@ -101,8 +103,8 @@ export class HabitacionesLista {
     return this.estados().find((e) => e.id === idEstadoHabitacion)?.label ?? '—';
   }
 
-  eliminar(id: number, numero: string): void {
-    if (!confirm(`¿Dar de baja la habitación "${numero}"?`)) {
+  async eliminar(id: number, numero: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja la habitación "${numero}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -112,8 +114,8 @@ export class HabitacionesLista {
     });
   }
 
-  reactivar(id: number, numero: string): void {
-    if (!confirm(`¿Reactivar la habitación "${numero}"?`)) {
+  async reactivar(id: number, numero: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la habitación "${numero}"?`))) {
       return;
     }
     this.errorAccion.set('');

@@ -14,6 +14,7 @@ import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -32,6 +33,7 @@ export class FacturasLista {
   private usuariosService = inject(UsuariosService);
   private estadosFacturaApi = this.catalogos.obtener('ESTADO_FACTURA');
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -148,8 +150,8 @@ export class FacturasLista {
     return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
-  eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Anular la factura de "${paciente}"?`)) {
+  async eliminar(id: number, paciente: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Anular la factura de "${paciente}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -159,8 +161,8 @@ export class FacturasLista {
     });
   }
 
-  reactivar(id: number, paciente: string): void {
-    if (!confirm(`¿Reactivar la factura de "${paciente}"?`)) {
+  async reactivar(id: number, paciente: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la factura de "${paciente}"?`))) {
       return;
     }
     this.errorAccion.set('');

@@ -21,6 +21,7 @@ import { AuditoriaInfo } from '../shared/auditoria-info/auditoria-info';
 import { mensajeError, requeridoSinEspacios } from '../shared/validadores';
 import { Acta, ActaRequest } from '../models/acta.model';
 import { PacienteListado } from '../models/paciente.model';
+import { ConfirmacionService } from '../shared/confirmacion/confirmacion.service';
 
 // Forma que espera el HTML en el selector "Atendido por".
 interface Recepcionista {
@@ -68,6 +69,7 @@ export class LibroActas {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
+  private confirmacion = inject(ConfirmacionService);
 
   readonly largoMotivo = LARGO_MOTIVO;
   readonly largoObservaciones = LARGO_OBSERVACIONES;
@@ -282,9 +284,9 @@ export class LibroActas {
     });
   }
 
-  eliminar(a: Acta): void {
+  async eliminar(a: Acta): Promise<void> {
     const nombre = this.nombrePaciente(a.idPaciente);
-    if (!confirm(`¿Eliminar el acta de "${nombre}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar el acta de "${nombre}"?`))) {
       return;
     }
     this.actaService.EliminarActa(a.idActa).subscribe({
@@ -302,9 +304,9 @@ export class LibroActas {
     });
   }
 
-  reactivar(a: Acta): void {
+  async reactivar(a: Acta): Promise<void> {
     const nombre = this.nombrePaciente(a.idPaciente);
-    if (!confirm(`¿Reactivar el acta de "${nombre}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el acta de "${nombre}"?`))) {
       return;
     }
     this.actaService.ReactivarActa(a.idActa).subscribe({

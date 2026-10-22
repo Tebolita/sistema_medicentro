@@ -13,6 +13,7 @@ import { UsuariosService } from '../../service/usuarios.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { MODULOS_SISTEMA } from '../permisos-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -36,6 +37,7 @@ export class PermisosLista {
   bitacoraSignal = signal<BitacoraItem[]>([]);
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private modulosApi = this.catalogos.obtener('MODULO_SISTEMA');
   private modulos = computed(() => {
     const api = this.modulosApi();
@@ -78,8 +80,8 @@ export class PermisosLista {
     return this.modulos().find((m) => m.id === idModulo)?.label ?? '—';
   }
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja el permiso "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja el permiso "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -89,8 +91,8 @@ export class PermisosLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar el permiso "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el permiso "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

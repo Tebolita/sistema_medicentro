@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BitacoraItem, PuestosService } from '../../service/puestos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -25,6 +26,7 @@ export class PuestosLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   // ============================================================
   // Historial general de Puestos
@@ -65,8 +67,8 @@ export class PuestosLista {
     return lista.filter((p) => p.nombre.toLowerCase().includes(term));
   });
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja el puesto "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja el puesto "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -76,8 +78,8 @@ export class PuestosLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar el puesto "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el puesto "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

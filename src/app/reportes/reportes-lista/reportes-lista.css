@@ -1,0 +1,246 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-header h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.page-header p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--c-text-muted);
+}
+
+.filtros {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filtros mat-form-field {
+  width: 180px;
+}
+
+.filtros button {
+  margin-top: 8px;
+}
+
+.reporte-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.seccion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.seccion-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.seccion-header h2 mat-icon {
+  color: var(--c-accent);
+}
+
+/* ===== Tarjetas de cifra (stat tiles) ===== */
+.stat-tiles {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 170px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.stat-valor {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--c-text);
+  font-variant-numeric: proportional-nums;
+}
+
+/* ===== Tarjeta del gráfico ===== */
+.reporte-card {
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.estado-vacio {
+  margin: 0;
+  padding: 32px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--c-text-soft);
+  font-style: italic;
+}
+
+.estado-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--c-accent-2) 10%, var(--c-surface));
+  color: var(--c-text-muted);
+}
+
+.estado-error mat-icon {
+  color: var(--c-accent-2);
+  flex-shrink: 0;
+}
+
+.estado-error p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ===== Gráfico de barras (SVG) ===== */
+.grafico-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.grafico-svg {
+  width: 100%;
+  min-width: 360px;
+  height: 220px;
+  display: block;
+}
+
+.linea-guia {
+  stroke: var(--c-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.barra-segmento {
+  --color-claro: var(--c-accent);
+  --color-oscuro: var(--c-accent);
+  fill: var(--color-claro);
+  transition: opacity 0.12s ease;
+}
+
+:root[data-theme='dark'] .barra-segmento {
+  fill: var(--color-oscuro);
+}
+
+.barra-segmento:hover {
+  opacity: 0.85;
+}
+
+.eje-x {
+  display: flex;
+}
+
+.eje-x-etiqueta {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--c-text-soft);
+  text-transform: capitalize;
+}
+
+/* ===== Leyenda ===== */
+.leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+}
+
+.leyenda-swatch {
+  --color-claro: var(--c-accent);
+  --color-oscuro: var(--c-accent);
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--color-claro);
+}
+
+:root[data-theme='dark'] .leyenda-swatch {
+  background: var(--color-oscuro);
+}
+
+/* ===== Tabla de datos (vista alterna, accesibilidad) ===== */
+.tabla-datos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.tabla-datos th,
+.tabla-datos td {
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--c-border);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla-datos th:first-child,
+.tabla-datos td:first-child {
+  text-align: left;
+  font-variant-numeric: normal;
+  text-transform: capitalize;
+}
+
+.tabla-datos th {
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+.tabla-datos .col-total {
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+@media (max-width: 700px) {
+  .filtros mat-form-field {
+    width: 100%;
+  }
+}

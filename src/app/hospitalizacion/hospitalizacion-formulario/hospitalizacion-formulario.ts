@@ -25,6 +25,7 @@ import {
 } from '../../service/hospitalizaciones.service';
 import { PacientesService } from '../../service/pacientes.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 function toIsoDateTime(value: Date | string | null): string | null {
   if (!value) return null;
@@ -71,6 +72,7 @@ export class HospitalizacionFormulario {
   private hospitalizacionesService = inject(HospitalizacionesService);
   private pacientesService = inject(PacientesService);
   private notif = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   pacientes = this.pacientesService.directorio;
 
@@ -315,11 +317,11 @@ export class HospitalizacionFormulario {
       });
   }
 
-  eliminarOrden(orden: OrdenMedicaHospitalizacion): void {
+  async eliminarOrden(orden: OrdenMedicaHospitalizacion): Promise<void> {
     const idHospitalizacion = this.idHospitalizacion();
     if (!idHospitalizacion) return;
 
-    if (!confirm(`¿Eliminar la orden "${orden.descripcion}"?`)) return;
+    if (!(await this.confirmacion.confirmar(`¿Eliminar la orden "${orden.descripcion}"?`))) return;
 
     this.hospitalizacionesService
       .eliminarOrden(idHospitalizacion, orden.idOrdenMedica)

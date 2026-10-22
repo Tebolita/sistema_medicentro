@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BitacoraItem, UsuariosService } from '../../service/usuarios.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 // ESTADO_USUARIO ya se siembra junto con el usuario inicial
 // (scripts/insertar_usuario.sql): ACTIVO / BLOQUEADO / INACTIVO.
@@ -38,6 +39,7 @@ export class UsuariosLista {
   errorCarga = this.usuariosService.errorCarga;
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private estadosApi = this.catalogos.obtener('ESTADO_USUARIO');
   private estados = computed(() => {
     const api = this.estadosApi();
@@ -71,8 +73,8 @@ export class UsuariosLista {
     return this.estados().find((e) => e.id === idEstadoUsuario)?.label ?? '—';
   }
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja al usuario "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja al usuario "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

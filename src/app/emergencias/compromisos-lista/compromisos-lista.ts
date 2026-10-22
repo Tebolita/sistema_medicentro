@@ -17,6 +17,7 @@ import {
 } from '../../service/compromisos-pago.service';
 import { PacientesService } from '../../service/pacientes.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-compromisos-lista',
@@ -36,6 +37,7 @@ export class CompromisosLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private pacientesService = inject(PacientesService);
   private notif = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   buscando = computed(() => this.buscar().trim().length > 0);
@@ -215,8 +217,8 @@ export class CompromisosLista {
     return u?.nombre ?? `Usuario #${idUsuario}`;
   }
 
-  eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Eliminar el compromiso de pago de "${paciente}"?`)) return;
+  async eliminar(id: number, paciente: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar el compromiso de pago de "${paciente}"?`))) return;
     this.compromisosService.eliminar(id);
     this.notif.exito('Compromiso de pago eliminado correctamente');
   }
@@ -224,8 +226,8 @@ export class CompromisosLista {
   /**
    * ✅ Reactiva un compromiso eliminado.
    */
-  reactivar(id: number): void {
-    if (!confirm('¿Reactivar este compromiso de pago?')) return;
+  async reactivar(id: number): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Reactivar este compromiso de pago?'))) return;
 
     this.compromisosService.reactivar(id).subscribe({
       next: () => {

@@ -18,6 +18,7 @@ import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { PacienteListado } from '../../models/paciente.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -35,6 +36,7 @@ export class PacientesLista {
   private notificaciones = inject(NotificacionesService);
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
+  private confirmacion = inject(ConfirmacionService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -214,9 +216,9 @@ export class PacientesLista {
     return new Date(iso).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
-  eliminar(p: PacienteListado): void {
+  async eliminar(p: PacienteListado): Promise<void> {
     const nombre = this.nombreCompleto(p);
-    if (!confirm(`¿Eliminar al paciente "${nombre}"? Esto no borra su expediente, solo lo marca como inactivo.`)) {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar al paciente "${nombre}"? Esto no borra su expediente, solo lo marca como inactivo.`))) {
       return;
     }
     this.pacienteService.EliminarPaciente(p.idPaciente).subscribe({
@@ -231,9 +233,9 @@ export class PacientesLista {
     });
   }
 
-  reactivar(p: PacienteListado): void {
+  async reactivar(p: PacienteListado): Promise<void> {
     const nombre = this.nombreCompleto(p);
-    if (!confirm(`¿Reactivar al paciente "${nombre}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar al paciente "${nombre}"?`))) {
       return;
     }
     this.pacienteService.ReactivarPaciente(p.idPaciente).subscribe({

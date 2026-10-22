@@ -20,6 +20,7 @@ import {
 import { PacientesService } from '../../service/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-laboratorio-lista',
@@ -33,6 +34,7 @@ export class LaboratorioLista {
   private pacientesService = inject(PacientesService);
   private route = inject(ActivatedRoute);
   private notif = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -239,14 +241,14 @@ export class LaboratorioLista {
     return u?.nombre ?? `Usuario #${idUsuario}`;
   }
 
-  eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Eliminar la orden de "${paciente}"?`)) return;
+  async eliminar(id: number, paciente: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar la orden de "${paciente}"?`))) return;
     this.laboratorioService.eliminar(id);
     this.notif.exito('Orden de laboratorio eliminada correctamente');
   }
 
-  reactivar(id: number): void {
-    if (!confirm('¿Reactivar esta orden de laboratorio?')) return;
+  async reactivar(id: number): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Reactivar esta orden de laboratorio?'))) return;
 
     this.laboratorioService.reactivar(id).subscribe({
       next: () => {

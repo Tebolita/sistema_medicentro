@@ -14,6 +14,7 @@ import { ESTADOS_EMPLEADO } from '../empleados-catalogos';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -31,6 +32,7 @@ export class EmpleadosLista {
   private notificaciones = inject(NotificacionesService);
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private estadosApi = this.catalogos.obtener('ESTADO_EMPLEADO');
   private estados = computed(() => {
     const api = this.estadosApi();
@@ -87,8 +89,8 @@ export class EmpleadosLista {
     return this.estados().find((e) => e.id === idEstadoEmpleado)?.label ?? '—';
   }
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja al empleado "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja al empleado "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -98,8 +100,8 @@ export class EmpleadosLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar al empleado "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar al empleado "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

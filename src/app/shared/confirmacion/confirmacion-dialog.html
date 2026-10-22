@@ -1,0 +1,13 @@
+<div class="confirmacion" [class.peligroso]="data.peligroso">
+  <div class="confirmacion-icono">
+    <mat-icon>{{ data.peligroso ? 'warning' : 'help' }}</mat-icon>
+  </div>
+  <h2 mat-dialog-title>{{ data.titulo }}</h2>
+  <p mat-dialog-content>{{ data.mensaje }}</p>
+  <div mat-dialog-actions class="confirmacion-acciones">
+    <button matButton type="button" (click)="cancelar()">{{ data.textoCancelar }}</button>
+    <button matButton="filled" type="button" class="boton-confirmar" (click)="confirmar()">
+      {{ data.textoConfirmar }}
+    </button>
+  </div>
+</div>

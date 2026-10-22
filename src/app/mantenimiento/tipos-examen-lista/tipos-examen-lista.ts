@@ -13,6 +13,7 @@ import { BitacoraItem, TiposExamenService } from '../../service/tipos-examen.ser
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -36,6 +37,7 @@ export class TiposExamenLista {
   bitacoraSignal = signal<BitacoraItem[]>([]);
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private categoriasApi = this.catalogos.obtener('CATEGORIA_EXAMEN');
 
   // ✅ Solo desde la BD. Sin fallback hardcodeado.
@@ -80,8 +82,8 @@ export class TiposExamenLista {
     return this.categorias().find((c) => c.id === idCategoriaExamen)?.label ?? '—';
   }
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja el tipo de examen "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja el tipo de examen "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -91,8 +93,8 @@ export class TiposExamenLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar el tipo de examen "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el tipo de examen "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

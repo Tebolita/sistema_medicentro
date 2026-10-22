@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BitacoraItem, EspecialidadesService } from '../../service/especialidades.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -25,6 +26,7 @@ export class EspecialidadesLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -70,8 +72,8 @@ export class EspecialidadesLista {
     return lista.filter((e) => e.nombre.toLowerCase().includes(term));
   });
 
-  eliminar(id: number, nombre: string): void {
-    if (!confirm(`¿Dar de baja la especialidad "${nombre}"?`)) {
+  async eliminar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Dar de baja la especialidad "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');
@@ -81,8 +83,8 @@ export class EspecialidadesLista {
     });
   }
 
-  reactivar(id: number, nombre: string): void {
-    if (!confirm(`¿Reactivar la especialidad "${nombre}"?`)) {
+  async reactivar(id: number, nombre: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar la especialidad "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

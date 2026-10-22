@@ -18,6 +18,7 @@ import {
 import { PacientesService } from '../../service/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 @Component({
   selector: 'app-casos-lista',
@@ -37,6 +38,7 @@ export class CasosLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private pacientesService = inject(PacientesService);
   private notif = inject(NotificacionesService);
+  private confirmacion = inject(ConfirmacionService);
 
   buscar = signal('');
   buscando = computed(() => this.buscar().trim().length > 0);
@@ -210,14 +212,14 @@ export class CasosLista {
     return u?.nombre ?? `Usuario #${idUsuario}`;
   }
 
-  eliminar(id: number, paciente: string): void {
-    if (!confirm(`¿Eliminar el caso de "${paciente}"?`)) return;
+  async eliminar(id: number, paciente: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar el caso de "${paciente}"?`))) return;
     this.casosService.eliminar(id);
     this.notif.exito('Caso de emergencia eliminado correctamente');
   }
 
-  reactivar(id: number): void {
-    if (!confirm('¿Reactivar este caso de emergencia?')) return;
+  async reactivar(id: number): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Reactivar este caso de emergencia?'))) return;
 
     this.casosService.reactivar(id).subscribe({
       next: () => {

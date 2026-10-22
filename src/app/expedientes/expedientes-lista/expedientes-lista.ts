@@ -22,6 +22,7 @@ import { HistorialClinico } from '../../models/tratamiento.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 // Forma que espera el HTML: { id, label }.
 interface OpcionCatalogo {
@@ -47,6 +48,7 @@ export class ExpedientesLista {
   private notificaciones = inject(NotificacionesService);
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
+  private confirmacion = inject(ConfirmacionService);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -246,9 +248,9 @@ export class ExpedientesLista {
     return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
   }
 
-  eliminar(h: HistorialClinico): void {
+  async eliminar(h: HistorialClinico): Promise<void> {
     const paciente = this.nombrePaciente(h.idPaciente);
-    if (!confirm(`¿Eliminar el registro clínico de "${paciente}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Eliminar el registro clínico de "${paciente}"?`))) {
       return;
     }
     this.expedienteService.EliminarExpediente(h.idHistorial).subscribe({
@@ -263,9 +265,9 @@ export class ExpedientesLista {
     });
   }
 
-  reactivar(h: HistorialClinico): void {
+  async reactivar(h: HistorialClinico): Promise<void> {
     const paciente = this.nombrePaciente(h.idPaciente);
-    if (!confirm(`¿Reactivar el registro clínico de "${paciente}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el registro clínico de "${paciente}"?`))) {
       return;
     }
     this.expedienteService.ReactivarExpediente(h.idHistorial).subscribe({

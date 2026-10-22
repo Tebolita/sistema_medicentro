@@ -15,6 +15,7 @@ import { CatalogosService } from '../../service/catalogos.service';
 import { ProveedoresService } from '../../service/proveedores.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -36,6 +37,7 @@ export class InventarioLista {
   // Mismo patrón que item-formulario: valores reales del catálogo si existen
   // en la base, si no, la lista de ejemplo.
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private unidadesMedidaApi = this.catalogos.obtener('UNIDAD_MEDIDA');
   private unidadesMedida = computed(() => {
     const api = this.unidadesMedidaApi();
@@ -107,7 +109,7 @@ export class InventarioLista {
     }
   }
 
-  eliminar(event: Event, idItemInventario: number, nombre: string, stockActual: number): void {
+  async eliminar(event: Event, idItemInventario: number, nombre: string, stockActual: number): Promise<void> {
     event.stopPropagation();
     event.preventDefault();
     const mensaje =
@@ -116,7 +118,7 @@ export class InventarioLista {
           `Si lo das de baja, deja de aparecer en el inventario activo pero el stock no se pierde.\n\n` +
           `¿Seguro que deseas darlo de baja de todos modos?`
         : `¿Dar de baja el item "${nombre}"?`;
-    if (!confirm(mensaje)) {
+    if (!(await this.confirmacion.confirmar(mensaje))) {
       return;
     }
     this.errorAccion.set('');
@@ -126,10 +128,10 @@ export class InventarioLista {
     });
   }
 
-  reactivar(event: Event, idItemInventario: number, nombre: string): void {
+  async reactivar(event: Event, idItemInventario: number, nombre: string): Promise<void> {
     event.stopPropagation();
     event.preventDefault();
-    if (!confirm(`¿Reactivar el item "${nombre}"?`)) {
+    if (!(await this.confirmacion.confirmar(`¿Reactivar el item "${nombre}"?`))) {
       return;
     }
     this.errorAccion.set('');

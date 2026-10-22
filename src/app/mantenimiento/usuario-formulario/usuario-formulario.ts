@@ -19,6 +19,7 @@ import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { cambiosBitacora, idEnBitacora } from '../../shared/bitacora-cambios';
 import { forkJoin } from 'rxjs';
+import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 
 const ESTADOS_USUARIO_EJEMPLO = [
   { id: 1, label: 'Activo' },
@@ -58,6 +59,7 @@ export class UsuarioFormulario {
   roles = this.rolesService.listar;
 
   private catalogos = inject(CatalogosService);
+  private confirmacion = inject(ConfirmacionService);
   private estadosApi = this.catalogos.obtener('ESTADO_USUARIO');
   estados = computed(() => {
     const api = this.estadosApi();
@@ -195,8 +197,8 @@ export class UsuarioFormulario {
     });
   }
 
-  quitarRol(idRol: number, nombreRol: string): void {
-    if (!confirm(`¿Quitar el rol "${nombreRol}" a este usuario?`)) {
+  async quitarRol(idRol: number, nombreRol: string): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Quitar el rol "${nombreRol}" a este usuario?`))) {
       return;
     }
     this.errorRoles.set('');
@@ -263,14 +265,14 @@ export class UsuarioFormulario {
     control.setErrors(noCoinciden ? { ...otrosErrores, noCoinciden: true } : Object.keys(otrosErrores).length ? otrosErrores : null);
   }
 
-  resetearContrasena(): void {
+  async resetearContrasena(): Promise<void> {
     this.validarCoincidenciaReset();
     this.resetForm.markAllAsTouched();
     if (this.resetForm.invalid) {
       return;
     }
     const v = this.resetForm.getRawValue();
-    if (!confirm('¿Resetear la contraseña de este usuario? La contraseña anterior deja de funcionar de inmediato.')) {
+    if (!(await this.confirmacion.confirmar('¿Resetear la contraseña de este usuario? La contraseña anterior deja de funcionar de inmediato.'))) {
       return;
     }
 
