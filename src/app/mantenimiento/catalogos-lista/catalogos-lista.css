@@ -1,5 +1,21 @@
 @import '../mantenimiento.css';
 
+.filtros-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.modulo-filtro {
+  width: 220px;
+}
+
+.modulo-filtro.mat-mdc-form-field {
+  margin: 0;
+}
+
 .catalogo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -63,6 +79,18 @@
   font-size: 11px;
   color: var(--c-text-soft);
   font-family: monospace;
+}
+
+.catalogo-card-modulo {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 14%, transparent);
 }
 
 .catalogo-card-chevron {
@@ -139,6 +167,22 @@
   font-size: 11px;
   color: var(--c-text-soft);
   font-family: monospace;
+}
+
+.valores-modulo {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 14%, transparent);
+}
+
+.valores-header-acciones {
+  display: flex;
+  gap: 8px;
 }
 
 .valor-grid {

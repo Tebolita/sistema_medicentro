@@ -19,19 +19,31 @@
   }
 
   @if (!tipoSeleccionado()) {
-    <div class="search-bar">
-      <mat-icon>search</mat-icon>
-      <input
-        type="text"
-        placeholder="Buscar catálogo por nombre o código..."
-        [value]="buscar()"
-        (input)="buscar.set($any($event.target).value)"
-      />
-      @if (buscar().trim()) {
-        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
+    <div class="filtros-bar">
+      <div class="search-bar">
+        <mat-icon>search</mat-icon>
+        <input
+          type="text"
+          placeholder="Buscar catálogo por nombre o código..."
+          [value]="buscar()"
+          (input)="buscar.set($any($event.target).value)"
+        />
+        @if (buscar().trim()) {
+          <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+
+      <mat-form-field appearance="outline" class="modulo-filtro">
+        <mat-label>Módulo</mat-label>
+        <mat-select [value]="moduloFiltro()" (valueChange)="moduloFiltro.set($event)">
+          <mat-option [value]="null">Todos</mat-option>
+          @for (m of modulosDisponibles(); track m.codigo) {
+            <mat-option [value]="m.codigo">{{ m.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
     </div>
 
     <div class="catalogo-grid">
@@ -43,6 +55,9 @@
           <div class="catalogo-card-info">
             <span class="catalogo-card-nombre">{{ t.nombre }}</span>
             <span class="catalogo-card-codigo">{{ t.codigo }}</span>
+            @if (nombreModulo(t.codigoModulo); as modulo) {
+              <span class="catalogo-card-modulo">{{ modulo }}</span>
+            }
           </div>
           <mat-icon class="catalogo-card-chevron">chevron_right</mat-icon>
         </button>
@@ -73,13 +88,22 @@
             <div>
               <h2>{{ actual.nombre }}</h2>
               <span class="valores-codigo">{{ actual.codigo }}</span>
+              @if (nombreModulo(actual.codigoModulo); as modulo) {
+                <span class="valores-modulo">{{ modulo }}</span>
+              }
             </div>
           }
         </div>
-        <button matButton="filled" type="button" (click)="nuevoValor()">
-          <mat-icon>add</mat-icon>
-          Agregar valor
-        </button>
+        <div class="valores-header-acciones">
+          <button matButton type="button" (click)="editarCatalogo()">
+            <mat-icon>edit</mat-icon>
+            Editar catálogo
+          </button>
+          <button matButton="filled" type="button" (click)="nuevoValor()">
+            <mat-icon>add</mat-icon>
+            Agregar valor
+          </button>
+        </div>
       </div>
 
       <div class="valor-grid">

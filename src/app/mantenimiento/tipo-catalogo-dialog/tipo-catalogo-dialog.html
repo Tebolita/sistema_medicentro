@@ -1,10 +1,10 @@
-<h2 mat-dialog-title>Nuevo catálogo</h2>
+<h2 mat-dialog-title>{{ esNuevo ? 'Nuevo catálogo' : 'Editar catálogo' }}</h2>
 
 <form [formGroup]="form" (ngSubmit)="guardar()">
   <mat-dialog-content class="dialog-form-grid">
     <mat-form-field appearance="outline">
       <mat-label>Código</mat-label>
-      <input matInput formControlName="codigo" placeholder="Ej. TIPO_DESCUENTO" />
+      <input matInput formControlName="codigo" placeholder="Ej. TIPO_DESCUENTO" [readonly]="!esNuevo" />
       @if (form.controls.codigo.errors?.['required'] && form.controls.codigo.touched) {
         <mat-error>Requerido</mat-error>
       } @else if (form.controls.codigo.errors?.['pattern']) {
@@ -23,6 +23,16 @@
       <input matInput formControlName="descripcion" />
     </mat-form-field>
 
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Módulo (opcional)</mat-label>
+      <mat-select formControlName="codigoModulo">
+        <mat-option [value]="null">Sin módulo</mat-option>
+        @for (m of modulos(); track m.codigo) {
+          <mat-option [value]="m.codigo">{{ m.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
     @if (error()) {
       <p class="form-error full-width">{{ error() }}</p>
     }
@@ -32,7 +42,7 @@
     <button matButton type="button" (click)="cerrar()">Cancelar</button>
     <button matButton="filled" type="submit" [disabled]="guardando()">
       <mat-icon>save</mat-icon>
-      Crear catálogo
+      {{ esNuevo ? 'Crear catálogo' : 'Guardar cambios' }}
     </button>
   </mat-dialog-actions>
 </form>

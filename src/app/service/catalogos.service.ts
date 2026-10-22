@@ -6,11 +6,14 @@ import { Observable, catchError, map, of, tap } from 'rxjs';
 import { ApiResponse } from '../models/api-response.model';
 import { ErrorService } from './error.service';
 
-// Cuerpos para crear un tipo o un valor de catálogo (CatalogosController).
+// Cuerpos para crear o editar un tipo, o crear un valor de catálogo (CatalogosController).
 export interface CatalogoTipoInput {
   codigo: string;
   nombre: string;
   descripcion: string | null;
+  // Código de un valor activo de MODULO_SISTEMA (ver menu-data.ts,
+  // CODIGO_MODULO_A_SLUG). Null = sin módulo asignado.
+  codigoModulo: string | null;
 }
 
 export interface CatalogoValorInput {
@@ -41,6 +44,7 @@ export interface CatalogoTipo {
   codigo: string;
   nombre: string;
   descripcion: string | null;
+  codigoModulo: string | null;
   valores: CatalogoValor[];
 }
 
@@ -134,6 +138,15 @@ export class CatalogosService {
 
   crearTipo(input: CatalogoTipoInput): Observable<unknown> {
     return this.http.post<ApiResponse<unknown>>(`${this.apiUrl}/tipos`, input).pipe(
+      tap(() => this.cargarTodos()),
+      catchError(this.errorService.handleError),
+    );
+  }
+
+  // El código del tipo no se puede editar (el backend resuelve los
+  // catálogos por ese código), por eso no forma parte de este input.
+  editarTipo(codigoTipo: string, input: Omit<CatalogoTipoInput, 'codigo'>): Observable<unknown> {
+    return this.http.put<ApiResponse<unknown>>(`${this.apiUrl}/tipos/${codigoTipo}`, input).pipe(
       tap(() => this.cargarTodos()),
       catchError(this.errorService.handleError),
     );
