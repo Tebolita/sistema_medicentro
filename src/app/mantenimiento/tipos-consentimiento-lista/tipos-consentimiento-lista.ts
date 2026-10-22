@@ -1,3 +1,5 @@
+import { HistorialCambios } from '../../shared/historial-cambios/historial-cambios';
+import { tieneCambios } from '../../shared/bitacora-cambios';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
@@ -17,7 +19,7 @@ type Vista = 'activos' | 'eliminados';
 
 @Component({
   selector: 'app-tipos-consentimiento-lista',
-  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [HistorialCambios, FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './tipos-consentimiento-lista.html',
   styleUrl: './tipos-consentimiento-lista.css',
 })
@@ -108,7 +110,7 @@ export class TiposConsentimientoLista {
 
     this.tiposService.RetornarBitacoraGeneral('tipos_consentimiento').subscribe({
       next: (items) => {
-        this.bitacoraSignal.set(items);
+        this.bitacoraSignal.set(items.filter(tieneCambios));
         this.cargandoHistorial.set(false);
       },
       error: (err: Error) => {

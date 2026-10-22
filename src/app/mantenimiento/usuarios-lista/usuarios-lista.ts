@@ -1,6 +1,9 @@
+import { HistorialCambios } from '../../shared/historial-cambios/historial-cambios';
+import { tieneCambios } from '../../shared/bitacora-cambios';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,7 +23,7 @@ const ESTADOS_USUARIO_EJEMPLO = [
 
 @Component({
   selector: 'app-usuarios-lista',
-  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [HistorialCambios, FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './usuarios-lista.html',
   styleUrl: './usuarios-lista.css',
 })
@@ -59,7 +62,9 @@ export class UsuariosLista {
     if (!term) {
       return lista;
     }
-    return lista.filter((u) => [u.nombreUsuario, u.correo].join(' ').toLowerCase().includes(term));
+    return lista.filter((u) =>
+      [u.nombreUsuario, u.correo, u.idUsuario, u.idEmpleado ?? ''].join(' ').toLowerCase().includes(term),
+    );
   });
 
   estadoLabel(idEstadoUsuario: number): string {
@@ -91,9 +96,14 @@ export class UsuariosLista {
     this.cargandoHistorial.set(true);
     this.bitacoraSignal.set([]);
 
-    this.usuariosService.RetornarBitacoraGeneral('usuarios').subscribe({
-      next: (items) => {
-        this.bitacoraSignal.set(items);
+    // Los roles que se asignan/quitan a un usuario se auditan en usuario_rol.
+    forkJoin([
+      this.usuariosService.RetornarBitacoraGeneral('usuarios'),
+      this.usuariosService.RetornarBitacoraGeneral('usuario_rol'),
+    ]).subscribe({
+      next: ([usuarios, roles]) => {
+        const items = [...usuarios, ...roles].sort((a, b) => b.fechaHora.localeCompare(a.fechaHora));
+        this.bitacoraSignal.set(items.filter(tieneCambios));
         this.cargandoHistorial.set(false);
       },
       error: (err: Error) => {
@@ -123,11 +133,13 @@ export class UsuariosLista {
 
   tablaLabel(tabla: string): string {
     if (tabla === 'usuarios') return 'Usuario';
+    if (tabla === 'usuario_rol') return 'Rol de usuario';
     return tabla;
   }
 
   tablaIcono(tabla: string): string {
     if (tabla === 'usuarios') return 'person';
+    if (tabla === 'usuario_rol') return 'badge';
     return 'description';
   }
 

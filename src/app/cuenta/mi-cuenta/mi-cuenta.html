@@ -9,6 +9,36 @@
   @if (errorCarga()) {
     <p class="carga-error">{{ errorCarga() }}</p>
   } @else {
+    @if (cuenta(); as c) {
+      <div class="form-panel">
+        <h2>Resumen</h2>
+        <dl class="cuenta-resumen">
+          <div>
+            <dt>Código de usuario</dt>
+            <dd>{{ c.idUsuario }}</dd>
+          </div>
+          <div>
+            <dt>Código de empleado</dt>
+            <dd>{{ c.idEmpleado ?? 'Sin empleado vinculado' }}</dd>
+          </div>
+          <div>
+            <dt>Roles</dt>
+            <dd>{{ c.roles.length ? c.roles.join(', ') : 'Sin roles asignados' }}</dd>
+          </div>
+          <div>
+            <dt>Último acceso</dt>
+            <dd>{{ c.fechaUltimoAcceso ? (c.fechaUltimoAcceso + 'Z' | date: 'd MMM y, HH:mm') : '—' }}</dd>
+          </div>
+        </dl>
+        @if (c.requiereCambioPassword) {
+          <p class="cuenta-aviso">
+            <mat-icon>info</mat-icon>
+            Debes cambiar tu contraseña.
+          </p>
+        }
+      </div>
+    }
+
     <form [formGroup]="datosForm" (ngSubmit)="guardarDatos()" class="form-panel">
       <h2>Datos de la cuenta</h2>
       <div class="form-grid">
@@ -44,6 +74,14 @@
     <form [formGroup]="passwordForm" (ngSubmit)="cambiarContrasena()" class="form-panel">
       <h2>Cambiar contraseña</h2>
       <div class="form-grid">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Contraseña actual</mat-label>
+          <input matInput type="password" formControlName="contrasenaActual" autocomplete="current-password" />
+          @if (passwordForm.controls.contrasenaActual.invalid && passwordForm.controls.contrasenaActual.touched) {
+            <mat-error>Requerido</mat-error>
+          }
+        </mat-form-field>
+
         <mat-form-field appearance="outline">
           <mat-label>Contraseña nueva</mat-label>
           <input matInput type="password" formControlName="contrasenaNueva" autocomplete="new-password" />

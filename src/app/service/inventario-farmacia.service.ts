@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { ItemInventario, MovimientoInventario } from '../models';
 import { ApiResponse } from '../models/api-response.model';
-import { ErrorService } from './error.service';
+import { ErrorService, esSinPermiso } from './error.service';
 
 // Datos que el backend espera para crear un medicamento en inventario
 // (CrearItemFarmaciaDto). El tipo de ítem (medicamento) lo fuerza el backend.
@@ -80,7 +80,13 @@ export class InventarioFarmaciaService {
           this.eliminados.set(lista);
           this.cargandoEliminados.set(false);
         },
-        error: () => {
+        error: (err: unknown) => {
+          // Sin acceso a lo eliminado: la pestaña se muestra vacía, no como error.
+          if (esSinPermiso(err)) {
+            this.eliminados.set([]);
+            this.cargandoEliminados.set(false);
+            return;
+          }
           this.errorEliminados.set('No se pudieron cargar los items de inventario eliminados.');
           this.cargandoEliminados.set(false);
         },

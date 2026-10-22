@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
 import { Medicamento } from '../models';
 import { ApiResponse } from '../models/api-response.model';
-import { ErrorService } from './error.service';
+import { ErrorService, esSinPermiso } from './error.service';
 
 // Cuerpo de POST/PUT. El endpoint aún NO existe en el backend: esta forma es
 // la propuesta (mismo estilo que el resto de la API) y se ajusta cuando se
@@ -65,7 +65,13 @@ export class MedicamentosService {
           this.eliminados.set(lista);
           this.cargandoEliminados.set(false);
         },
-        error: () => {
+        error: (err: unknown) => {
+          // Sin acceso a lo eliminado: la pestaña se muestra vacía, no como error.
+          if (esSinPermiso(err)) {
+            this.eliminados.set([]);
+            this.cargandoEliminados.set(false);
+            return;
+          }
           this.errorEliminados.set('No se pudieron cargar los medicamentos eliminados.');
           this.cargandoEliminados.set(false);
         },

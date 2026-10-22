@@ -1,3 +1,5 @@
+import { HistorialCambios } from '../../shared/historial-cambios/historial-cambios';
+import { tieneCambios } from '../../shared/bitacora-cambios';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
@@ -12,7 +14,7 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
 
 @Component({
   selector: 'app-proveedores-lista',
-  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [HistorialCambios, FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './proveedores-lista.html',
   styleUrl: './proveedores-lista.css',
 })
@@ -75,7 +77,7 @@ export class ProveedoresLista {
 
     this.proveedoresService.RetornarBitacoraGeneral('proveedores').subscribe({
       next: (items) => {
-        this.bitacoraSignal.set(items);
+        this.bitacoraSignal.set(items.filter(tieneCambios));
         this.cargandoHistorial.set(false);
       },
       error: (err: Error) => {

@@ -13,3 +13,41 @@
   font-weight: 700;
   color: var(--c-text);
 }
+
+.cuenta-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+}
+
+.cuenta-resumen dt {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-text-muted);
+}
+
+.cuenta-resumen dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.cuenta-aviso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ef6c00;
+}
+
+.cuenta-aviso mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}

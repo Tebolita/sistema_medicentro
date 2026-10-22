@@ -1,3 +1,4 @@
+import { esSinPermiso } from '../../service/error.service';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser, NgClass } from '@angular/common';
@@ -8,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
+import { listaOpcional } from '../../shared/lista-opcional';
 
 import { BitacoraItem, CitaService } from '../../service/cita.service';
 import { PacienteService } from '../../service/paciente.service';
@@ -93,7 +95,7 @@ export class ConsultasLista {
     forkJoin({
       citas: this.citaService.RetornarCitas(),
       pacientes: this.pacienteService.RetornarPacientes(),
-      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados().pipe(listaOpcional()),
       medicos: this.empleadoService.RetornarMedicos(),
       estados: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.ESTADO_CITA),
       tiposConsulta: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.TIPO_CONSULTA),
@@ -131,12 +133,19 @@ export class ConsultasLista {
       },
       error: (err: Error) => {
         this.cargando.set(false);
+        // Sin acceso a lo eliminado: se muestra el mensaje de "no hay registros".
+        if (esSinPermiso(err)) {
+          this.eliminadas.set([]);
+          return;
+        }
         this.errorCarga.set('No se pudieron cargar las consultas eliminadas: ' + err.message);
       },
     });
   }
 
   verActivas(): void {
+    // El error de la pestaña "Eliminadas" no aplica a las activas.
+    this.errorCarga.set('');
     this.vista.set('activas');
   }
 

@@ -1,6 +1,9 @@
+import { HistorialCambios } from '../../shared/historial-cambios/historial-cambios';
+import { tieneCambios } from '../../shared/bitacora-cambios';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +15,7 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
 
 @Component({
   selector: 'app-roles-lista',
-  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [HistorialCambios, FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './roles-lista.html',
   styleUrl: './roles-lista.css',
 })
@@ -73,9 +76,14 @@ export class RolesLista {
     this.cargandoHistorial.set(true);
     this.bitacoraSignal.set([]);
 
-    this.rolesService.RetornarBitacoraGeneral('roles').subscribe({
-      next: (items) => {
-        this.bitacoraSignal.set(items);
+    // Los permisos que se asignan/quitan a un rol se auditan en rol_permiso.
+    forkJoin([
+      this.rolesService.RetornarBitacoraGeneral('roles'),
+      this.rolesService.RetornarBitacoraGeneral('rol_permiso'),
+    ]).subscribe({
+      next: ([roles, permisos]) => {
+        const items = [...roles, ...permisos].sort((a, b) => b.fechaHora.localeCompare(a.fechaHora));
+        this.bitacoraSignal.set(items.filter(tieneCambios));
         this.cargandoHistorial.set(false);
       },
       error: (err: Error) => {
@@ -105,11 +113,13 @@ export class RolesLista {
 
   tablaLabel(tabla: string): string {
     if (tabla === 'roles') return 'Rol';
+    if (tabla === 'rol_permiso') return 'Permiso de rol';
     return tabla;
   }
 
   tablaIcono(tabla: string): string {
     if (tabla === 'roles') return 'badge';
+    if (tabla === 'rol_permiso') return 'key';
     return 'description';
   }
 

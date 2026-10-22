@@ -4,7 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
 import { ApiResponse } from '../models/api-response.model';
-import { ErrorService } from './error.service';
+import { ErrorService, esSinPermiso } from './error.service';
 
 // HabitacionDto / CamaDto reales (HabitacionesController). GET/POST/PUT de
 // habitación siempre devuelven HabitacionCompletaDto { habitacion, camas },
@@ -132,7 +132,13 @@ export class HabitacionesService {
           this.eliminadas.set(lista);
           this.cargandoEliminadas.set(false);
         },
-        error: () => {
+        error: (err: unknown) => {
+          // Sin acceso a lo eliminado: la pestaña se muestra vacía, no como error.
+          if (esSinPermiso(err)) {
+            this.eliminadas.set([]);
+            this.cargandoEliminadas.set(false);
+            return;
+          }
           this.errorEliminadas.set('No se pudieron cargar las habitaciones eliminadas.');
           this.cargandoEliminadas.set(false);
         },

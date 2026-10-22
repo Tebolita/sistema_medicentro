@@ -4,7 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
 import { ApiResponse } from '../models/api-response.model';
-import { ErrorService } from './error.service';
+import { ErrorService, esSinPermiso } from './error.service';
 
 // SalaDto / SalaInputDto reales (SalasController: CRUD completo).
 // idTipoSala/idEstadoSala no se validan contra nada del lado del backend.
@@ -106,7 +106,13 @@ export class SalasService {
           this.eliminadas.set(lista);
           this.cargandoEliminadas.set(false);
         },
-        error: () => {
+        error: (err: unknown) => {
+          // Sin acceso a lo eliminado: la pestaña se muestra vacía, no como error.
+          if (esSinPermiso(err)) {
+            this.eliminadas.set([]);
+            this.cargandoEliminadas.set(false);
+            return;
+          }
           this.errorEliminadas.set('No se pudieron cargar las salas eliminadas.');
           this.cargandoEliminadas.set(false);
         },

@@ -43,7 +43,16 @@ export class ErrorService {
                 : `Error del servidor (Código ${error.status})`;
         }
     }
-    // Retornamos el error limpio para que el componente lo lea
-    return throwError(() => new Error(errorMessage));
-  }    
+    // Retornamos el error limpio para que el componente lo lea. Se conserva
+    // el código HTTP en `status` (ver esSinPermiso).
+    return throwError(() => Object.assign(new Error(errorMessage), { status: error.status }));
+  }
+}
+
+// true si la petición falló porque el usuario no tiene permiso (403). Sirve
+// tanto para el Error de handleError como para un HttpErrorResponse crudo.
+// Se usa en las pestañas "Eliminados": sin acceso se muestran como vacías
+// ("No hay registros eliminados") en vez de como un error de carga.
+export function esSinPermiso(err: unknown): boolean {
+  return (err as { status?: number } | null)?.status === 403;
 }

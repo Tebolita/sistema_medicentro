@@ -19,31 +19,97 @@
    Emergencias/Hospitalización (badges tipo pill por tabla y por acción),
    adaptado a las variables de tema de la app (--c-*) para que funcione
    igual de bien en modo oscuro. */
-.historial-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.bitacora-total {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--c-text-soft);
 }
 
-.historial-item {
+/* La tabla hace scroll horizontal dentro de su contenedor en pantallas
+   angostas, en vez de desbordar la página. */
+.bitacora-tabla-wrap {
+  overflow-x: auto;
   border-radius: 12px;
-  background: var(--c-surface);
   border: 1px solid var(--c-border);
-  overflow: hidden;
+  background: var(--c-surface);
 }
 
-.historial-resumen {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.bitacora-tabla {
   width: 100%;
-  padding: 10px 14px;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.bitacora-tabla thead th {
+  position: sticky;
+  top: 0;
   text-align: left;
+  padding: 10px 12px;
+  background: var(--c-bg);
+  color: var(--c-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.bitacora-tabla td {
+  padding: 8px 12px;
+  border-top: 1px solid var(--c-border);
+  vertical-align: middle;
+  color: var(--c-text);
+}
+
+.bitacora-tabla tbody tr:first-child td {
+  border-top: 0;
+}
+
+.bitacora-fila {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.bitacora-fila:hover,
+.bitacora-fila.abierta {
+  background: var(--c-bg);
+}
+
+.col-num {
+  width: 1%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-soft);
+  font-weight: 600;
+}
+
+.bitacora-tabla th.col-num {
+  text-align: right;
+}
+
+.col-registro {
+  font-variant-numeric: tabular-nums;
+}
+
+.col-fecha {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bitacora-ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c-text-muted);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .bitacora-chevron {
@@ -56,14 +122,13 @@
 }
 
 .bitacora-chevron.abierto {
-  transform: rotate(90deg);
+  transform: rotate(180deg);
 }
 
-.historial-item-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.bitacora-fila-detalle td {
+  border-top: 0;
+  background: var(--c-bg);
+  padding: 0;
 }
 
 .historial-tabla-badge {
@@ -124,19 +189,16 @@
   color: var(--c-text-muted);
 }
 
-.historial-meta {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--c-text-soft);
-}
-
 .bitacora-detalle {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 14px 14px 44px;
+  gap: 6px;
+  padding: 4px 12px 12px 48px;
   font-size: 12.5px;
+}
+
+.bitacora-detalle .item-meta {
+  margin: 0;
 }
 
 .cambio-fila {
@@ -145,7 +207,8 @@
   gap: 8px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: var(--c-bg);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
 }
 
 .cambio-icono {

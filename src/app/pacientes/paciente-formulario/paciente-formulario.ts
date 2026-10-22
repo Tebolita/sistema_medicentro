@@ -15,6 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { forkJoin } from 'rxjs';
+import { listaOpcional } from '../../shared/lista-opcional';
 
 import { PacienteService, BitacoraItem } from '../../service/paciente.service';
 import { CatalogoService } from '../../service/catalogo.service';
@@ -288,7 +289,7 @@ export class PacienteFormulario {
   private cargarDocumentosRegistrados(): void {
     forkJoin({
       activos: this.pacienteService.RetornarPacientes(),
-      eliminados: this.pacienteService.RetornarPacientesEliminados(),
+      eliminados: this.pacienteService.RetornarPacientesEliminados().pipe(listaOpcional()),
     }).subscribe({
       next: (r) => (this.documentosRegistrados = [...(r.activos.datos ?? []), ...(r.eliminados.datos ?? [])]),
       // Si falla, el backend igual rechaza el duplicado; solo se pierde el aviso previo.

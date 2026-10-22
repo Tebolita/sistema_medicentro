@@ -142,6 +142,7 @@
                       {{ usuarioLabel(item.idUsuario) }} · {{ formatFechaHoraUTC(item.fechaHora) }}
                     </span>
                   </div>
+                  <app-historial-cambios [item]="item" />
                 </div>
               }
             </div>

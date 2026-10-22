@@ -1,3 +1,5 @@
+import { HistorialCambios } from '../../shared/historial-cambios/historial-cambios';
+import { tieneCambios } from '../../shared/bitacora-cambios';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
@@ -14,7 +16,7 @@ type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-aseguradoras-lista',
-  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [HistorialCambios, FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './aseguradoras-lista.html',
   styleUrl: './aseguradoras-lista.css',
 })
@@ -103,7 +105,7 @@ export class AseguradorasLista {
 
     this.aseguradorasService.RetornarBitacoraGeneral('aseguradoras').subscribe({
       next: (items) => {
-        this.bitacoraSignal.set(items);
+        this.bitacoraSignal.set(items.filter(tieneCambios));
         this.cargandoHistorial.set(false);
       },
       error: (err: Error) => {

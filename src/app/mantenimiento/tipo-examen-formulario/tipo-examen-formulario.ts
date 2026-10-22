@@ -134,7 +134,7 @@ export class TipoExamenFormulario {
 
     this.tiposService.RetornarBitacoraPorRegistro('tipos_examen', id).subscribe({
       next: (items) => {
-        this.bitacoraSignal.set(items);
+        this.bitacoraSignal.set(items.filter((b) => this.camposCambiados(b).length > 0));
         this.cargandoHistorial.set(false);
       },
       error: (err: HttpErrorResponse) => {

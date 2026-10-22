@@ -94,14 +94,14 @@ export class Menu {
 
   inicio: MenuItem = { icon: 'dashboard', label: 'Inicio', route: '/home/inicio' };
 
-  // Filtrado según los permisos del usuario (PermisosMenuService): null
-  // significa "mostrar todas" (sin permisos configurados todavía o mientras
-  // se cargan). El estado `expanded` se reinicia solo cuando este cómputo
-  // realmente cambia (no en cada render), así toggleSection sigue mutando el
-  // mismo objeto sin que se pierda al expandir/colapsar.
+  // Solo las secciones a las que el usuario tiene permiso
+  // (PermisosMenuService); mientras se cargan (null) no se muestra ninguna.
+  // El estado `expanded` se reinicia solo cuando este cómputo realmente
+  // cambia (no en cada render), así toggleSection sigue mutando el mismo
+  // objeto sin que se pierda al expandir/colapsar.
   sections = computed<MenuSectionState[]>(() => {
     const permitidos = this.permisosMenu.modulosPermitidos();
-    const base = permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : MENU_SECTIONS;
+    const base = permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : [];
     return base.map((section) => ({ ...section, expanded: false }));
   });
 

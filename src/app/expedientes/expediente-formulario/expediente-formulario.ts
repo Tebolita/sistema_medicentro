@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { forkJoin } from 'rxjs';
+import { listaOpcional } from '../../shared/lista-opcional';
 
 import { BitacoraItem, ExpedienteService } from '../../service/expediente.service';
 import { PacienteService } from '../../service/paciente.service';
@@ -258,7 +259,7 @@ export class ExpedienteFormulario {
     const c = CODIGOS_CATALOGO;
     forkJoin({
       pacientes: this.pacienteService.RetornarPacientes(),
-      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados().pipe(listaOpcional()),
       medicos: this.empleadoService.RetornarMedicos(),
       especialidades: this.especialidadService.RetornarEspecialidades(),
       tipos: this.catalogoService.RetornarCatalogo(c.TIPO_REGISTRO_CLINICO),

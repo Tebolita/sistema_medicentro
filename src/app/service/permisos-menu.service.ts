@@ -1,45 +1,47 @@
-import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { environment } from '../../environments/environment';
+import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { map } from 'rxjs';
+import { ApiResponse } from '../models/api-response.model';
 import { AuthService } from './auth.service';
-import { UsuariosService } from './usuarios.service';
-import { RolesService } from './roles.service';
 import { PermisosService } from './permisos.service';
 import { CatalogosService } from './catalogos.service';
-import { CODIGO_MODULO_A_SLUG } from '../shared/menu-data';
+import { CODIGO_MODULO_A_SLUG, MENU_SECTIONS } from '../shared/menu-data';
 
-// Traduce los roles del usuario de la sesión actual a los slugs de
-// MenuSection que puede ver, usando lo que YA existe en Mantenimiento ->
-// Roles/Permisos (sin tocar el backend):
-//   idUsuario actual (AuthService) -> roles activos (UsuariosService.listarRoles)
-//     -> permisos del rol (RolesService.listarPermisos)
-//     -> Permiso.idModulo (PermisosService.obtener)
-//     -> código MODULO_SISTEMA (CatalogosService 'MODULO_SISTEMA')
-//     -> slug de MenuSection (CODIGO_MODULO_A_SLUG)
+// Respuesta de GET /api/mi-acceso (MiAccesoController en el backend).
+interface MiAcceso {
+  esAdmin: boolean;
+  roles: string[];
+  modulos: string[]; // códigos MODULO_SISTEMA: RECEPCION, FARMACIA...
+}
+
+// Decide qué secciones del menú (MenuSection.slug) puede ver el usuario de
+// la sesión. El backend lo resuelve en /api/mi-acceso:
+//   roles activos del usuario -> rol_permiso activos -> permisos.id_modulo
+//   -> código MODULO_SISTEMA
+// y acá se traduce cada código a su slug (CODIGO_MODULO_A_SLUG).
 //
-// Se usa /usuarios/{id}/roles (que da idRol directo) en vez de los nombres
-// de rol que vienen en la respuesta del login: así funciona también para
-// sesiones que ya estaban iniciadas antes de este cambio, sin pedirle a
-// nadie que vuelva a loguearse.
+// Antes se armaba desde el front con /usuarios/{id}/roles, /roles/{id}/permisos
+// y /permisos, pero esos endpoints son solo para ADMIN: a cualquier otro
+// usuario le respondían 403 y el menú terminaba mostrándose completo.
 //
-// Si el usuario no tiene NINGÚN permiso asignado todavía en ninguno de sus
-// roles (dato aún sin configurar desde Mantenimiento), se decide mostrar el
-// menú completo en vez de dejarlo vacío: así nadie queda bloqueado sin poder
-// entrar a Mantenimiento a asignar permisos. En cuanto haya al menos un
-// permiso asignado, el filtro empieza a aplicar de verdad.
+// Reglas:
+//   - ADMIN ve todas las secciones.
+//   - Cualquier otro usuario ve SOLO los módulos de sus permisos; sin
+//     permisos (o si la consulta falla) no ve ninguna sección, solo Inicio.
 @Injectable({ providedIn: 'root' })
 export class PermisosMenuService {
+  private http = inject(HttpClient);
   private authService = inject(AuthService);
-  private usuariosService = inject(UsuariosService);
-  private rolesService = inject(RolesService);
   private permisosService = inject(PermisosService);
   private catalogosService = inject(CatalogosService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
+  private apiUrl = `${environment.apiUrl}/api/mi-acceso`;
 
-  // null = todavía no se pudo calcular (o el usuario no tiene permisos
-  // asignados en ningún rol) -> el menú se muestra completo.
-  private idsPermisosUsuario = signal<number[] | null>(null);
+  // Slugs de MenuSection permitidos, o null mientras todavía se cargan
+  // (el menú no muestra secciones y permisosGuard espera a que termine).
+  modulosPermitidos = signal<Set<string> | null>(null);
 
   constructor() {
     if (!this.esNavegador) {
@@ -58,59 +60,38 @@ export class PermisosMenuService {
     if (!this.esNavegador) {
       return;
     }
-    this.idsPermisosUsuario.set(null);
+    this.modulosPermitidos.set(null);
     this.permisosService.cargar();
     this.catalogosService.recargarTodos();
     this.calcular();
   }
 
   private calcular(): void {
-    const idUsuario = this.authService.idUsuarioActual();
-    if (!idUsuario) {
+    // Sin sesión no hay nada que mostrar; se marca como "cargado" (vacío)
+    // para que permisosGuard no se quede esperando. login.ts llama a
+    // refrescar() al iniciar sesión y se vuelve a calcular.
+    if (!this.authService.idUsuarioActual()) {
+      this.modulosPermitidos.set(new Set());
       return;
     }
-    this.usuariosService
-      .listarRoles(idUsuario)
-      .pipe(catchError(() => of([])))
-      .subscribe((rolesUsuario) => {
-        const idsRol = rolesUsuario.filter((r) => r.activo).map((r) => r.idRol);
-        if (idsRol.length === 0) {
-          this.idsPermisosUsuario.set([]);
-          return;
-        }
-        forkJoin(idsRol.map((id) => this.rolesService.listarPermisos(id).pipe(catchError(() => of([])))))
-          .pipe(catchError(() => of([])))
-          .subscribe((listas) => {
-            const ids = [...new Set(listas.flat().map((p) => p.idPermiso))];
-            this.idsPermisosUsuario.set(ids);
-          });
+    this.http
+      .get<ApiResponse<MiAcceso>>(this.apiUrl)
+      .pipe(map((resp) => resp.datos))
+      .subscribe({
+        next: (acceso) => this.modulosPermitidos.set(this.aSlugs(acceso)),
+        // Si no se pudo saber qué puede ver, no se muestra nada (solo
+        // Inicio) en vez de abrirle todo el menú.
+        error: () => this.modulosPermitidos.set(new Set()),
       });
   }
 
-  // Slugs de MenuSection permitidos, o null si se debe mostrar el menú
-  // completo (sin permisos configurados todavía, o mientras se cargan).
-  modulosPermitidos = computed<Set<string> | null>(() => {
-    const ids = this.idsPermisosUsuario();
-    if (ids === null || ids.length === 0) {
-      return null;
+  private aSlugs(acceso: MiAcceso | null | undefined): Set<string> {
+    if (!acceso) {
+      return new Set();
     }
-    const modulosCat = this.catalogosService.obtener('MODULO_SISTEMA')();
-    if (modulosCat.length === 0) {
-      return null;
+    if (acceso.esAdmin) {
+      return new Set(MENU_SECTIONS.map((s) => s.slug));
     }
-    const idModuloACodigo = new Map(modulosCat.map((v) => [v.id, v.codigo]));
-    const slugs = new Set<string>();
-    for (const idPermiso of ids) {
-      const permiso = this.permisosService.obtener(idPermiso);
-      if (!permiso) {
-        continue;
-      }
-      const codigoModulo = idModuloACodigo.get(permiso.idModulo);
-      const slug = codigoModulo ? CODIGO_MODULO_A_SLUG[codigoModulo] : undefined;
-      if (slug) {
-        slugs.add(slug);
-      }
-    }
-    return slugs.size > 0 ? slugs : null;
-  });
+    return new Set(acceso.modulos.map((codigo) => CODIGO_MODULO_A_SLUG[codigo]).filter((slug): slug is string => !!slug));
+  }
 }

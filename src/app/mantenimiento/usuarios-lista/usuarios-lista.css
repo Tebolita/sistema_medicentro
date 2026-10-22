@@ -1,1 +1,22 @@
 @import '../mantenimiento.css';
+
+/* Código interno de la cuenta (id_usuario): más discreto que el código de
+   empleado, que es el que se usa para iniciar sesión. */
+.codigo-usuario {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+}
+
+.codigo-usuario strong {
+  color: var(--c-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.codigo-usuario mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}

@@ -1,3 +1,4 @@
+import { esSinPermiso } from '../service/error.service';
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -8,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
+import { listaOpcional } from '../shared/lista-opcional';
 
 import { ActaService } from '../service/acta.service';
 import { PacienteService } from '../service/paciente.service';
@@ -127,7 +129,7 @@ export class LibroActas {
     forkJoin({
       actas: this.actaService.RetornarActas(),
       pacientes: this.pacienteService.RetornarPacientes(),
-      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados().pipe(listaOpcional()),
       puestos: this.puestoService.RetornarPuestos(),
     }).subscribe({
       next: (r) => {
@@ -177,18 +179,27 @@ export class LibroActas {
       },
       error: (err: Error) => {
         this.cargando.set(false);
+        // Sin acceso a lo eliminado: se muestra el mensaje de "no hay registros".
+        if (esSinPermiso(err)) {
+          this.actasEliminadas.set([]);
+          return;
+        }
         this.errorCarga.set('No se pudieron cargar las actas eliminadas: ' + err.message);
       },
     });
   }
 
   verActivas(): void {
+    // El error de la pestaña "Eliminadas" no aplica a las activas.
+    this.errorCarga.set('');
     this.vista.set('activas');
   }
 
   verEliminadas(): void {
     this.cerrarFormulario();
     this.vista.set('eliminadas');
+    // Como no quedaron cargadas, se vuelve a intentar y el mensaje
+    // aparece de nuevo si sigue sin acceso.
     if (!this.eliminadasCargadas) {
       this.cargarEliminadas();
     }

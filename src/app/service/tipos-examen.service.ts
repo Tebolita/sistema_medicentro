@@ -4,7 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
 import { ApiResponse } from '../models/api-response.model';
-import { ErrorService } from './error.service';
+import { ErrorService, esSinPermiso } from './error.service';
 
 // TipoExamenDto / TipoExamenInputDto reales (CatalogosPropiosController:
 // CRUD completo). idCategoriaExamen SÍ se valida contra cat_valor_catalogo
@@ -107,7 +107,13 @@ export class TiposExamenService {
           this.eliminados.set(lista);
           this.cargandoEliminados.set(false);
         },
-        error: () => {
+        error: (err: unknown) => {
+          // Sin acceso a lo eliminado: la pestaña se muestra vacía, no como error.
+          if (esSinPermiso(err)) {
+            this.eliminados.set([]);
+            this.cargandoEliminados.set(false);
+            return;
+          }
           this.errorEliminados.set('No se pudieron cargar los tipos de examen eliminados.');
           this.cargandoEliminados.set(false);
         },

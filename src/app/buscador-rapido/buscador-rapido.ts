@@ -40,7 +40,7 @@ export class BuscadorRapido {
 
   private opciones = computed<OpcionBuscador[]>(() => {
     const permitidos = this.permisosMenu.modulosPermitidos();
-    const secciones: MenuSection[] = permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : MENU_SECTIONS;
+    const secciones: MenuSection[] = permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : [];
 
     const lista: OpcionBuscador[] = [
       { icono: 'dashboard', label: 'Inicio', seccion: '', route: '/home/inicio' },

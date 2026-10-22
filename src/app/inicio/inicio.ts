@@ -13,10 +13,10 @@ import { PermisosMenuService } from '../service/permisos-menu.service';
 export class Inicio {
   private permisosMenu = inject(PermisosMenuService);
 
-  // Mismo filtro que el menú lateral (PermisosMenuService): null significa
-  // "mostrar todas" (sin permisos configurados todavía o mientras cargan).
+  // Mismo filtro que el menú lateral (PermisosMenuService): solo los
+  // módulos permitidos; mientras cargan (null) no se muestra ninguno.
   sections = computed(() => {
     const permitidos = this.permisosMenu.modulosPermitidos();
-    return permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : MENU_SECTIONS;
+    return permitidos ? MENU_SECTIONS.filter((s) => permitidos.has(s.slug)) : [];
   });
 }

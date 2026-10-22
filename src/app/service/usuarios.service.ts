@@ -42,6 +42,17 @@ export interface UsuarioEditInput {
   requiereCambioPassword: boolean;
 }
 
+// GET /api/mi-cuenta (MiCuentaController).
+export interface MiCuentaDatos {
+  idUsuario: number;
+  idEmpleado: number | null;
+  nombreUsuario: string;
+  correo: string;
+  fechaUltimoAcceso: string | null;
+  requiereCambioPassword: boolean;
+  roles: string[];
+}
+
 export interface UsuarioRol {
   idUsuarioRol: number;
   idUsuario: number;
@@ -73,6 +84,7 @@ export class UsuariosService {
   private errorService = inject(ErrorService);
   private esNavegador = isPlatformBrowser(inject(PLATFORM_ID));
   private apiUrl = `${environment.apiUrl}/api/usuarios`;
+  private apiUrlMiCuenta = `${environment.apiUrl}/api/mi-cuenta`;
   private apiUrlBitacora = `${environment.apiUrl}/api/bitacora-auditoria`;
 
   private registros = signal<Usuario[]>([]);
@@ -151,6 +163,33 @@ export class UsuariosService {
   cambiarContrasena(id: number, nuevaContrasena: string, requiereCambioPassword?: boolean): Observable<unknown> {
     return this.http
       .put<ApiResponse<unknown>>(`${this.apiUrl}/${id}/contrasena`, { nuevaContrasena, requiereCambioPassword })
+      .pipe(catchError(this.errorService.handleError));
+  }
+
+  // =============================================================
+  // MI CUENTA (Configuración): la cuenta del usuario de la sesión.
+  // /api/mi-cuenta toma el id del token, así que cualquier usuario puede
+  // usarlo aunque no tenga acceso a /api/usuarios (solo Mantenimiento).
+  // =============================================================
+
+  obtenerMiCuenta(): Observable<MiCuentaDatos> {
+    return this.http.get<ApiResponse<MiCuentaDatos>>(this.apiUrlMiCuenta).pipe(
+      map((resp) => resp.datos as MiCuentaDatos),
+      catchError(this.errorService.handleError),
+    );
+  }
+
+  actualizarMiCuenta(input: { nombreUsuario: string; correo: string }): Observable<Usuario> {
+    return this.http.put<ApiResponse<Usuario>>(this.apiUrlMiCuenta, input).pipe(
+      map((resp) => resp.datos as Usuario),
+      catchError(this.errorService.handleError),
+    );
+  }
+
+  // El backend exige la contraseña actual.
+  cambiarMiContrasena(contrasenaActual: string, nuevaContrasena: string): Observable<unknown> {
+    return this.http
+      .put<ApiResponse<unknown>>(`${this.apiUrlMiCuenta}/contrasena`, { contrasenaActual, nuevaContrasena })
       .pipe(catchError(this.errorService.handleError));
   }
 

@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { forkJoin } from 'rxjs';
+import { listaOpcional } from '../../shared/lista-opcional';
 
 import { PolizaService, BitacoraItem } from '../../service/poliza.service';
 import { AseguradoraService } from '../../service/aseguradora.service';
@@ -244,13 +245,13 @@ export class PolizaFormulario {
     const c = CODIGOS_CATALOGO;
     forkJoin({
       pacientes: this.pacienteService.RetornarPacientes(),
-      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados().pipe(listaOpcional()),
       aseguradoras: this.aseguradoraService.RetornarAseguradoras(),
       ramos: this.catalogoService.RetornarCatalogo(c.RAMO_SEGURO),
       titularidades: this.catalogoService.RetornarCatalogo(c.TITULARIDAD_POLIZA),
       estados: this.catalogoService.RetornarCatalogo(c.ESTADO_POLIZA),
       polizas: this.polizaService.RetornarPolizas(),
-      polizasEliminadas: this.polizaService.RetornarPolizasEliminadas(),
+      polizasEliminadas: this.polizaService.RetornarPolizasEliminadas().pipe(listaOpcional()),
     }).subscribe({
       next: (r) => {
         this.pacientesActivos.set(r.pacientes.datos ?? []);

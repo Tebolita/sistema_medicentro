@@ -144,7 +144,7 @@ export class PermisoFormulario {
 
     this.permisosService.RetornarBitacoraPorRegistro('permisos', id).subscribe({
       next: (items) => {
-        this.bitacoraSignal.set(items);
+        this.bitacoraSignal.set(items.filter((b) => this.camposCambiados(b).length > 0));
         this.cargandoHistorial.set(false);
       },
       error: (err: Error) => {

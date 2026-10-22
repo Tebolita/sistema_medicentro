@@ -1,3 +1,4 @@
+import { esSinPermiso } from '../../service/error.service';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, ElementRef, PLATFORM_ID, computed, inject, signal, viewChild } from '@angular/core';
 import { isPlatformBrowser, NgClass } from '@angular/common';
@@ -8,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { forkJoin } from 'rxjs';
+import { listaOpcional } from '../../shared/lista-opcional';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 
 import { PolizaService, BitacoraItem } from '../../service/poliza.service';
@@ -97,7 +99,7 @@ export class PolizasLista {
     forkJoin({
       polizas: this.polizaService.RetornarPolizas(),
       pacientes: this.pacienteService.RetornarPacientes(),
-      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados(),
+      pacientesEliminados: this.pacienteService.RetornarPacientesEliminados().pipe(listaOpcional()),
       aseguradoras: this.aseguradoraService.RetornarAseguradoras(),
       ramos: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.RAMO_SEGURO),
       estados: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.ESTADO_POLIZA),
@@ -135,12 +137,19 @@ export class PolizasLista {
       },
       error: (err: Error) => {
         this.cargando.set(false);
+        // Sin acceso a lo eliminado: se muestra el mensaje de "no hay registros".
+        if (esSinPermiso(err)) {
+          this.eliminadas.set([]);
+          return;
+        }
         this.errorCarga.set('No se pudieron cargar las pólizas eliminadas: ' + err.message);
       },
     });
   }
 
   verActivas(): void {
+    // El error de la pestaña "Eliminadas" no aplica a las activas.
+    this.errorCarga.set('');
     this.vista.set('activas');
   }
 

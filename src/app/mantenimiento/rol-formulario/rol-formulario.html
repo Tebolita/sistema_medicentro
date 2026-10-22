@@ -23,6 +23,40 @@
       </mat-form-field>
     </div>
 
+    <div class="permisos-panel">
+      <h2>Permisos</h2>
+      <p class="permisos-hint">
+        Marca los permisos que tiene este rol. Los cambios se aplican al presionar <strong>Guardar</strong>.
+      </p>
+
+      @if (errorPermisos()) {
+        <p class="form-error">{{ errorPermisos() }}</p>
+      }
+
+      @if (cargandoPermisos()) {
+        <p class="permisos-hint">Cargando permisos...</p>
+      } @else {
+        <div class="permisos-lista">
+          @for (p of permisos(); track p.idPermiso) {
+            <mat-checkbox
+              [checked]="idsMarcados().has(p.idPermiso)"
+              [disabled]="guardando()"
+              (change)="alternarPermiso(p.idPermiso, $event.checked)"
+            >
+              {{ p.nombre }}
+            </mat-checkbox>
+          }
+          @if (permisos().length === 0) {
+            <p class="sin-roles">No hay permisos registrados todavía.</p>
+          }
+        </div>
+      }
+
+      @if (hayCambiosPermisos()) {
+        <p class="permisos-pendientes">Hay cambios de permisos sin guardar.</p>
+      }
+    </div>
+
     @if (registro()) {
       <app-auditoria-info
         [fechaCreacion]="registro()!.fechaCreacion"
@@ -46,29 +80,6 @@
   </form>
 
   @if (!esNuevo()) {
-    <div class="form-panel permisos-panel">
-      <h2>Permisos</h2>
-      <p class="permisos-hint">Marca los permisos que tiene este rol.</p>
-
-      @if (errorPermisos()) {
-        <p class="form-error">{{ errorPermisos() }}</p>
-      }
-
-      <div class="permisos-lista">
-        @for (p of permisos(); track p.idPermiso) {
-          <mat-checkbox
-            [checked]="idsAsignados().has(p.idPermiso)"
-            (change)="alternarPermiso(p.idPermiso, $event.checked)"
-          >
-            {{ p.nombre }}
-          </mat-checkbox>
-        }
-        @if (permisos().length === 0) {
-          <p class="sin-roles">No hay permisos registrados todavía.</p>
-        }
-      </div>
-    </div>
-
     <div class="historial-btn-wrap">
       <button matButton type="button" (click)="abrirHistorial()">
         <mat-icon>history</mat-icon>

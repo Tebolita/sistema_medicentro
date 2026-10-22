@@ -17,6 +17,8 @@ import { RolesService } from '../../service/roles.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { cambiosBitacora, idEnBitacora } from '../../shared/bitacora-cambios';
+import { forkJoin } from 'rxjs';
 
 const ESTADOS_USUARIO_EJEMPLO = [
   { id: 1, label: 'Activo' },
@@ -64,6 +66,19 @@ export class UsuarioFormulario {
 
   idUsuario = signal(0);
   esNuevo = computed(() => this.idUsuario() === 0);
+
+  // idEmpleado -> nombre de la OTRA cuenta activa que ya lo tiene. Un
+  // empleado solo puede tener un usuario (su código sirve para iniciar
+  // sesión); el backend también lo valida.
+  empleadosOcupados = computed(() => {
+    const mapa = new Map<number, string>();
+    for (const u of this.usuariosService.listar()) {
+      if (u.idEmpleado != null && u.idUsuario !== this.idUsuario()) {
+        mapa.set(u.idEmpleado, u.nombreUsuario);
+      }
+    }
+    return mapa;
+  });
   guardando = signal(false);
   errorMsg = signal('');
   registro = signal<Usuario | null>(null);
@@ -126,6 +141,7 @@ export class UsuarioFormulario {
 
     afterNextRender(() => {
       this.empleadosService.cargar();
+      this.usuariosService.cargar();
       // RolesService ya es reactivo (rolesDisponibles se recalcula solo
       // cuando cambia su lista), pero si este singleton se cargó UNA vez al
       // arrancar la app (p. ej. para el menú) y luego se crean roles nuevos,
@@ -199,6 +215,12 @@ export class UsuarioFormulario {
       return;
     }
     const v = this.form.getRawValue();
+
+    const ocupadoPor = v.idEmpleado != null ? this.empleadosOcupados().get(v.idEmpleado) : undefined;
+    if (ocupadoPor) {
+      this.errorMsg.set(`El empleado seleccionado ya está asignado al usuario "${ocupadoPor}".`);
+      return;
+    }
 
     this.guardando.set(true);
     this.errorMsg.set('');
@@ -284,9 +306,17 @@ export class UsuarioFormulario {
     this.cargandoHistorial.set(true);
     this.bitacoraSignal.set([]);
 
-    this.usuariosService.RetornarBitacoraPorRegistro('usuarios', id).subscribe({
-      next: (items) => {
-        this.bitacoraSignal.set(items);
+    // Los roles del usuario se auditan en usuario_rol (con el id de esa
+    // relación), así que se traen aparte y se filtran por IdUsuario.
+    forkJoin([
+      this.usuariosService.RetornarBitacoraPorRegistro('usuarios', id),
+      this.usuariosService.RetornarBitacoraGeneral('usuario_rol'),
+    ]).subscribe({
+      next: ([itemsUsuario, itemsRoles]) => {
+        const items = [...itemsUsuario, ...itemsRoles.filter((b) => idEnBitacora(b, 'IdUsuario') === id)].sort((a, b) =>
+          b.fechaHora.localeCompare(a.fechaHora),
+        );
+        this.bitacoraSignal.set(items.filter((b) => this.camposCambiados(b).length > 0));
         this.cargandoHistorial.set(false);
       },
       error: (err: Error) => {
@@ -329,6 +359,12 @@ export class UsuarioFormulario {
   }
 
   camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
+    if (item.tablaAfectada === 'usuario_rol') {
+      return cambiosBitacora(item, {
+        rol: (id) => this.rolesService.obtener(id)?.nombre,
+        usuario: (id) => this.usuariosService.obtener(id)?.nombreUsuario,
+      });
+    }
     try {
       const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
       const despues = item.valoresNuevos ? JSON.parse(item.valoresNuevos) : {};

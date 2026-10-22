@@ -40,8 +40,11 @@
         <mat-select formControlName="idEmpleado">
           <mat-option [value]="null">Sin empleado (cuenta técnica)</mat-option>
           @for (e of empleados(); track e.idEmpleado) {
-            <mat-option [value]="e.idEmpleado">
+            <mat-option [value]="e.idEmpleado" [disabled]="empleadosOcupados().has(e.idEmpleado)">
               {{ e.primerNombre }} {{ e.primerApellido }} — Código {{ e.idEmpleado }}
+              @if (empleadosOcupados().get(e.idEmpleado); as otro) {
+                (ya asignado a {{ otro }})
+              }
             </mat-option>
           }
         </mat-select>

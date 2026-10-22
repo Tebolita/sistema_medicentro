@@ -10,6 +10,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { BitacoraService, RegistroBitacora } from '../../service/bitacora.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { CatalogosService } from '../../service/catalogos.service';
+import { PermisosService } from '../../service/permisos.service';
+import { RolesService } from '../../service/roles.service';
+import { cambiosBitacora } from '../../shared/bitacora-cambios';
 
 // Mismos códigos que se acaban de sembrar en scripts/sembrar_catalogos.sql
 // (TIPO_ACCION_AUDITORIA) — de respaldo mientras ese catálogo no haya
@@ -49,6 +52,8 @@ export interface CambioCampo {
 export class BitacoraLista {
   private bitacoraService = inject(BitacoraService);
   usuariosService = inject(UsuariosService);
+  private permisosService = inject(PermisosService);
+  private rolesService = inject(RolesService);
 
   private catalogos = inject(CatalogosService);
   private accionesApi = this.catalogos.obtener('TIPO_ACCION_AUDITORIA');
@@ -86,7 +91,9 @@ export class BitacoraLista {
       })
       .subscribe({
         next: (lista) => {
-          this.registros.set(lista);
+          // Fuera las entradas "Modificar" en las que solo cambiaron campos
+          // de control (fecha/usuario de modificación): no dicen nada.
+          this.registros.set(lista.filter((r) => this.camposCambiados(r).length > 0));
           this.cargando.set(false);
         },
         error: (err: Error) => {
@@ -158,6 +165,15 @@ export class BitacoraLista {
   // lista de "qué campo cambió, de qué a qué" — en vez de mostrar el JSON
   // tal cual, que nadie fuera de un desarrollador puede leer rápido.
   camposCambiados(r: RegistroBitacora): CambioCampo[] {
+    // Tablas de relación: "Permiso: X / Rol: Y — Sin asignar → Asignado"
+    // en vez de sus columnas crudas (IdRolPermiso, IdRol, IdPermiso...).
+    if (r.tablaAfectada === 'rol_permiso' || r.tablaAfectada === 'usuario_rol') {
+      return cambiosBitacora(r, {
+        permiso: (id) => this.permisosService.obtener(id)?.nombre,
+        rol: (id) => this.rolesService.obtener(id)?.nombre,
+        usuario: (id) => this.usuariosService.obtener(id)?.nombreUsuario,
+      }).map((c) => ({ ...c, tipo: 'cambio' as const }));
+    }
     const antes = this.parsear(r.valoresAnteriores);
     const despues = this.parsear(r.valoresNuevos);
     const campos = new Set([...Object.keys(antes ?? {}), ...Object.keys(despues ?? {})]);

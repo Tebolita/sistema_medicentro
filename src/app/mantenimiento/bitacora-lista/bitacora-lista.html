@@ -37,61 +37,89 @@
     <p class="carga-error">{{ errorCarga() }}</p>
   }
 
-  <div class="historial-lista">
-    @for (r of registros(); track r.idBitacora) {
-      <div class="historial-item">
-        <button type="button" class="historial-resumen" (click)="toggleDetalle(r.idBitacora)">
-          <mat-icon class="bitacora-chevron" [class.abierto]="expandidos().has(r.idBitacora)">chevron_right</mat-icon>
-          <div class="historial-item-left">
-            <span class="historial-tabla-badge">
-              <mat-icon>description</mat-icon>
-              {{ tablaLabel(r.tablaAfectada) }}
-              @if (r.idRegistroAfectado != null) {
-                #{{ r.idRegistroAfectado }}
-              }
-            </span>
-            <span class="historial-badge" [ngClass]="accionClase(r.idTipoAccion)">
-              <mat-icon>{{ accionIcono(r.idTipoAccion) }}</mat-icon>
-              {{ accionLabel(r.idTipoAccion) }}
-            </span>
-          </div>
-          <span class="historial-meta">
-            {{ usuarioNombre(r.idUsuario) }} · {{ r.fechaHora | date: 'd MMM y, HH:mm' }}
-          </span>
-        </button>
+  @if (cargando()) {
+    <p class="item-meta">Cargando bitácora...</p>
+  }
 
-        @if (expandidos().has(r.idBitacora)) {
-          <div class="bitacora-detalle">
-            @if (r.ipOrigen) {
-              <p class="item-meta">IP: {{ r.ipOrigen }}</p>
-            }
-            @for (c of camposCambiados(r); track c.campo) {
-              <div class="cambio-fila">
-                <mat-icon [class]="'cambio-icono cambio-' + c.tipo">{{ iconoDeCambio(c.tipo) }}</mat-icon>
-                <span class="cambio-campo">{{ c.campo }}</span>
-                <span class="cambio-valores">
-                  @if (c.tipo === 'cambio') {
-                    <span class="cambio-antes">{{ c.antes }}</span>
-                    <mat-icon class="cambio-flecha">arrow_forward</mat-icon>
-                    <span class="cambio-despues">{{ c.despues }}</span>
-                  } @else {
-                    <span>{{ c.despues ?? c.antes }}</span>
-                  }
+  @if (registros().length > 0) {
+    <p class="bitacora-total">{{ registros().length }} registro(s)</p>
+
+    <div class="bitacora-tabla-wrap">
+      <table class="bitacora-tabla">
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th>Fecha y hora</th>
+            <th>Usuario</th>
+            <th>Tabla</th>
+            <th class="col-registro">Registro</th>
+            <th>Acción</th>
+            <th>Cambios</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of registros(); track r.idBitacora; let i = $index) {
+            <tr class="bitacora-fila" [class.abierta]="expandidos().has(r.idBitacora)" (click)="toggleDetalle(r.idBitacora)">
+              <td class="col-num">{{ i + 1 }}</td>
+              <td class="col-fecha">{{ r.fechaHora | date: 'd MMM y, HH:mm' }}</td>
+              <td>{{ usuarioNombre(r.idUsuario) }}</td>
+              <td>
+                <span class="historial-tabla-badge">
+                  <mat-icon>description</mat-icon>
+                  {{ tablaLabel(r.tablaAfectada) }}
                 </span>
-              </div>
-            } @empty {
-              <p class="item-meta">Sin cambios de campos para mostrar.</p>
-            }
-          </div>
-        }
-      </div>
-    }
+              </td>
+              <td class="col-registro">{{ r.idRegistroAfectado ?? '—' }}</td>
+              <td>
+                <span class="historial-badge" [ngClass]="accionClase(r.idTipoAccion)">
+                  <mat-icon>{{ accionIcono(r.idTipoAccion) }}</mat-icon>
+                  {{ accionLabel(r.idTipoAccion) }}
+                </span>
+              </td>
+              <td>
+                <button type="button" class="bitacora-ver" [attr.aria-expanded]="expandidos().has(r.idBitacora)">
+                  {{ camposCambiados(r).length }} campo(s)
+                  <mat-icon class="bitacora-chevron" [class.abierto]="expandidos().has(r.idBitacora)">expand_more</mat-icon>
+                </button>
+              </td>
+            </tr>
 
-    @if (registros().length === 0 && !cargando() && !errorCarga() && yaBusco()) {
-      <div class="empty-state">
-        <mat-icon>history</mat-icon>
-        <p>No hay registros de bitácora para estos filtros.</p>
-      </div>
-    }
-  </div>
+            @if (expandidos().has(r.idBitacora)) {
+              <tr class="bitacora-fila-detalle">
+                <td colspan="7">
+                  <div class="bitacora-detalle">
+                    @if (r.ipOrigen) {
+                      <p class="item-meta">IP: {{ r.ipOrigen }}</p>
+                    }
+                    @for (c of camposCambiados(r); track c.campo) {
+                      <div class="cambio-fila">
+                        <mat-icon [class]="'cambio-icono cambio-' + c.tipo">{{ iconoDeCambio(c.tipo) }}</mat-icon>
+                        <span class="cambio-campo">{{ c.campo }}</span>
+                        <span class="cambio-valores">
+                          @if (c.tipo === 'cambio') {
+                            <span class="cambio-antes">{{ c.antes }}</span>
+                            <mat-icon class="cambio-flecha">arrow_forward</mat-icon>
+                            <span class="cambio-despues">{{ c.despues }}</span>
+                          } @else {
+                            <span>{{ c.despues ?? c.antes }}</span>
+                          }
+                        </span>
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (registros().length === 0 && !cargando() && !errorCarga() && yaBusco()) {
+    <div class="empty-state">
+      <mat-icon>history</mat-icon>
+      <p>No hay registros de bitácora para estos filtros.</p>
+    </div>
+  }
 </div>

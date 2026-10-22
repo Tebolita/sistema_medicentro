@@ -24,7 +24,7 @@
     <mat-icon>search</mat-icon>
     <input
       type="text"
-      placeholder="Buscar por usuario o correo..."
+      placeholder="Buscar por usuario, correo o código..."
       [ngModel]="buscar()"
       (ngModelChange)="buscar.set($event)"
     />
@@ -46,10 +46,14 @@
         <div class="item-info">
           <h2>{{ u.nombreUsuario }}</h2>
           <span class="item-meta">{{ u.correo }}</span>
+          <span class="codigo-usuario">
+            <mat-icon>tag</mat-icon>
+            Código de usuario: <strong>{{ u.idUsuario }}</strong>
+          </span>
           @if (u.idEmpleado) {
             <span class="codigo-empleado">
               <mat-icon>badge</mat-icon>
-              <span class="codigo-empleado-texto">Código:</span>
+              <span class="codigo-empleado-texto">Código de empleado:</span>
               <span class="codigo-empleado-valor">{{ u.idEmpleado }}</span>
             </span>
           }
@@ -117,6 +121,7 @@
                       {{ usuarioLabel(item.idUsuario) }} · {{ formatFechaHoraUTC(item.fechaHora) }}
                     </span>
                   </div>
+                  <app-historial-cambios [item]="item" />
                 </div>
               }
             </div>

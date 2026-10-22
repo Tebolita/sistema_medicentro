@@ -13,6 +13,13 @@
   color: var(--c-text);
 }
 
+.permisos-pendientes {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, #c62828 var(--c-keep), white);
+}
+
 .permisos-lista {
   display: flex;
   flex-direction: column;

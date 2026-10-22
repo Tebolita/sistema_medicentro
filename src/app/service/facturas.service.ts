@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { Factura, FacturaDetalle, Pago } from '../models';
 import { ApiResponse } from '../models/api-response.model';
-import { ErrorService } from './error.service';
+import { ErrorService, esSinPermiso } from './error.service';
 import { CatalogosService } from './catalogos.service';
 import { ESTADOS_PAGO } from '../facturacion/facturacion-catalogos';
 
@@ -118,7 +118,13 @@ export class FacturasService {
           this.eliminadas.set(lista);
           this.cargandoEliminadas.set(false);
         },
-        error: () => {
+        error: (err: unknown) => {
+          // Sin acceso a lo eliminado: la pestaña se muestra vacía, no como error.
+          if (esSinPermiso(err)) {
+            this.eliminadas.set([]);
+            this.cargandoEliminadas.set(false);
+            return;
+          }
           this.errorEliminadas.set('No se pudieron cargar las facturas eliminadas.');
           this.cargandoEliminadas.set(false);
         },

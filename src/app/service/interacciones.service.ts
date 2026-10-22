@@ -4,7 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, tap } from 'rxjs';
 import { ApiResponse } from '../models/api-response.model';
-import { ErrorService } from './error.service';
+import { ErrorService, esSinPermiso } from './error.service';
 
 // InteraccionDto / InteraccionInputDto reales (InteraccionesMedicamentosController:
 // CRUD completo). idNivelSeveridad NO se valida contra ningún catálogo en el
@@ -107,7 +107,13 @@ export class InteraccionesService {
           this.eliminadas.set(lista);
           this.cargandoEliminadas.set(false);
         },
-        error: () => {
+        error: (err: unknown) => {
+          // Sin acceso a lo eliminado: la pestaña se muestra vacía, no como error.
+          if (esSinPermiso(err)) {
+            this.eliminadas.set([]);
+            this.cargandoEliminadas.set(false);
+            return;
+          }
           this.errorEliminadas.set('No se pudieron cargar las interacciones eliminadas.');
           this.cargandoEliminadas.set(false);
         },

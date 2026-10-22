@@ -1,3 +1,4 @@
+import { esSinPermiso } from '../../service/error.service';
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
 import { Component, ElementRef, PLATFORM_ID, computed, inject, signal, viewChild } from '@angular/core';
 import { isPlatformBrowser, NgClass } from '@angular/common';
@@ -117,6 +118,8 @@ export class PacientesLista {
   );
 
   verActivos(): void {
+    // El error de la pestaña "Eliminados" no aplica a los activos.
+    this.errorCarga.set('');
     this.vista.set('activos');
   }
 
@@ -153,6 +156,11 @@ export class PacientesLista {
       },
       error: (err: Error) => {
         this.cargando.set(false);
+        // Sin acceso a lo eliminado: se muestra "No hay pacientes eliminados".
+        if (esSinPermiso(err)) {
+          this.eliminados.set([]);
+          return;
+        }
         this.errorCarga.set('No se pudieron cargar los pacientes eliminados: ' + err.message);
       },
     });
