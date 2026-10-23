@@ -2,6 +2,7 @@ import { esSinPermiso } from '../service/error.service';
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -49,6 +50,7 @@ function toIsoDateTimeLocal(value: Date): string {
   selector: 'app-libro-actas',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -207,17 +209,7 @@ export class LibroActas {
     }
   }
 
-  toggleFormulario(): void {
-    if (this.mostrarFormulario()) {
-      this.cerrarFormulario();
-    } else {
-      this.editando.set(null);
-      this.form.reset();
-      this.mostrarFormulario.set(true);
-    }
-  }
-
-  private cerrarFormulario(): void {
+  cerrarFormulario(): void {
     this.mostrarFormulario.set(false);
     this.editando.set(null);
     this.form.reset();
@@ -250,6 +242,9 @@ export class LibroActas {
     const acta = this.editando();
     const request: ActaRequest = {
       idPaciente: v.idPaciente!,
+      // Esta pantalla solo edita actas de antes del cambio (sin cita); las
+      // nuevas se generan desde la atención de la consulta.
+      idCita: acta?.idCita ?? null,
       motivoIngreso: v.motivoIngreso.trim(),
       idAtendidoPor: v.idAtendidoPor!,
       observaciones: v.observaciones.trim() || null,

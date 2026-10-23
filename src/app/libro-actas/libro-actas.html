@@ -2,14 +2,11 @@
   <div class="page-header">
     <div>
       <h1>Libro de actas</h1>
-      <p>Bitácora de ingreso de pacientes a recepción.</p>
+      <p>
+        Actas de cierre de cada consulta. Ya no se registran sueltas desde aquí: se generan desde
+        la atención de la consulta, al terminar (ver "Acta de cierre" en esa pantalla).
+      </p>
     </div>
-    @if (vista() === 'activas') {
-      <button matButton="filled" type="button" (click)="toggleFormulario()">
-        <mat-icon>{{ mostrarFormulario() ? 'close' : 'add' }}</mat-icon>
-        {{ mostrarFormulario() ? 'Cancelar' : 'Nueva acta' }}
-      </button>
-    }
   </div>
 
   <div class="tabs">
@@ -82,12 +79,13 @@
       </div>
 
       <div class="form-actions">
+        <button matButton type="button" (click)="cerrarFormulario()">Cancelar</button>
         <button matButton="filled" type="submit" [disabled]="guardando()">
           <mat-icon>save</mat-icon>
           @if (guardando()) {
             Guardando...
           } @else {
-            {{ editando() ? 'Guardar cambios' : 'Registrar' }}
+            Guardar cambios
           }
         </button>
       </div>
@@ -118,9 +116,20 @@
           }
         </div>
         @if (vista() === 'activas') {
-          <button matIconButton type="button" [matTooltip]="'Editar acta'" (click)="editar(a)">
-            <mat-icon>edit</mat-icon>
-          </button>
+          @if (a.idCita) {
+            <a
+              matIconButton
+              type="button"
+              [matTooltip]="'Ver consulta'"
+              [routerLink]="['/home/consultas', a.idCita, 'atencion']"
+            >
+              <mat-icon>medical_services</mat-icon>
+            </a>
+          } @else {
+            <button matIconButton type="button" [matTooltip]="'Editar acta'" (click)="editar(a)">
+              <mat-icon>edit</mat-icon>
+            </button>
+          }
           <button matIconButton type="button" [matTooltip]="'Eliminar acta'" (click)="eliminar(a)">
             <mat-icon>delete</mat-icon>
           </button>

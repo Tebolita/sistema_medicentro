@@ -86,14 +86,11 @@ export const MENU_SECTIONS: MenuSection[] = [
       'Órdenes y resultados de laboratorio solicitados durante la consulta.',
     color: '#ef6c00',
     route: '/home/laboratorio',
-    items: [
-      {
-        icon: 'science',
-        label: 'Orden de exámenes de laboratorio',
-        route: '/home/laboratorio/nueva',
-        queryParams: { categoria: '1' },
-      },
-    ],
+    // Sin accesos rápidos: una orden de laboratorio nace de la atención de
+    // una consulta (/home/consultas/:id/atencion), ya no se crea suelta
+    // (SOLICITUD_MOTOR_CONSULTAS.md, sección 3). La ruta de arriba sigue
+    // llevando al listado, de solo lectura/seguimiento para Laboratorio.
+    items: [],
   },
   {
     slug: 'emergencias',
@@ -116,7 +113,11 @@ export const MENU_SECTIONS: MenuSection[] = [
     color: '#455a64',
     route: '/home/hospitalizacion',
     items: [
-      { icon: 'login', label: 'Ingreso hospitalario', route: '/home/hospitalizacion/nuevo' },
+      // Sin "Ingreso hospitalario": se inicia desde la atención de la
+      // consulta que lo origina (/home/consultas/:id/atencion), no suelto
+      // aquí (SOLICITUD_MOTOR_CONSULTAS.md, sección 3). "Órdenes médicas" se
+      // queda: es cuidado continuo del paciente ya internado, no de una
+      // consulta puntual.
       {
         icon: 'assignment',
         label: 'Órdenes médicas',

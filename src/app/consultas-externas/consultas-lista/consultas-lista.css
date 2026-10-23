@@ -85,6 +85,28 @@
   border-color: #0d6a8f;
 }
 
+/* Marcadas para operación: mismo color rojo que el badge de la pantalla de
+   atención, para identificarlas de un vistazo en el listado. */
+.consulta-card-operacion {
+  background: color-mix(in srgb, #c62828 6%, var(--c-surface));
+  border-color: color-mix(in srgb, #c62828 35%, var(--c-border));
+}
+
+.consulta-card-operacion:hover {
+  border-color: #c62828;
+}
+
+.consulta-meta-operacion {
+  color: #c62828 !important;
+  font-weight: 600;
+}
+
+.consulta-meta-operacion mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
 .patient-avatar {
   display: flex;
   align-items: center;

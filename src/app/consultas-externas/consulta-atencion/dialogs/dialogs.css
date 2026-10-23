@@ -1,0 +1,56 @@
+.dialog-title-icon {
+  vertical-align: middle;
+  margin-right: 6px;
+  color: var(--c-accent);
+}
+
+.dialog-form-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 320px;
+  max-width: 480px;
+  padding-top: 4px;
+}
+
+.dialog-form-grid mat-form-field {
+  flex: 1 1 200px;
+}
+
+.full-width {
+  flex: 1 1 100% !important;
+  width: 100%;
+}
+
+.aviso-stock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 100%;
+  margin: -4px 0 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: color-mix(in srgb, #2e7d32 10%, transparent);
+  color: #2e7d32;
+}
+
+.aviso-stock mat-icon {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+}
+
+.aviso-stock-sin {
+  background: color-mix(in srgb, #ef6c00 12%, transparent);
+  color: #ef6c00;
+}
+
+.acta-motivo {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--c-surface-alt, rgba(0, 0, 0, 0.03));
+  font-size: 13px;
+  color: var(--c-text-soft);
+}

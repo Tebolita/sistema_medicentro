@@ -19,13 +19,16 @@ export interface RecetaInput {
   idTratamiento: number | null;
   idPaciente: number;
   idMedico: number;
+  idCita: number | null;
   fechaEmision: string;
   firmaDigitalHash: string | null;
   firmaDigitalUrl: string | null;
   idEstadoReceta: number;
   detalles: {
     idRecetaDetalle: number;
-    idMedicamento: number;
+    idMedicamento: number | null;
+    nombreMedicamentoExterno: string | null;
+    cantidad: number;
     dosis: string;
     frecuencia: string;
     duracion: string | null;

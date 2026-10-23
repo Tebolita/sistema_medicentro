@@ -1,128 +1,194 @@
 <div class="page">
-  <div class="page-header">
-    <div>
-      <h1>Expedientes Clínicos</h1>
-      <p>Fichas de consulta, evolución y notas que conforman el expediente del paciente.</p>
-    </div>
-    <div class="header-actions">
-      <button matButton type="button" class="history-btn" (click)="abrirHistorialGeneral()">
-        <mat-icon>history</mat-icon>
-        Historial general
-      </button>
-      <a matButton="filled" routerLink="/home/expedientes/nuevo" class="new-btn">
-        <mat-icon>note_add</mat-icon>
-        Nuevo registro
-      </a>
-    </div>
-  </div>
-
-  <div class="tabs">
-    <button type="button" class="tab" [class.active]="vista() === 'activos'" (click)="verActivos()">
-      <mat-icon>folder_shared</mat-icon>
-      Activos
-    </button>
-    <button type="button" class="tab" [class.active]="vista() === 'eliminados'" (click)="verEliminados()">
-      <mat-icon>delete_outline</mat-icon>
-      Eliminados
-    </button>
-  </div>
-
-  <div class="top-row">
-    <div class="search-bar" [class.pulse]="resaltarBusqueda()">
-      <mat-icon>search</mat-icon>
-      <input
-        #searchInput
-        type="text"
-        placeholder="Buscar por paciente, motivo o diagnóstico..."
-        [ngModel]="buscar()"
-        (ngModelChange)="buscar.set($event)"
-      />
-      @if (buscando()) {
-        <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </div>
-  </div>
-
-  @if (tipoFiltro() !== null) {
-    <div class="filtro-chip">
-      <mat-icon>filter_alt</mat-icon>
-      <span>{{ tipoFiltroLabel() }}</span>
-      <button type="button" (click)="limpiarFiltroTipo()" aria-label="Quitar filtro">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-  }
-
-  @if (errorCarga()) {
-    <p class="carga-error">{{ errorCarga() }}</p>
-  }
-
-  <h2 class="section-title">
-    @if (buscando()) {
-      Resultados de búsqueda ({{ expedientes().length }})
-    } @else if (vista() === 'activos') {
-      Registros clínicos
-    } @else {
-      Registros eliminados
-    }
-  </h2>
-
-  <div class="expediente-grid">
-    @for (h of expedientes(); track h.idHistorial) {
-      <a
-        class="expediente-card"
-        [class.inactivo]="vista() === 'eliminados'"
-        [routerLink]="vista() === 'activos' ? ['/home/expedientes', h.idHistorial] : null"
-      >
-        <div class="patient-avatar">{{ iniciales(h.idPaciente) }}</div>
-        <div class="expediente-info">
-          <h2>{{ nombrePaciente(h.idPaciente) }}</h2>
-          <span class="tipo-badge">{{ tipoLabel(h.idTipoRegistro) }}</span>
-          <span class="expediente-meta"><mat-icon>event</mat-icon>{{ formatFecha(h.fecha) }} · {{ medicoLabel(h.idMedico) }}</span>
-          <span class="expediente-meta resumen">{{ resumen(h) }}</span>
-          @if (vista() === 'eliminados') {
-            <span class="expediente-meta">
-              Dado de baja por {{ usuarioLabel(h.idUsuarioModificacion) }} el {{ formatFecha(h.fechaModificacion) }}
-            </span>
-          }
-        </div>
-        @if (vista() === 'activos') {
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Eliminar registro'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); eliminar(h)"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
-        } @else {
-          <button
-            matIconButton
-            type="button"
-            [matTooltip]="'Reactivar registro'"
-            (click)="$event.preventDefault(); $event.stopPropagation(); reactivar(h)"
-          >
-            <mat-icon>restore</mat-icon>
-          </button>
-        }
-      </a>
-    }
-
-    @if (expedientes().length === 0 && !cargando() && !errorCarga()) {
-      <div class="empty-state">
-        <mat-icon>{{ vista() === 'activos' ? 'folder_off' : 'delete_outline' }}</mat-icon>
+  @if (!pacienteSeleccionado()) {
+    <div class="page-header">
+      <div>
+        <h1>Expedientes Clínicos</h1>
         <p>
-          @if (vista() === 'activos') {
-            No se encontraron registros{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
-          } @else {
-            No hay registros eliminados{{ buscar() ? ' para "' + buscar() + '"' : '' }}.
-          }
+          Una tarjeta por paciente — al abrirla ves sus consultas, y cada consulta lleva a su
+          atención (datos clínicos, recetario, exámenes y hospitalización).
         </p>
       </div>
+      <div class="header-actions">
+        <button matButton type="button" class="history-btn" (click)="abrirHistorialGeneral()">
+          <mat-icon>history</mat-icon>
+          Historial general
+        </button>
+      </div>
+    </div>
+
+    <div class="top-row">
+      <div class="search-bar">
+        <mat-icon>search</mat-icon>
+        <input
+          #searchInput
+          type="text"
+          placeholder="Buscar paciente..."
+          [ngModel]="buscar()"
+          (ngModelChange)="buscar.set($event)"
+        />
+        @if (buscar().trim()) {
+          <button type="button" class="search-clear" (click)="buscar.set('')" aria-label="Limpiar búsqueda">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (errorCarga()) {
+      <p class="carga-error">{{ errorCarga() }}</p>
     }
-  </div>
+
+    <div class="expediente-grid">
+      @for (p of pacientesConConsultas(); track p.idPaciente) {
+        <button type="button" class="expediente-card" (click)="seleccionarPaciente(p.idPaciente)">
+          <div class="patient-avatar">{{ iniciales(p.idPaciente) }}</div>
+          <div class="expediente-info">
+            <h2>{{ p.nombre }}</h2>
+            <span class="expediente-meta">
+              <mat-icon>event</mat-icon>
+              {{ p.cantidad }} consulta{{ p.cantidad === 1 ? '' : 's' }} · última el {{ formatFecha(p.ultimaFecha) }}
+            </span>
+          </div>
+          <mat-icon class="chevron">chevron_right</mat-icon>
+        </button>
+      }
+
+      @if (pacientesConConsultas().length === 0 && !cargando() && !errorCarga()) {
+        <div class="empty-state">
+          <mat-icon>folder_off</mat-icon>
+          <p>No se encontraron pacientes{{ buscar() ? ' para "' + buscar() + '"' : '' }}.</p>
+        </div>
+      }
+    </div>
+  } @else {
+    <button type="button" class="link-button volver" (click)="volverAPacientes()">
+      <mat-icon>arrow_back</mat-icon>
+      Todos los pacientes
+    </button>
+
+    <div class="page-header">
+      <div>
+        <h1>{{ nombrePacienteActual() }}</h1>
+        <p>{{ consultasDelPaciente().length }} consulta{{ consultasDelPaciente().length === 1 ? '' : 's' }} registrada{{ consultasDelPaciente().length === 1 ? '' : 's' }}.</p>
+      </div>
+      <button matButton type="button" (click)="toggleVistazo()">
+        <mat-icon>{{ vistazoAbierto() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        {{ vistazoAbierto() ? 'Ocultar vistazo rápido' : 'Vistazo rápido del paciente' }}
+      </button>
+    </div>
+
+    <!-- Datos útiles ANTES de entrar a una consulta en particular (ver
+         SOLICITUD_MOTOR_CONSULTAS.md): última consulta, última operación, y
+         un vistazo rápido opcional de la ficha del paciente. -->
+    <div class="resumen-paciente">
+      <div class="resumen-item">
+        <mat-icon>event</mat-icon>
+        <span>
+          <strong>Última consulta:</strong>
+          @if (ultimaConsulta(); as u) {
+            {{ formatFecha(u.fechaHoraInicio) }} · {{ medicoLabel(u.idMedico) }}
+          } @else {
+            Sin consultas registradas
+          }
+        </span>
+      </div>
+      <div class="resumen-item">
+        <mat-icon>medical_services</mat-icon>
+        <span>
+          <strong>Última operación:</strong>
+          @if (ultimaOperacion(); as u) {
+            {{ formatFecha(u.fechaHoraInicio) }} · {{ nombreTipoOperacion(u.idTipoOperacion) }}
+          } @else {
+            Sin operaciones registradas
+          }
+        </span>
+      </div>
+    </div>
+
+    @if (vistazoAbierto() && pacienteActual(); as p) {
+      <div class="vistazo-paciente">
+        <div class="vistazo-datos-basicos">
+          <div class="vistazo-dato"><strong>Expediente:</strong> {{ p.codigoExpediente }}</div>
+          <div class="vistazo-dato"><strong>Edad:</strong> {{ p.edad }} años</div>
+          <div class="vistazo-dato"><strong>Fecha de nacimiento:</strong> {{ formatFechaSolo(p.fechaNacimiento) }}</div>
+          <div class="vistazo-dato"><strong>Teléfono:</strong> {{ p.telefonoPrincipal || '—' }}</div>
+          <div class="vistazo-dato"><strong>Correo:</strong> {{ p.correo || '—' }}</div>
+          <div class="vistazo-dato"><strong>Dirección:</strong> {{ p.direccion || '—' }}</div>
+        </div>
+
+        @if (cargandoVistazo()) {
+          <p class="vistazo-cargando">Cargando alergias y antecedentes...</p>
+        } @else {
+          <div class="vistazo-seccion">
+            <h3><mat-icon>warning</mat-icon> Alergias</h3>
+            @if (alergiasPaciente().length === 0) {
+              <p class="vistazo-vacio">Sin alergias registradas.</p>
+            } @else {
+              <ul class="vistazo-lista">
+                @for (a of alergiasPaciente(); track a.idAlergia) {
+                  <li>
+                    <span class="vistazo-severidad" [class]="'severidad-' + severidadLabel(a.idSeveridad).toLowerCase()">
+                      {{ severidadLabel(a.idSeveridad) }}
+                    </span>
+                    {{ a.descripcion }} <span class="vistazo-tipo">({{ tipoAlergiaLabel(a.idTipoAlergia) }})</span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <div class="vistazo-seccion">
+            <h3><mat-icon>history_edu</mat-icon> Antecedentes</h3>
+            @if (antecedentesPaciente().length === 0) {
+              <p class="vistazo-vacio">Sin antecedentes registrados.</p>
+            } @else {
+              <ul class="vistazo-lista">
+                @for (a of antecedentesPaciente(); track a.idAntecedente) {
+                  <li>
+                    {{ a.descripcion }} <span class="vistazo-tipo">({{ tipoAntecedenteLabel(a.idTipoAntecedente) }})</span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <div class="consulta-grid">
+      @for (c of consultasDelPaciente(); track c.idCita) {
+        <a
+          class="consulta-card"
+          [class.consulta-card-operacion]="c.requiereOperacion"
+          [routerLink]="['/home/consultas', c.idCita, 'atencion']"
+          [queryParams]="{ paciente: c.idPaciente }"
+        >
+          <div class="consulta-info">
+            <span class="consulta-fecha"><mat-icon>event</mat-icon>{{ formatFecha(c.fechaHoraInicio) }}</span>
+            <span class="consulta-meta"><mat-icon>medical_services</mat-icon><span class="texto-truncado">{{ medicoLabel(c.idMedico) }}</span></span>
+            <span class="consulta-meta"><span class="texto-truncado">{{ c.motivoConsulta || 'Sin motivo especificado' }}</span></span>
+          </div>
+          <div class="consulta-badges">
+            @if (c.requiereOperacion) {
+              <span class="status-badge status-badge-operacion">
+                <mat-icon>medical_services</mat-icon>
+                Operación
+              </span>
+            }
+            <span class="status-badge">{{ estadoLabel(c.idEstadoCita) }}</span>
+          </div>
+          <mat-icon class="chevron">chevron_right</mat-icon>
+        </a>
+      }
+
+      @if (consultasDelPaciente().length === 0) {
+        <div class="empty-state">
+          <mat-icon>event_busy</mat-icon>
+          <p>Este paciente todavía no tiene consultas registradas.</p>
+        </div>
+      }
+    </div>
+  }
 
   <!-- MODAL: Historial general -->
   @if (historialAbierto()) {
@@ -133,8 +199,8 @@
           <div class="modal-title-wrap">
             <mat-icon class="modal-icon">history</mat-icon>
             <div>
-              <h2>Historial de Expedientes</h2>
-              <p class="modal-subtitle">Todos los cambios registrados en el módulo.</p>
+              <h2>Historial de Consultas</h2>
+              <p class="modal-subtitle">Todos los cambios registrados en las consultas.</p>
             </div>
           </div>
           <button matIconButton type="button" matTooltip="Cerrar" (click)="cerrarHistorialGeneral()">
@@ -154,8 +220,8 @@
                   <div class="historial-item-header">
                     <div class="historial-item-left">
                       <span class="historial-tabla-badge">
-                        <mat-icon>{{ tablaIcono(item.tablaAfectada) }}</mat-icon>
-                        {{ tablaLabel(item.tablaAfectada) }} #{{ item.idRegistroAfectado }}
+                        <mat-icon>event</mat-icon>
+                        Consulta #{{ item.idRegistroAfectado }}
                       </span>
                       <span class="historial-badge" [ngClass]="accionClase(item.idTipoAccion)">
                         <mat-icon>{{ accionIcono(item.idTipoAccion) }}</mat-icon>

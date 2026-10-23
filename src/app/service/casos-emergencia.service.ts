@@ -9,6 +9,10 @@ export interface CasoEmergencia {
   idPaciente: number | null;
   nombrePaciente: string;
   idMedico: number | null;
+  idSala: number | null;
+  // La genera el backend solo si hay paciente registrado + médico asignado
+  // (ver SOLICITUD_MOTOR_CONSULTAS.md, sección 4); no se manda al guardar.
+  idCita: number | null;
   idNivelTriage: number;
   idEstadoCaso: number;
   motivo: string;
@@ -189,6 +193,7 @@ export class CasosEmergenciaService {
       idPaciente: registro.idPaciente,
       nombrePaciente: registro.nombrePaciente || null,
       idMedico: registro.idMedico,
+      idSala: registro.idSala,
       idNivelTriage: registro.idNivelTriage,
       idEstadoCaso: registro.idEstadoCaso,
       motivo: registro.motivo,

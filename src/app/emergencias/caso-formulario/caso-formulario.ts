@@ -19,6 +19,8 @@ import {
   UsuarioOpcion,
 } from '../../service/casos-emergencia.service';
 import { PacientesService } from '../../service/pacientes.service';
+import { SalaService } from '../../service/sala.service';
+import { Sala } from '../../models/cita.model';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 
 const PACIENTE_NO_REGISTRADO = 0;
@@ -58,10 +60,17 @@ export class CasoFormulario {
   private router = inject(Router);
   private casosService = inject(CasosEmergenciaService);
   private pacientesService = inject(PacientesService);
+  private salaService = inject(SalaService);
   private notif = inject(NotificacionesService);
 
   pacientes = this.pacientesService.directorio;
   pacienteNoRegistrado = PACIENTE_NO_REGISTRADO;
+
+  // Dónde se está atendiendo al paciente — se copia a la consulta que se
+  // genera sola cuando el caso tiene paciente registrado + médico (ver
+  // SOLICITUD_MOTOR_CONSULTAS.md, sección 4).
+  salasSignal = signal<Sala[]>([]);
+  idCitaGenerada = signal<number | null>(null);
 
   medicosSignal = signal<MedicoOpcion[]>([]);
   nivelesTriageSignal = signal<OpcionCatalogo[]>([]);
@@ -92,6 +101,7 @@ export class CasoFormulario {
       ],
     ],
     idMedico: this.fb.control<number | null>(null),
+    idSala: this.fb.control<number | null>(null),
     idNivelTriage: this.fb.control<number | null>(null, Validators.required),
     idEstadoCaso: this.fb.control<number | null>(null, Validators.required),
     motivo: [
@@ -108,6 +118,14 @@ export class CasoFormulario {
   esWalkIn = computed(() => this.idPacienteSeleccionado() === PACIENTE_NO_REGISTRADO);
 
   constructor() {
+    this.salaService.RetornarSalas().subscribe({
+      next: (resp) => this.salasSignal.set(resp.datos ?? []),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [CasoFormulario] Error salas:', err.status);
+        this.notif.error('No se pudieron cargar las salas');
+      },
+    });
+
     this.casosService.RetornarMedicos().subscribe({
       next: (m) => this.medicosSignal.set(m),
       error: (err: HttpErrorResponse) => {
@@ -185,11 +203,13 @@ export class CasoFormulario {
       idPaciente: null,
       nombrePaciente: '',
       idMedico: null,
+      idSala: null,
       idNivelTriage: null,
       idEstadoCaso: null,
       motivo: '',
     });
     this.idPacienteSeleccionado.set(null);
+    this.idCitaGenerada.set(null);
     this.errorGuardar.set(null);
     this.historialAbierto.set(false);
     this.bitacoraSignal.set([]);
@@ -201,11 +221,13 @@ export class CasoFormulario {
       idPaciente: registro.idPaciente ?? PACIENTE_NO_REGISTRADO,
       nombrePaciente: registro.nombrePaciente ?? '',
       idMedico: registro.idMedico,
+      idSala: registro.idSala,
       idNivelTriage: registro.idNivelTriage,
       idEstadoCaso: registro.idEstadoCaso,
       motivo: registro.motivo,
     });
     this.idPacienteSeleccionado.set(registro.idPaciente ?? PACIENTE_NO_REGISTRADO);
+    this.idCitaGenerada.set(registro.idCita);
   }
 
   guardar(): void {
@@ -228,6 +250,8 @@ export class CasoFormulario {
       idPaciente: esWalkIn ? null : v.idPaciente,
       nombrePaciente: esWalkIn ? v.nombrePaciente : '',
       idMedico: v.idMedico,
+      idSala: v.idSala,
+      idCita: this.idCitaGenerada(),
       idNivelTriage: v.idNivelTriage!,
       idEstadoCaso: v.idEstadoCaso!,
       motivo: v.motivo,

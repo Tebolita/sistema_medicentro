@@ -102,7 +102,7 @@ export class RecetasLista {
 
   medicamentosTexto(r: RecetaCompleta): string {
     return r.detalles
-      .map((d) => this.medicamentosService.nombreDe(d.idMedicamento))
+      .map((d) => this.medicamentosService.nombreDe(d.idMedicamento) ?? d.nombreMedicamentoExterno)
       .filter(Boolean)
       .join(', ');
   }

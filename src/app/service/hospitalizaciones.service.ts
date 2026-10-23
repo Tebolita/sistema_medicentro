@@ -267,6 +267,7 @@ export class HospitalizacionesService {
 
     const body = {
       idPaciente: registro.idPaciente,
+      idCita: registro.idCita,
       idCama: registro.idCama,
       idMedicoResponsable: registro.idMedicoResponsable,
       fechaIngreso: registro.fechaIngreso,

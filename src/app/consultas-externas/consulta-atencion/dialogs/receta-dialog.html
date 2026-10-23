@@ -1,0 +1,97 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">medication</mat-icon>
+  Agregar medicamento
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    @if (data.recetasVigentes.length > 0) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Receta</mat-label>
+        <mat-select formControlName="idRecetaDestino">
+          @for (r of data.recetasVigentes; track r.idReceta) {
+            <mat-option [value]="r.idReceta">Receta #{{ r.idReceta }} ({{ r.resumen }})</mat-option>
+          }
+          <mat-option [value]="null">+ Nueva receta</mat-option>
+        </mat-select>
+      </mat-form-field>
+    }
+
+    <mat-checkbox formControlName="esExterno" class="full-width">
+      Es un medicamento externo (no se maneja en la clínica)
+    </mat-checkbox>
+
+    @if (!esExterno()) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Medicamento</mat-label>
+        <mat-select formControlName="idMedicamento">
+          @for (m of data.medicamentos; track m.idMedicamento) {
+            <mat-option [value]="m.idMedicamento">{{ m.nombre }}</mat-option>
+          }
+        </mat-select>
+        @if (intentoGuardar() && !form.controls.idMedicamento.value) {
+          <mat-error>Selecciona el medicamento</mat-error>
+        }
+      </mat-form-field>
+
+      @if (form.controls.idMedicamento.value) {
+        @if (avisoStock(); as aviso) {
+          <p class="aviso-stock" [class.aviso-stock-sin]="aviso.tipo !== 'disponible'">
+            <mat-icon>{{ aviso.tipo === 'disponible' ? 'inventory' : 'info' }}</mat-icon>
+            {{ aviso.mensaje }}
+          </p>
+        }
+      }
+    } @else {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre del medicamento externo</mat-label>
+        <input matInput formControlName="nombreMedicamentoExterno" placeholder="Ej. Amoxicilina 500mg" />
+        @if (intentoGuardar() && !form.controls.nombreMedicamentoExterno.value.trim()) {
+          <mat-error>Escribe el nombre del medicamento</mat-error>
+        }
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cantidad</mat-label>
+      <input matInput type="number" min="0.01" step="0.01" formControlName="cantidad" />
+      @if (form.controls.cantidad.invalid && form.controls.cantidad.touched) {
+        <mat-error>Requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Dosis</mat-label>
+      <input matInput formControlName="dosis" placeholder="Ej. 500mg" />
+      @if (form.controls.dosis.invalid && form.controls.dosis.touched) {
+        <mat-error>Requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Frecuencia</mat-label>
+      <input matInput formControlName="frecuencia" placeholder="Ej. cada 8 horas" />
+      @if (form.controls.frecuencia.invalid && form.controls.frecuencia.touched) {
+        <mat-error>Requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Duración (opcional)</mat-label>
+      <input matInput formControlName="duracion" placeholder="Ej. 7 días" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Indicaciones (opcional)</mat-label>
+      <input matInput formControlName="indicaciones" />
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>add</mat-icon>
+      Agregar
+    </button>
+  </mat-dialog-actions>
+</form>

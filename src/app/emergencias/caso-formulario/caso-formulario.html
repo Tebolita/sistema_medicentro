@@ -74,6 +74,17 @@
         </mat-select>
       </mat-form-field>
 
+      <!-- Sala: dónde se está atendiendo al paciente -->
+      <mat-form-field appearance="outline">
+        <mat-label>Sala</mat-label>
+        <mat-select formControlName="idSala">
+          <mat-option [value]="null">Sin asignar</mat-option>
+          @for (s of salasSignal(); track s.idSala) {
+            <mat-option [value]="s.idSala">{{ s.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
       <!-- Nivel de triaje -->
       <mat-form-field appearance="outline">
         <mat-label>Nivel de triaje</mat-label>
@@ -135,6 +146,14 @@
       </button>
     </div>
   </form>
+
+  <!-- Este caso ya generó una consulta (paciente registrado + médico asignado) -->
+  @if (idCitaGenerada()) {
+    <p class="consulta-generada">
+      <mat-icon>event_available</mat-icon>
+      Este caso generó la consulta #{{ idCitaGenerada() }}.
+    </p>
+  }
 
   <!-- Botón de historial (solo si ya existe el caso) -->
   @if (!esNuevo()) {

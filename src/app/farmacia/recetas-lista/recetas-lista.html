@@ -2,17 +2,16 @@
   <div class="page-header">
     <div>
       <h1>Recetario</h1>
-      <p>Recetas internas y recetas Mediprocesos emitidas a pacientes.</p>
+      <p>
+        Recetas emitidas a pacientes — se agregan desde la atención de cada consulta, ya no se
+        crean sueltas aquí.
+      </p>
     </div>
     <div class="header-actions">
       <button matButton type="button" class="history-btn" (click)="abrirHistorialGeneral()">
         <mat-icon>history</mat-icon>
         Historial general
       </button>
-      <a matButton="filled" routerLink="/home/farmacia/recetas/nueva" class="new-btn">
-        <mat-icon>receipt_long</mat-icon>
-        Nueva receta
-      </a>
     </div>
   </div>
 
@@ -47,6 +46,16 @@
         </div>
         <div class="receta-actions">
           <span class="status-badge" [class]="estadoClase(r.receta.idEstadoReceta)">{{ estadoLabel(r.receta.idEstadoReceta) }}</span>
+          @if (r.receta.idCita) {
+            <a
+              matIconButton
+              [matTooltip]="'Ver consulta'"
+              [routerLink]="['/home/consultas', r.receta.idCita, 'atencion']"
+              (click)="$event.stopPropagation()"
+            >
+              <mat-icon>medical_services</mat-icon>
+            </a>
+          }
           <button
             matIconButton
             type="button"

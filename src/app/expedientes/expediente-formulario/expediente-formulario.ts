@@ -369,6 +369,21 @@ export class ExpedienteFormulario {
     if (this.guardando()) {
       return;
     }
+
+    // El expediente ya no se crea suelto: nace de una consulta (ver
+    // SOLICITUD_MOTOR_CONSULTAS.md, sección 2). Esta pantalla ya no puede
+    // crear ninguno (idCita siempre viene null al crear), y un registro
+    // viejo que nunca tuvo cita tampoco se puede volver a guardar.
+    const idCita = this.idCita;
+    if (idCita === null) {
+      this.notificaciones.error(
+        this.esNuevo()
+          ? 'Los expedientes ya no se crean sueltos: se generan desde la pantalla de Atención de la consulta.'
+          : 'Este expediente no está vinculado a ninguna consulta; ya no se puede editar desde aquí.',
+      );
+      return;
+    }
+
     this.form.markAllAsTouched();
     if (this.form.invalid) {
       this.notificaciones.error('Revisa los campos marcados en rojo.');
@@ -403,7 +418,7 @@ export class ExpedienteFormulario {
     const request: HistorialClinicoRequest = {
       idPaciente: v.idPaciente!,
       idMedico: v.idMedico!,
-      idCita: this.idCita,
+      idCita,
       idTratamiento: this.idTratamiento,
       idTipoRegistro: v.idTipoRegistro!,
       idNivelConfidencialidad: v.idNivelConfidencialidad,

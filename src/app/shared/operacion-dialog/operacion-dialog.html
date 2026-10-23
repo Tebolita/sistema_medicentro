@@ -1,0 +1,41 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">medical_services</mat-icon>
+  Marcar para operación
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="confirmar()">
+  <mat-dialog-content class="dialog-form-grid">
+    <p class="dialog-aviso">
+      Esta consulta se va a marcar para operación. Indica qué tipo de
+      operación se va a realizar.
+    </p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Tipo de operación</mat-label>
+      <mat-select formControlName="idTipoOperacion">
+        @for (t of tipos(); track t.id) {
+          <mat-option [value]="t.id">{{ t.nombre }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.idTipoOperacion.invalid && form.controls.idTipoOperacion.touched) {
+        <mat-error>Selecciona el tipo de operación</mat-error>
+      }
+      @if (tipos().length === 0) {
+        <mat-hint>No hay tipos de operación cargados todavía — agrégalos desde Mantenimiento → Catálogos.</mat-hint>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Notas (opcional)</mat-label>
+      <textarea matInput formControlName="notasOperacion" rows="3" maxlength="500"></textarea>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>check</mat-icon>
+      Confirmar
+    </button>
+  </mat-dialog-actions>
+</form>

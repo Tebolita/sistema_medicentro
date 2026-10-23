@@ -4,6 +4,7 @@ import { HttpClient } from "@angular/common/http";
 import { catchError, map, Observable } from "rxjs";
 
 import {
+    AtencionCita,
     CitaCompleta,
     CitaHistorial,
     CitaRequest,
@@ -104,6 +105,15 @@ export class CitaService {
     // Cambios de estado y reprogramaciones, del más reciente al más antiguo.
     RetornarHistorialCita(idCita: number): Observable<ApiResponse<CitaHistorial[]>> {
         return this.http.get<ApiResponse<CitaHistorial[]>>(`${this.apiUrl}/${idCita}/historial`).pipe(
+            catchError(this.errorService.handleError)
+        )
+    }
+
+    // GET /api/Citas/{id}/atencion
+    // Todo lo generado durante esta cita (expediente, laboratorio, recetas)
+    // en un solo viaje — ver SOLICITUD_MOTOR_CONSULTAS.md, Fase 1.
+    RetornarAtencionCita(idCita: number): Observable<ApiResponse<AtencionCita>> {
+        return this.http.get<ApiResponse<AtencionCita>>(`${this.apiUrl}/${idCita}/atencion`).pipe(
             catchError(this.errorService.handleError)
         )
     }

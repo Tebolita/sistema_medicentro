@@ -15,7 +15,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { OrdenDetalle, OrdenLaboratorio } from '../../models';
+import { MatDialog } from '@angular/material/dialog';
+import { OrdenDetalle, OrdenLaboratorio, ResultadoExamen } from '../../models';
 import {
   BitacoraItem,
   LaboratorioService,
@@ -23,9 +24,12 @@ import {
   OpcionCatalogo,
   MedicoOpcion,
   UsuarioOpcion,
+  ResultadoInput,
 } from '../../service/laboratorio.service';
 import { PacientesService } from '../../service/pacientes.service';
+import { ResultadoAdjuntoService } from '../../service/resultado-adjunto.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+import { ResultadoDialog, ResultadoDialogResultado } from './dialogs/resultado-dialog';
 
 /**
  * Toma un Date del datepicker y le añade la HORA ACTUAL.
@@ -94,13 +98,16 @@ export class OrdenFormulario {
   private router = inject(Router);
   private laboratorioService = inject(LaboratorioService);
   private pacientesService = inject(PacientesService);
+  private resultadoAdjuntoService = inject(ResultadoAdjuntoService);
   private notif = inject(NotificacionesService);
+  private dialog = inject(MatDialog);
 
   pacientes = this.pacientesService.directorio;
 
   medicosSignal = signal<MedicoOpcion[]>([]);
   prioridadesSignal = signal<OpcionCatalogo[]>([]);
   estadosSignal = signal<OpcionCatalogo[]>([]);
+  estadosResultadoSignal = signal<OpcionCatalogo[]>([]);
   tiposExamen = signal<TipoExamen[]>([]);
   usuariosSignal = signal<UsuarioOpcion[]>([]);
 
@@ -209,6 +216,13 @@ export class OrdenFormulario {
       },
     });
 
+    this.laboratorioService.RetornarEstadosResultado().subscribe({
+      next: (e) => this.estadosResultadoSignal.set(e),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ [OrdenFormulario] Error estados de resultado:', err.status);
+      },
+    });
+
     this.cargandoTipos.set(true);
     this.laboratorioService.RetornarTiposExamen().subscribe({
       next: (tipos) => {
@@ -310,6 +324,86 @@ export class OrdenFormulario {
     this.filtroExamen.set('');
   }
 
+  // Se lee directo de la caché del servicio (no una copia propia): así, en
+  // cuanto se agrega/edita/elimina un resultado, esto se refleja solo sin
+  // tener que volver a pedir la orden completa.
+  detallesCargados = computed<OrdenDetalle[]>(() => this.laboratorioService.obtener(this.idOrden())?.detalles ?? []);
+
+  detalleDe(idTipoExamen: number): OrdenDetalle | undefined {
+    return this.detallesCargados().find((d) => d.idTipoExamen === idTipoExamen);
+  }
+
+  resultadosDe(idTipoExamen: number): ResultadoExamen[] {
+    return this.detalleDe(idTipoExamen)?.resultados ?? [];
+  }
+
+  // ============================================================
+  // RESULTADOS DE EXAMEN
+  // ============================================================
+
+  abrirDialogoResultado(idTipoExamen: number, existente: ResultadoExamen | null): void {
+    const detalle = this.detalleDe(idTipoExamen);
+    if (!detalle) {
+      this.notif.error('Guarda la orden primero para poder cargar resultados.');
+      return;
+    }
+
+    this.dialog
+      .open(ResultadoDialog, {
+        autoFocus: false,
+        data: { resultado: existente, estados: this.estadosResultadoSignal(), medicos: this.medicosSignal() },
+      })
+      .afterClosed()
+      .subscribe((resultado: ResultadoDialogResultado | null) => {
+        if (resultado) this.guardarResultado(detalle.idOrdenDetalle, existente, resultado);
+      });
+  }
+
+  eliminarResultado(idTipoExamen: number, resultado: ResultadoExamen): void {
+    const detalle = this.detalleDe(idTipoExamen);
+    if (!detalle) return;
+
+    this.laboratorioService.EliminarResultado(this.idOrden(), detalle.idOrdenDetalle, resultado.idResultado).subscribe({
+      next: () => this.notif.exito('Resultado eliminado'),
+      error: (err: HttpErrorResponse) =>
+        this.notif.error('No se pudo eliminar el resultado: ' + (err.error?.mensaje ?? err.message)),
+    });
+  }
+
+  private guardarResultado(idOrdenDetalle: number, existente: ResultadoExamen | null, v: ResultadoDialogResultado): void {
+    const idOrden = this.idOrden();
+
+    const continuar = (archivoAdjuntoUrl: string | null) => {
+      const input: ResultadoInput = {
+        fechaResultado: v.fechaResultado,
+        resultadoTexto: v.resultadoTexto,
+        archivoAdjuntoUrl,
+        idEstadoResultado: v.idEstadoResultado,
+        idMedicoValida: v.idMedicoValida,
+      };
+      const peticion = existente
+        ? this.laboratorioService.EditarResultado(idOrden, idOrdenDetalle, existente.idResultado, input)
+        : this.laboratorioService.AgregarResultado(idOrden, idOrdenDetalle, input);
+
+      peticion.subscribe({
+        next: () => this.notif.exito(existente ? 'Resultado actualizado' : 'Resultado agregado'),
+        error: (err: HttpErrorResponse) =>
+          this.notif.error('No se pudo guardar el resultado: ' + (err.error?.mensaje ?? err.message)),
+      });
+    };
+
+    if (v.archivoNuevo) {
+      this.resultadoAdjuntoService.subir(v.archivoNuevo).subscribe({
+        next: (url) => continuar(url),
+        error: (err: Error) => this.notif.error('No se pudo subir el archivo: ' + err.message),
+      });
+    } else if (v.quitarArchivoExistente) {
+      continuar(null);
+    } else {
+      continuar(existente?.archivoAdjuntoUrl ?? null);
+    }
+  }
+
   private cargar(registro: { orden: OrdenLaboratorio; detalles: OrdenDetalle[] }): void {
     this.idOrden.set(registro.orden.idOrden);
     this.estadoOrdenOriginal.set(registro.orden.idEstadoOrden);
@@ -345,7 +439,12 @@ export class OrdenFormulario {
         idOrden,
         idPaciente: v.idPaciente!,
         idMedico: v.idMedico!,
-        idCita: null,
+        // Se preserva el idCita que ya tenía (si la orden nació de la
+        // atención de una consulta); de lo contrario esta pantalla la
+        // desvinculaba de su cita cada vez que se editaba (p. ej. al
+        // marcarla "Completada"), haciendo que desapareciera de la
+        // consulta. Nueva orden desde aquí: sin cita, como siempre.
+        idCita: this.esNueva() ? null : (this.laboratorioService.obtener(idOrden)?.orden.idCita ?? null),
         fechaOrden: toIsoDateTime(v.fecha)!,
         idPrioridad: v.idPrioridad!,
         idEstadoOrden: v.idEstadoOrden!,

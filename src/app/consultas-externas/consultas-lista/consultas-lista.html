@@ -46,6 +46,7 @@
       <a
         class="consulta-card"
         [class.inactivo]="vista() === 'eliminadas'"
+        [class.consulta-card-operacion]="c.requiereOperacion"
         [routerLink]="vista() === 'activas' ? ['/home/consultas', c.idCita] : null"
       >
         <div class="patient-avatar">{{ iniciales(c.idPaciente) }}</div>
@@ -54,6 +55,12 @@
           <span class="consulta-meta"><mat-icon>event</mat-icon>{{ formatFechaHora(c.fechaHoraInicio) }}</span>
           <span class="consulta-meta"><mat-icon>medical_services</mat-icon>{{ medicoLabel(c.idMedico) }}</span>
           <span class="consulta-meta">{{ tipoConsultaLabel(c.idTipoConsulta) }} · {{ c.motivoConsulta || 'Sin motivo especificado' }}</span>
+          @if (c.requiereOperacion) {
+            <span class="consulta-meta consulta-meta-operacion">
+              <mat-icon>medical_services</mat-icon>
+              Marcada para operación
+            </span>
+          }
           @if (vista() === 'eliminadas') {
             <span class="consulta-meta">
               Dada de baja por {{ usuarioLabel(c.idUsuarioModificacion) }} el {{ formatFechaHora(c.fechaModificacion) }}
@@ -63,6 +70,15 @@
         <div class="consulta-actions">
           @if (vista() === 'activas') {
             <span class="status-badge" [class]="estadoClase(c.idEstadoCita)">{{ estadoLabel(c.idEstadoCita) }}</span>
+            <button
+              matIconButton
+              type="button"
+              [matTooltip]="'Atención de la consulta'"
+              [routerLink]="['/home/consultas', c.idCita, 'atencion']"
+              (click)="$event.stopPropagation()"
+            >
+              <mat-icon>medical_services</mat-icon>
+            </button>
             <button
               matIconButton
               type="button"

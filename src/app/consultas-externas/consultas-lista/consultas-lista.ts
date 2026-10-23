@@ -38,6 +38,7 @@ interface ConsultaFila {
   idEstadoCita: number;
   idTipoConsulta: number | null; // id del catálogo TIPO_CONSULTA
   motivoConsulta: string | null;
+  requiereOperacion: boolean;
   fechaModificacion: string | null;
   idUsuarioModificacion: number | null;
 }
@@ -167,6 +168,7 @@ export class ConsultasLista {
       idEstadoCita: c.idEstadoCita,
       idTipoConsulta: this.idTipoConsultaDesdeNotas(c.notas),
       motivoConsulta: c.motivoConsulta,
+      requiereOperacion: c.requiereOperacion,
       fechaModificacion: c.fechaModificacion,
       idUsuarioModificacion: c.idUsuarioModificacion,
     };

@@ -153,6 +153,53 @@
               </button>
             </div>
             <p class="detalle-desc">{{ t.descripcion || 'Sin descripción' }}</p>
+
+            @if (!esNueva()) {
+              <div class="resultados-wrap">
+                @if (resultadosDe(t.idTipoExamen).length === 0) {
+                  <p class="sin-resultados">Sin resultado cargado todavía.</p>
+                } @else {
+                  @for (r of resultadosDe(t.idTipoExamen); track r.idResultado) {
+                    <div class="resultado-item">
+                      <div class="resultado-info">
+                        <span class="resultado-fecha">{{ formatFechaHora(r.fechaResultado) }}</span>
+                        @if (r.resultadoTexto) {
+                          <span class="resultado-texto">{{ r.resultadoTexto }}</span>
+                        }
+                        @if (r.archivoAdjuntoUrl) {
+                          <a [href]="r.archivoAdjuntoUrl" target="_blank" class="resultado-archivo">
+                            <mat-icon>attach_file</mat-icon>
+                            Ver archivo adjunto
+                          </a>
+                        }
+                      </div>
+                      <div class="resultado-acciones">
+                        <button
+                          matIconButton
+                          type="button"
+                          matTooltip="Editar resultado"
+                          (click)="abrirDialogoResultado(t.idTipoExamen, r)"
+                        >
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button
+                          matIconButton
+                          type="button"
+                          matTooltip="Eliminar resultado"
+                          (click)="eliminarResultado(t.idTipoExamen, r)"
+                        >
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                }
+                <button matButton type="button" (click)="abrirDialogoResultado(t.idTipoExamen, null)">
+                  <mat-icon>add</mat-icon>
+                  Agregar resultado
+                </button>
+              </div>
+            }
           </div>
         }
       </div>

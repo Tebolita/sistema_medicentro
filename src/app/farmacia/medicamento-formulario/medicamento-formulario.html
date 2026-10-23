@@ -53,6 +53,15 @@
           <mat-hint>Catálogo CATEGORIA_MEDICAMENTO sin sembrar en la base (corre sembrar_catalogos.sql)</mat-hint>
         }
       </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Precio de venta al público (Q)</mat-label>
+        <input matInput type="number" min="0" step="0.01" formControlName="precioVentaPublico" />
+        @if (form.controls.precioVentaPublico.invalid && form.controls.precioVentaPublico.touched) {
+          <mat-error>Requerido</mat-error>
+        }
+        <mat-hint>Se usa para calcular la línea de factura al agregarlo a una receta.</mat-hint>
+      </mat-form-field>
     </div>
 
     <mat-checkbox formControlName="requiereReceta">Requiere receta médica</mat-checkbox>

@@ -11,8 +11,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { FacturaDetalle } from '../../models';
-import { NgClass } from '@angular/common';
+import { RecetasService, RecetaCompleta } from '../../service/recetas.service';
+import { CitaService } from '../../service/cita.service';
+import { MedicamentosService } from '../../service/medicamentos.service';
+import { RecetasVistazoDialog } from './dialogs/recetas-vistazo-dialog';
+import { NgClass, DatePipe } from '@angular/common';
 import { BitacoraItem, FacturaCompleta, FacturaInput, FacturasService } from '../../service/facturas.service';
 import { ESTADOS_FACTURA, FORMAS_PAGO, TASA_IVA, TIPOS_ITEM_FACTURA } from '../facturacion-catalogos';
 import { CatalogosService } from '../../service/catalogos.service';
@@ -28,6 +33,7 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
   selector: 'app-factura-formulario',
   imports: [
     NgClass,
+    DatePipe,
     ReactiveFormsModule,
     RouterLink,
     MatFormFieldModule,
@@ -51,6 +57,15 @@ export class FacturaFormulario {
   private comprobantesService = inject(ComprobantesService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
+  private recetasService = inject(RecetasService);
+  private medicamentosService = inject(MedicamentosService);
+  private citaService = inject(CitaService);
+  private dialog = inject(MatDialog);
+
+  // Para identificar de dónde salió esta factura (ver
+  // SOLICITUD_MOTOR_CONSULTAS.md: toda cita nace con su factura en Q0).
+  // null en facturas manuales/legado sin cita.
+  citaOrigenFecha = signal<string | null>(null);
 
   // GET /api/convenios ya existe. Si por alguna razón no hay convenios
   // sembrados todavía, se cae al campo numérico de respaldo para el id.
@@ -164,7 +179,85 @@ export class FacturaFormulario {
   subiendoComprobante = signal(false);
   errorComprobante = signal('');
 
+  // Esta factura solo muestra las recetas de LA CONSULTA a la que
+  // pertenece (no todas las del paciente): son las que efectivamente se
+  // están cobrando aquí. Sin cita (factura manual/legado) no hay nada que
+  // mostrar — no hay forma de saber a cuál consulta correspondería.
+  idCitaActual = computed(() => this.registro()?.factura.idCita ?? null);
+
+  // Recetas vigentes de esta consulta, para poder agregarlas como línea de
+  // factura sin volver a escribir el medicamento a mano — y, de paso, dejar
+  // la línea ligada a esa receta para que al pagar se descuente el
+  // inventario automáticamente (ver SOLICITUD_MOTOR_CONSULTAS.md).
+  medicamentosRecetaDisponibles = computed(() => {
+    const idCita = this.idCitaActual();
+    if (!idCita) return [];
+    const idCancelada = this.catalogos.idPorCodigo('ESTADO_RECETA', 'CANCELADA');
+    return this.recetasService
+      .listar()
+      .filter((r) => r.receta.idCita === idCita && r.receta.idEstadoReceta !== idCancelada)
+      .flatMap((r) =>
+        r.detalles
+          .filter((d) => d.activo)
+          .map((d) => ({
+            idRecetaDetalle: d.idRecetaDetalle,
+            idMedicamento: d.idMedicamento,
+            cantidad: d.cantidad,
+            label: `Receta #${r.receta.idReceta} · ${this.medicamentosService.nombreDe(d.idMedicamento) ?? d.nombreMedicamentoExterno ?? 'Medicamento'}`,
+          })),
+      );
+  });
+
+  // Todas las recetas de esta consulta (vigentes y anuladas), para el popup
+  // de vistazo rápido — a diferencia de medicamentosRecetaDisponibles, aquí
+  // sí interesa ver también las anuladas (contexto completo, nada que agregar).
+  recetasDelPacienteSeleccionado = computed<RecetaCompleta[]>(() => {
+    const idCita = this.idCitaActual();
+    if (!idCita) return [];
+    return this.recetasService
+      .listar()
+      .filter((r) => r.receta.idCita === idCita)
+      .sort((a, b) => b.receta.fechaEmision.localeCompare(a.receta.fechaEmision));
+  });
+
+  recetaAnulada = (idEstadoReceta: number): boolean =>
+    this.catalogos.idPorCodigo('ESTADO_RECETA', 'CANCELADA') === idEstadoReceta;
+
+  nombreMedicamento = (idMedicamento: number | null, nombreMedicamentoExterno: string | null): string =>
+    this.medicamentosService.nombreDe(idMedicamento) ?? nombreMedicamentoExterno ?? 'Medicamento';
+
+  abrirVistazoRecetas(): void {
+    this.dialog.open(RecetasVistazoDialog, {
+      autoFocus: false,
+      data: {
+        recetas: this.recetasDelPacienteSeleccionado(),
+        nombreMedicamento: this.nombreMedicamento,
+        recetaAnulada: this.recetaAnulada,
+      },
+    });
+  }
+
+  agregarLineaDesdeReceta(idRecetaDetalle: number): void {
+    const linea = this.medicamentosRecetaDisponibles().find((m) => m.idRecetaDetalle === idRecetaDetalle);
+    if (!linea) return;
+
+    const idTipoMedicamento = this.catalogos.idPorCodigo('TIPO_ITEM_FACTURA', 'MEDICAMENTO') ?? this.tiposItem()[0]?.id ?? 1;
+    this.detalles.push(
+      this.crearDetalleGroup({
+        idTipoItem: idTipoMedicamento,
+        idMedicamento: linea.idMedicamento,
+        idRecetaDetalle: linea.idRecetaDetalle,
+        descripcion: linea.label,
+        cantidad: linea.cantidad,
+        precioUnitario: 0,
+        descuento: 0,
+      }),
+    );
+  }
+
   constructor() {
+    this.recetasService.cargar();
+
     this.cabecera.controls.descuento.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((v) => this.descuentoHeader.set(v));
@@ -225,12 +318,17 @@ export class FacturaFormulario {
     this.errorMsg.set('');
     this.errorPago.set('');
     this.pagoForm.reset({ monto: 0, idFormaPago: null, referenciaPago: '' });
+    this.citaOrigenFecha.set(null);
   }
 
-  private crearDetalleGroup(d?: FacturaDetalle) {
+  private crearDetalleGroup(d?: Partial<FacturaDetalle>) {
     return this.fb.nonNullable.group({
       id: d?.idFacturaDetalle ?? 0,
       idTipoItem: this.fb.control<number | null>(d?.idTipoItem ?? 1, Validators.required),
+      // Solo se llenan al importar una línea desde una receta (ver
+      // agregarLineaDesdeReceta); en una línea manual quedan en null.
+      idMedicamento: this.fb.control<number | null>(d?.idMedicamento ?? null),
+      idRecetaDetalle: this.fb.control<number | null>(d?.idRecetaDetalle ?? null),
       descripcion: [d?.descripcion ?? '', [Validators.required, Validators.maxLength(200)]],
       cantidad: [d?.cantidad ?? 1, [Validators.required, Validators.min(1)]],
       precioUnitario: [d?.precioUnitario ?? 0, [Validators.required, Validators.min(0.01)]],
@@ -274,6 +372,14 @@ export class FacturaFormulario {
     }
 
     this.pagoForm.patchValue({ monto: this.saldoPendiente() });
+
+    this.citaOrigenFecha.set(null);
+    if (registro.factura.idCita !== null) {
+      this.citaService.RetornarCita(registro.factura.idCita).subscribe({
+        next: (resp) => this.citaOrigenFecha.set(resp.datos?.cita.fechaHoraInicio ?? null),
+        error: () => {},
+      });
+    }
   }
 
   private readonly EXTENSIONES_PERMITIDAS = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
@@ -433,7 +539,8 @@ export class FacturaFormulario {
         idTipoItem: d.idTipoItem!,
         idCita: null,
         idTratamiento: null,
-        idMedicamento: null,
+        idMedicamento: d.idMedicamento,
+        idRecetaDetalle: d.idRecetaDetalle,
         descripcion: d.descripcion,
         cantidad: d.cantidad,
         precioUnitario: d.precioUnitario,
@@ -475,6 +582,7 @@ export class FacturaFormulario {
                     idCita: d.idCita,
                     idTratamiento: d.idTratamiento,
                     idMedicamento: d.idMedicamento,
+                    idRecetaDetalle: d.idRecetaDetalle,
                     descripcion: d.descripcion,
                     cantidad: d.cantidad,
                     precioUnitario: d.precioUnitario,

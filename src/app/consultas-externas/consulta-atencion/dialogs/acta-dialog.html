@@ -1,0 +1,28 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">menu_book</mat-icon>
+  {{ data.esNueva ? 'Generar acta de cierre' : 'Editar acta de cierre' }}
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    <p class="acta-motivo full-width">
+      <strong>Motivo de la consulta:</strong> {{ data.motivoConsulta || 'Sin motivo especificado' }}
+    </p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Observaciones de cierre (opcional)</mat-label>
+      <textarea matInput formControlName="observaciones" rows="4"></textarea>
+      @if (form.controls.observaciones.hasError('maxlength')) {
+        <mat-error>Máximo 1000 caracteres</mat-error>
+      }
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>save</mat-icon>
+      {{ data.esNueva ? 'Generar' : 'Guardar cambios' }}
+    </button>
+  </mat-dialog-actions>
+</form>

@@ -239,6 +239,56 @@ app.post('/api/uploads/comprobante/confirmar', express.json(), (req, res) => {
 app.use('/uploads/comprobantes', express.static(uploadsDir, { maxAge: '1y' }));
 
 /**
+ * Archivos adjuntos de resultados de examen de laboratorio (PDF/imagen del
+ * resultado). A diferencia del comprobante de factura, acá no hace falta el
+ * truco de "nombre temporal + confirmar": el id del resultado nunca hace
+ * falta para encontrarlo después (la URL siempre viaja directo en la
+ * columna archivo_adjunto_url, que es nueva — no hay facturas viejas sin
+ * esa columna que necesiten un respaldo por convención de nombre), así que
+ * cada subida simplemente recibe un nombre único al azar.
+ */
+const uploadsDirResultados = join(process.cwd(), 'uploads-resultados');
+if (!existsSync(uploadsDirResultados)) {
+  mkdirSync(uploadsDirResultados, { recursive: true });
+}
+
+const uploadResultado = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDirResultados),
+    filename: (_req, file, cb) => cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+  fileFilter: (_req, file, cb) => {
+    if (!TIPOS_PERMITIDOS.has(extname(file.originalname).toLowerCase())) {
+      cb(new Error('Solo se aceptan imágenes (JPG, PNG, WEBP) o PDF.'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+app.post('/api/uploads/resultado-laboratorio', (req, res) => {
+  uploadResultado.single('archivo')(req, res, (err: unknown) => {
+    if (err) {
+      const mensaje = err instanceof Error ? err.message : 'No se pudo subir el archivo.';
+      res.status(400).json({ exito: false, mensaje, datos: null });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ exito: false, mensaje: 'No se recibió ningún archivo.', datos: null });
+      return;
+    }
+    res.json({
+      exito: true,
+      mensaje: 'Archivo subido correctamente',
+      datos: { url: `/uploads/resultados/${req.file.filename}?v=${Date.now()}` },
+    });
+  });
+});
+
+app.use('/uploads/resultados', express.static(uploadsDirResultados, { maxAge: '1y' }));
+
+/**
  * Serve static files from /browser
  */
 app.use(

@@ -1,0 +1,50 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">biotech</mat-icon>
+  Solicitar examen
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    @if (data.ordenesVigentes.length > 0) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Orden</mat-label>
+        <mat-select formControlName="idOrdenDestino">
+          @for (o of data.ordenesVigentes; track o.idOrden) {
+            <mat-option [value]="o.idOrden">Orden #{{ o.idOrden }} ({{ o.resumen }})</mat-option>
+          }
+          <mat-option [value]="null">+ Nueva orden</mat-option>
+        </mat-select>
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Tipo de examen</mat-label>
+      <mat-select formControlName="idTipoExamen">
+        @for (t of data.tiposExamen; track t.idTipoExamen) {
+          <mat-option [value]="t.idTipoExamen">{{ t.nombre }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.idTipoExamen.invalid && form.controls.idTipoExamen.touched) {
+        <mat-error>Selecciona el tipo de examen</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Prioridad (opcional)</mat-label>
+      <mat-select formControlName="idPrioridad">
+        <mat-option [value]="null">Normal</mat-option>
+        @for (p of data.prioridades; track p.id) {
+          <mat-option [value]="p.id">{{ p.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>add</mat-icon>
+      Solicitar
+    </button>
+  </mat-dialog-actions>
+</form>

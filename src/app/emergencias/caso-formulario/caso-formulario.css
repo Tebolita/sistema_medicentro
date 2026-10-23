@@ -193,6 +193,26 @@
 :host ::ng-deep .mat-datepicker-toggle mat-icon {
   color: #0d6a8f !important;
 }
+.consulta-generada {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 900px;
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(13, 106, 143, 0.08);
+  color: #0d6a8f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.consulta-generada mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
 /* =========================================================================
    Botón "Ver historial" (abajo del formulario)
    ========================================================================= */

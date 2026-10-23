@@ -24,6 +24,9 @@ export interface Cama {
 export interface Hospitalizacion {
   idHospitalizacion: number;
   idPaciente: number;
+  // Consulta que la originó, si se inició desde la atención de una
+  // consulta (ver SOLICITUD_MOTOR_CONSULTAS.md).
+  idCita: number | null;
   idCama: number;
   idMedicoResponsable: number;
   fechaIngreso: string;

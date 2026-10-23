@@ -2,17 +2,16 @@
   <div class="page-header">
     <div>
       <h1>Hospitalización</h1>
-      <p>Ingresos, órdenes médicas y seguimiento de pacientes hospitalizados.</p>
+      <p>
+        Ingresos, órdenes médicas y seguimiento de pacientes hospitalizados — el ingreso se inicia
+        desde la atención de la consulta que lo origina, ya no se crea suelto aquí.
+      </p>
     </div>
     <div class="header-actions">
       <button matButton type="button" class="history-btn" (click)="abrirHistorialGeneral()">
         <mat-icon>history</mat-icon>
         Historial general
       </button>
-      <a matButton="filled" routerLink="/home/hospitalizacion/nuevo" class="new-btn">
-        <mat-icon>login</mat-icon>
-        Nuevo ingreso
-      </a>
     </div>
   </div>
 
@@ -142,6 +141,17 @@
           >
             {{ estadoLabel(r.hospitalizacion.idEstadoHospitalizacion) }}
           </span>
+
+          @if (r.hospitalizacion.idCita) {
+            <a
+              matIconButton
+              [matTooltip]="'Ver consulta'"
+              [routerLink]="['/home/consultas', r.hospitalizacion.idCita, 'atencion']"
+              (click)="$event.stopPropagation()"
+            >
+              <mat-icon>medical_services</mat-icon>
+            </a>
+          }
 
           @if (filtro() === 'activas') {
             <button

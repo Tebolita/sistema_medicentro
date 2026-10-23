@@ -10,6 +10,9 @@
 export interface Acta {
   idActa: number;
   idPaciente: number;
+  // Cita que esta acta cierra (ver SOLICITUD_MOTOR_CONSULTAS.md) — null en
+  // actas de antes de este cambio, cuando se llenaba suelta en Recepción.
+  idCita: number | null;
   motivoIngreso: string;
   idAtendidoPor: number; // empleado de recepción (idEmpleado)
   fechaHora: string;
@@ -25,6 +28,7 @@ export interface Acta {
 
 export interface ActaRequest {
   idPaciente: number;
+  idCita: number | null;
   motivoIngreso: string;
   idAtendidoPor: number;
   fechaHora?: string | null;

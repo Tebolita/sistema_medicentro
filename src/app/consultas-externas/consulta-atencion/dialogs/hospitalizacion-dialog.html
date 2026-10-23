@@ -1,0 +1,39 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">bed</mat-icon>
+  Iniciar hospitalización
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Cama</mat-label>
+      <mat-select formControlName="idCama">
+        @for (c of data.camasLibres; track c.id) {
+          <mat-option [value]="c.id">{{ c.label }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.idCama.invalid && form.controls.idCama.touched) {
+        <mat-error>Selecciona una cama</mat-error>
+      }
+      @if (data.camasLibres.length === 0) {
+        <mat-hint>No hay camas libres en este momento.</mat-hint>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Motivo de ingreso</mat-label>
+      <textarea matInput formControlName="motivoIngreso" rows="3"></textarea>
+      @if (form.controls.motivoIngreso.invalid && form.controls.motivoIngreso.touched) {
+        <mat-error>El motivo de ingreso es obligatorio</mat-error>
+      }
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit" [disabled]="data.camasLibres.length === 0">
+      <mat-icon>login</mat-icon>
+      Iniciar hospitalización
+    </button>
+  </mat-dialog-actions>
+</form>

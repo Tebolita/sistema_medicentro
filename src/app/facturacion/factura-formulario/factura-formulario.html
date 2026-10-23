@@ -20,6 +20,16 @@
         · Última modificación por: {{ usuarioLabel(r.factura.idUsuarioModificacion) }}
       }
     </p>
+    @if (r.factura.idCita) {
+      <a class="factura-origen" [routerLink]="['/home/consultas', r.factura.idCita, 'atencion']">
+        <mat-icon>event</mat-icon>
+        Generada desde la consulta #{{ r.factura.idCita }}
+        @if (citaOrigenFecha(); as f) {
+          del {{ f | date: 'dd/MM/yyyy HH:mm' }}
+        }
+        · Ver consulta
+      </a>
+    }
   }
 
   <div class="form-layout">
@@ -100,10 +110,32 @@
     <div class="detalles-panel">
       <div class="detalles-header">
         <h2>Detalle de factura</h2>
-        <button matButton type="button" (click)="agregarDetalle()">
-          <mat-icon>add</mat-icon>
-          Agregar línea
-        </button>
+        <div class="detalles-header-acciones">
+          @if (recetasDelPacienteSeleccionado().length > 0) {
+            <button
+              matIconButton
+              type="button"
+              matTooltip="Vistazo rápido de las recetas de este paciente"
+              (click)="abrirVistazoRecetas()"
+            >
+              <mat-icon>visibility</mat-icon>
+            </button>
+          }
+          @if (medicamentosRecetaDisponibles().length > 0) {
+            <mat-form-field appearance="outline" class="selector-receta">
+              <mat-label>Medicamento de una receta</mat-label>
+              <mat-select #selectorReceta (selectionChange)="agregarLineaDesdeReceta($event.value); selectorReceta.value = null">
+                @for (m of medicamentosRecetaDisponibles(); track m.idRecetaDetalle) {
+                  <mat-option [value]="m.idRecetaDetalle">{{ m.label }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          }
+          <button matButton type="button" (click)="agregarDetalle()">
+            <mat-icon>add</mat-icon>
+            Agregar línea
+          </button>
+        </div>
       </div>
 
       @for (grupo of detalles.controls; track grupo; let i = $index) {

@@ -1,0 +1,44 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">receipt_long</mat-icon>
+  Recetas del paciente
+</h2>
+
+<mat-dialog-content class="vistazo-content">
+  @if (data.recetas.length === 0) {
+    <p class="vistazo-vacio">Este paciente todavía no tiene recetas registradas.</p>
+  }
+
+  @for (r of data.recetas; track r.receta.idReceta) {
+    <div class="receta-card" [class.receta-anulada]="data.recetaAnulada(r.receta.idEstadoReceta)">
+      <div class="receta-header">
+        <span class="receta-titulo">
+          <mat-icon>medication</mat-icon>
+          Receta #{{ r.receta.idReceta }}
+        </span>
+        <span class="receta-fecha">{{ r.receta.fechaEmision | date: 'dd/MM/yyyy' }}</span>
+        @if (data.recetaAnulada(r.receta.idEstadoReceta)) {
+          <span class="receta-estado">Anulada</span>
+        }
+      </div>
+
+      @if (r.detalles.length === 0) {
+        <p class="vistazo-vacio">Sin medicamentos.</p>
+      } @else {
+        <ul class="medicamento-lista">
+          @for (d of r.detalles; track d.idRecetaDetalle) {
+            <li>
+              <span class="medicamento-nombre">{{ data.nombreMedicamento(d.idMedicamento, d.nombreMedicamentoExterno) }}</span>
+              <span class="medicamento-detalle">
+                {{ d.cantidad }} · {{ d.dosis }} · {{ d.frecuencia }}{{ d.duracion ? ' · ' + d.duracion : '' }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton="filled" type="button" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

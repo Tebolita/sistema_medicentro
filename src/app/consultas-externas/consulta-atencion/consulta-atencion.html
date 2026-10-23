@@ -1,0 +1,394 @@
+<div class="page">
+  <a [routerLink]="volverLink" [queryParams]="volverQueryParams" class="back-link">
+    <mat-icon>arrow_back</mat-icon>
+    {{ idPacienteOrigen ? 'Expediente del paciente' : 'Consultas' }}
+  </a>
+
+  @if (cargando()) {
+    <p class="estado-carga">Cargando atención de la consulta...</p>
+  } @else if (errorCarga()) {
+    <p class="estado-error">{{ errorCarga() }}</p>
+  } @else if (cita(); as c) {
+    <div class="page-header">
+      <div>
+        <h1>Atención de la consulta</h1>
+        <p class="resumen">
+          <span><mat-icon>person</mat-icon>{{ nombrePaciente() }}</span>
+          <span><mat-icon>medical_services</mat-icon>{{ nombreMedico() }}</span>
+          <span><mat-icon>event</mat-icon>{{ c.fechaHoraInicio | date: 'dd/MM/yyyy HH:mm' }}</span>
+        </p>
+      </div>
+      <div class="operacion-control">
+        @if (puedeMarcarOperacion()) {
+          @if (c.requiereOperacion) {
+            <button matButton type="button" class="badge-operacion badge-operacion-btn" (click)="abrirDialogoOperacion()">
+              <mat-icon>medical_services</mat-icon>
+              Marcada para operación — {{ nombreTipoOperacion() ?? 'tipo sin especificar' }}
+            </button>
+            <button matIconButton type="button" matTooltip="Quitar marca de operación" (click)="quitarOperacion()">
+              <mat-icon>close</mat-icon>
+            </button>
+          } @else {
+            <button matButton type="button" (click)="abrirDialogoOperacion()">
+              <mat-icon>medical_services</mat-icon>
+              Marcar para operación
+            </button>
+          }
+        } @else if (c.requiereOperacion) {
+          <span class="badge-operacion">
+            <mat-icon>medical_services</mat-icon>
+            Marcada para operación — {{ nombreTipoOperacion() ?? 'tipo sin especificar' }}
+          </span>
+        }
+      </div>
+    </div>
+
+    <!-- Vistazo rápido: lo primero que el médico necesita ver, sin tener que abrir nada. -->
+    <div class="vistazo-rapido">
+      <div class="vistazo-item">
+        <mat-icon>notes</mat-icon>
+        <span><strong>Motivo:</strong> {{ motivoResumen() }}</span>
+      </div>
+      <div class="vistazo-item">
+        <mat-icon>sticky_note_2</mat-icon>
+        <span><strong>Notas:</strong> {{ notasResumen() }}</span>
+      </div>
+      <div class="vistazo-item">
+        <mat-icon>person</mat-icon>
+        <span><strong>Registrado por:</strong> {{ usuarioRegistroResumen() }}</span>
+      </div>
+      @if (factura(); as f) {
+        @if (!puedeMarcarOperacion()) {
+          <a class="vistazo-item vistazo-factura" [routerLink]="['/home/facturacion', f.factura.idFactura]">
+            <mat-icon>receipt</mat-icon>
+            <span><strong>Factura de la consulta:</strong> Q{{ f.factura.total.toFixed(2) }} · Ver factura</span>
+          </a>
+        }
+      }
+    </div>
+
+    <mat-accordion class="atencion-accordion" multi>
+      <!-- Datos clínicos -->
+      <mat-expansion-panel class="panel-datos">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>assignment</mat-icon> Datos de la consulta</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        @if (expedientes().length) {
+          <div class="resumen-datos">
+            <p><strong>Diagnóstico:</strong> {{ expedientes()[0].diagnostico || '—' }}</p>
+            <p><strong>Notas:</strong> {{ expedientes()[0].notas || '—' }}</p>
+          </div>
+        } @else {
+          <p class="panel-nota">Registra el diagnóstico de esta consulta. Todavía no se han registrado los datos clínicos.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton="filled" type="button" (click)="abrirDialogoDatos()">
+            <mat-icon>{{ expedientes().length ? 'edit' : 'add' }}</mat-icon>
+            {{ expedientes().length ? 'Editar datos' : 'Agregar datos' }}
+          </button>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Recetario -->
+      <mat-expansion-panel class="panel-receta">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>receipt_long</mat-icon> Recetario ({{ recetas().length }})</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        @if (recetas().length) {
+          <div class="tabla-toolbar">
+            <div class="filtro-chips">
+              <button type="button" class="chip" [class.chip-activo]="filtroReceta() === 'todas'" (click)="filtroReceta.set('todas')">
+                Todas
+              </button>
+              <button type="button" class="chip" [class.chip-activo]="filtroReceta() === 'vigentes'" (click)="filtroReceta.set('vigentes')">
+                Vigentes
+              </button>
+              <button type="button" class="chip" [class.chip-activo]="filtroReceta() === 'anuladas'" (click)="filtroReceta.set('anuladas')">
+                Anuladas ({{ cantidadAnuladas() }})
+              </button>
+            </div>
+
+            <button
+              matButton="filled"
+              type="button"
+              class="btn-imprimir"
+              [disabled]="cantidadSeleccionada() === 0"
+              (click)="imprimirSeleccionados()"
+            >
+              <mat-icon>print</mat-icon>
+              Imprimir seleccionados ({{ cantidadSeleccionada() }})
+            </button>
+          </div>
+
+          <div class="tabla-buscador">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              placeholder="Buscar medicamento..."
+              [value]="buscarReceta()"
+              (input)="buscarReceta.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      class="checkbox-receta"
+                      [checked]="todosSeleccionados()"
+                      (change)="toggleSeleccionarTodos()"
+                      aria-label="Seleccionar todos"
+                    />
+                  </th>
+                  <th>Receta</th>
+                  <th><mat-icon>medication</mat-icon> Medicamento</th>
+                  <th>Cantidad</th>
+                  <th>Dosis</th>
+                  <th>Frecuencia</th>
+                  <th>Duración</th>
+                  <th>Indicaciones</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of filasReceta(); track f.detalle.idRecetaDetalle) {
+                  <tr [class.fila-anulada]="recetaAnulada(f.receta.receta.idEstadoReceta)">
+                    <td>
+                      <input
+                        type="checkbox"
+                        class="checkbox-receta"
+                        [checked]="estaSeleccionada(f.detalle.idRecetaDetalle)"
+                        (change)="toggleSeleccion(f.detalle.idRecetaDetalle)"
+                        [attr.aria-label]="'Seleccionar ' + nombreMedicamento(f.detalle.idMedicamento, f.detalle.nombreMedicamentoExterno)"
+                      />
+                    </td>
+                    <td class="celda-grupo">#{{ f.receta.receta.idReceta }}</td>
+                    <td class="celda-nombre">
+                      <mat-icon>medication</mat-icon>
+                      {{ nombreMedicamento(f.detalle.idMedicamento, f.detalle.nombreMedicamentoExterno) }}
+                    </td>
+                    <td>{{ f.detalle.cantidad }}</td>
+                    <td>{{ f.detalle.dosis }}</td>
+                    <td>{{ f.detalle.frecuencia }}</td>
+                    <td>{{ f.detalle.duracion || '—' }}</td>
+                    <td>{{ f.detalle.indicaciones || '—' }}</td>
+                    <td>
+                      @if (recetaAnulada(f.receta.receta.idEstadoReceta)) {
+                        <span class="estado-chip">
+                          <mat-icon>block</mat-icon>
+                          Anulada
+                        </span>
+                      } @else {
+                        <span class="estado-chip estado-chip-activa">
+                          <mat-icon>check_circle</mat-icon>
+                          Vigente
+                        </span>
+                      }
+                    </td>
+                    <td class="celda-acciones">
+                      @if (!recetaAnulada(f.receta.receta.idEstadoReceta)) {
+                        <button matIconButton type="button" matTooltip="Anular receta" (click)="anularReceta(f.receta)">
+                          <mat-icon>block</mat-icon>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+                @if (filasReceta().length === 0) {
+                  <tr>
+                    <td colspan="10" class="tabla-vacia">Sin medicamentos que coincidan con la búsqueda.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="panel-nota">Agrega una receta para el paciente si es necesario. Todavía no hay ningún medicamento registrado.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton="filled" type="button" (click)="abrirDialogoReceta()">
+            <mat-icon>add</mat-icon>
+            Agregar receta
+          </button>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Exámenes -->
+      <mat-expansion-panel class="panel-examen">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>science</mat-icon> Exámenes ({{ ordenesLaboratorio().length }})</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        @if (ordenesLaboratorio().length) {
+          <div class="tabla-toolbar">
+            <div class="filtro-chips">
+              <button type="button" class="chip" [class.chip-activo]="filtroExamen() === 'todas'" (click)="filtroExamen.set('todas')">
+                Todos
+              </button>
+              <button type="button" class="chip" [class.chip-activo]="filtroExamen() === 'pendientes'" (click)="filtroExamen.set('pendientes')">
+                Pendientes
+              </button>
+              <button type="button" class="chip" [class.chip-activo]="filtroExamen() === 'completados'" (click)="filtroExamen.set('completados')">
+                Completados ({{ cantidadCompletados() }})
+              </button>
+            </div>
+          </div>
+
+          <div class="tabla-buscador">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              placeholder="Buscar examen..."
+              [value]="buscarExamen()"
+              (input)="buscarExamen.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th>Orden</th>
+                  <th><mat-icon>biotech</mat-icon> Examen</th>
+                  <th>Estado</th>
+                  <th>Resultado</th>
+                  <th>Archivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of filasExamen(); track f.detalle.idOrdenDetalle) {
+                  <tr>
+                    <td class="celda-grupo">#{{ f.orden.idOrden }}</td>
+                    <td class="celda-nombre">
+                      <mat-icon>biotech</mat-icon>
+                      {{ nombreTipoExamen(f.detalle.idTipoExamen) }}
+                    </td>
+                    <td>
+                      <span class="estado-chip" [class.estado-chip-activa]="f.detalle.resultados.length > 0">
+                        <mat-icon>{{ f.detalle.resultados.length ? 'task_alt' : 'hourglass_empty' }}</mat-icon>
+                        {{ f.detalle.resultados.length ? 'Con resultado' : 'Pendiente' }}
+                      </span>
+                    </td>
+                    <td>
+                      @if (f.detalle.resultados.length) {
+                        @for (res of f.detalle.resultados; track res.idResultado) {
+                          <div>{{ res.resultadoTexto || 'Sin texto' }}</div>
+                        }
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td>
+                      @for (res of f.detalle.resultados; track res.idResultado) {
+                        @if (res.archivoAdjuntoUrl) {
+                          <a [href]="res.archivoAdjuntoUrl" target="_blank" class="link-archivo">
+                            <mat-icon>attach_file</mat-icon>
+                            Ver
+                          </a>
+                        }
+                      }
+                    </td>
+                  </tr>
+                }
+                @if (filasExamen().length === 0) {
+                  <tr>
+                    <td colspan="5" class="tabla-vacia">Sin exámenes que coincidan con la búsqueda.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="panel-nota">Solicita un examen de laboratorio para el paciente si es necesario. Todavía no hay ningún examen registrado.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton="filled" type="button" (click)="abrirDialogoExamen()">
+            <mat-icon>add</mat-icon>
+            Solicitar examen
+          </button>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Hospitalización -->
+      <mat-expansion-panel class="panel-hosp">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>bed</mat-icon> Hospitalización</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        @if (hospitalizacionIniciada(); as h) {
+          <div class="resumen-datos">
+            <p><strong>Cama:</strong> {{ h.camaLabel }}</p>
+            <p><strong>Motivo de ingreso:</strong> {{ h.hospitalizacion.motivoIngreso }}</p>
+          </div>
+          <p class="panel-nota">
+            El seguimiento continuo (órdenes médicas, egreso) se maneja desde el módulo de
+            Hospitalización.
+          </p>
+        } @else {
+          <p class="panel-nota">
+            Si el paciente necesita quedar ingresado, se inicia aquí mismo, ya con el paciente y
+            el médico responsable resueltos.
+          </p>
+          <div class="panel-actions">
+            <button matButton="filled" type="button" (click)="abrirDialogoHospitalizacion()">
+              <mat-icon>login</mat-icon>
+              Iniciar hospitalización
+            </button>
+          </div>
+        }
+      </mat-expansion-panel>
+    </mat-accordion>
+
+    <!-- Constancia médica: siempre al final de la consulta, no va acoplada -->
+    <div class="constancia-panel panel-constancia">
+      <h2><mat-icon>description</mat-icon> Constancia médica</h2>
+
+      @if (constancia(); as con) {
+        <div class="resumen-datos">
+          <p><strong>Diagnóstico:</strong> {{ con.diagnostico || '—' }}</p>
+          <p><strong>Contenido:</strong> {{ con.contenido }}</p>
+        </div>
+      } @else {
+        <p class="panel-nota">Genera una constancia médica para el paciente si es necesario. Esta consulta todavía no tiene una generada.</p>
+      }
+
+      <div class="panel-actions">
+        <button matButton="filled" type="button" (click)="abrirDialogoConstancia()">
+          <mat-icon>{{ constancia() ? 'edit' : 'add' }}</mat-icon>
+          {{ constancia() ? 'Editar constancia' : 'Generar constancia' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Acta de cierre: igual que la constancia, al final de todo el
+         proceso (ya no se llena suelta en Recepción al ingreso). -->
+    <div class="constancia-panel panel-acta">
+      <h2><mat-icon>menu_book</mat-icon> Acta de cierre</h2>
+
+      @if (acta(); as a) {
+        <div class="resumen-datos">
+          <p><strong>Motivo:</strong> {{ a.motivoIngreso }}</p>
+          <p><strong>Observaciones:</strong> {{ a.observaciones || '—' }}</p>
+        </div>
+      } @else {
+        <p class="panel-nota">Esta consulta todavía no tiene su acta de cierre generada.</p>
+      }
+
+      <div class="panel-actions">
+        <button matButton="filled" type="button" (click)="abrirDialogoActa()">
+          <mat-icon>{{ acta() ? 'edit' : 'add' }}</mat-icon>
+          {{ acta() ? 'Editar acta' : 'Generar acta' }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

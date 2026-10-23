@@ -33,6 +33,10 @@ export interface OrdenDetalle {
   idTipoExamen: number;
   activo: boolean;
   fechaCreacion: string;
+  // El backend ya lo manda anidado en cada detalle (ver
+  // OrdenesLaboratorioService.Mapear); opcional porque al construir el
+  // cuerpo de un POST/PUT no hace falta incluirlo.
+  resultados?: ResultadoExamen[];
 }
 
 export interface ResultadoExamen {

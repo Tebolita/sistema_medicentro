@@ -1,0 +1,76 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">science</mat-icon>
+  {{ data.resultado ? 'Editar resultado' : 'Agregar resultado' }}
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha del resultado</mat-label>
+      <input matInput type="date" formControlName="fecha" />
+      @if (form.controls.fecha.invalid && form.controls.fecha.touched) {
+        <mat-error>Requerido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select formControlName="idEstadoResultado">
+        @for (e of data.estados; track e.id) {
+          <mat-option [value]="e.id">{{ e.label }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.idEstadoResultado.invalid && form.controls.idEstadoResultado.touched) {
+        <mat-error>Selecciona el estado</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Médico que valida (opcional)</mat-label>
+      <mat-select formControlName="idMedicoValida">
+        <mat-option [value]="null">Sin especificar</mat-option>
+        @for (m of data.medicos; track m.id) {
+          <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Resultado (texto, opcional)</mat-label>
+      <textarea matInput formControlName="resultadoTexto" rows="3"></textarea>
+    </mat-form-field>
+
+    <div class="full-width archivo-adjunto">
+      @if (archivoNuevo(); as f) {
+        <span class="archivo-info">
+          <mat-icon>attach_file</mat-icon>
+          {{ f.name }}
+        </span>
+        <button matButton type="button" (click)="quitarArchivo()">Quitar</button>
+      } @else if (archivoNombreExistente(); as nombre) {
+        <span class="archivo-info">
+          <mat-icon>attach_file</mat-icon>
+          {{ nombre }}
+        </span>
+        <button matButton type="button" (click)="quitarArchivo()">Quitar</button>
+      } @else {
+        <label class="archivo-picker">
+          <mat-icon>upload_file</mat-icon>
+          Adjuntar archivo (PDF o imagen, opcional)
+          <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" (change)="onArchivoSeleccionado($event)" hidden />
+        </label>
+      }
+      @if (errorArchivo()) {
+        <p class="archivo-error">{{ errorArchivo() }}</p>
+      }
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>save</mat-icon>
+      Guardar
+    </button>
+  </mat-dialog-actions>
+</form>

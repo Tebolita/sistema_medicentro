@@ -1,4 +1,7 @@
 // Módulo 2: Citas / Agendamiento.
+import { HistorialClinico, Receta, RecetaDetalle } from './tratamiento.model';
+import { OrdenDetalle, OrdenLaboratorio, ResultadoExamen } from './laboratorio.model';
+import { Hospitalizacion } from './hospitalizacion.model';
 
 export interface Sala {
   idSala: number;
@@ -39,6 +42,9 @@ export interface Cita {
   motivoConsulta: string | null;
   notas: string | null;
   idPoliza: number | null; // agregado en Módulo 12.1 (pólizas de seguro)
+  requiereOperacion: boolean;
+  idTipoOperacion: number | null; // cat TIPO_OPERACION
+  notasOperacion: string | null;
   activo: boolean;
   fechaCreacion: string;
   fechaModificacion: string | null;
@@ -91,6 +97,20 @@ export interface CitaCompleta {
 // GET /api/Recordatorios/pendientes  →  Recordatorio[]
 // (usan las interfaces de arriba tal cual)
 
+// GET /api/Citas/{id}/atencion — todo lo generado durante esta cita en un
+// solo viaje (ver SOLICITUD_MOTOR_CONSULTAS.md, Fase 1), en vez de 3
+// llamadas sueltas a expedientes/laboratorio/recetas filtradas a mano.
+export interface AtencionCita {
+  cita: CitaCompleta;
+  expedientes: HistorialClinico[];
+  ordenesLaboratorio: {
+    orden: OrdenLaboratorio;
+    detalles: (OrdenDetalle & { resultados: ResultadoExamen[] })[];
+  }[];
+  recetas: { receta: Receta; detalles: RecetaDetalle[] }[];
+  hospitalizaciones: Hospitalizacion[];
+}
+
 // ---------- Lo que el front ENVÍA ----------
 
 // POST /api/Citas  y  PUT /api/Citas/{id}  (el mismo formato para ambos)
@@ -108,6 +128,9 @@ export interface CitaRequest {
   motivoConsulta: string | null;
   notas: string | null;
   idPoliza: number | null;
+  requiereOperacion: boolean;
+  idTipoOperacion: number | null;
+  notasOperacion: string | null;
   // Solo al editar: el porqué del cambio (reprogramación, cancelación...).
   // Queda guardado en el historial. Al crear se ignora.
   motivoCambio?: string | null;

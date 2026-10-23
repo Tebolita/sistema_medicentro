@@ -43,6 +43,26 @@ export class PermisosMenuService {
   // (el menú no muestra secciones y permisosGuard espera a que termine).
   modulosPermitidos = signal<Set<string> | null>(null);
 
+  // Roles activos del usuario de la sesión (tal como están en Mantenimiento
+  // → Roles), para reglas que dependen del rol clínico y no de a qué módulo
+  // tiene acceso (ej. "solo el médico puede marcar una consulta para
+  // operación" — ver SOLICITUD_MOTOR_CONSULTAS.md, sección 5).
+  private roles = signal<string[]>([]);
+  private esAdminSignal = signal(false);
+
+  // ADMIN puede todo, igual que ya hace con los módulos (aSlugs abajo).
+  esAdmin(): boolean {
+    return this.esAdminSignal();
+  }
+
+  // Comparación sin mayúsculas/acentos: evita que un typo de capitalización
+  // en Mantenimiento → Roles rompa silenciosamente esta regla.
+  tieneRol(nombre: string): boolean {
+    const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    const buscado = normalizar(nombre);
+    return this.esAdminSignal() || this.roles().some((r) => normalizar(r) === buscado);
+  }
+
   constructor() {
     if (!this.esNavegador) {
       return;
@@ -72,16 +92,26 @@ export class PermisosMenuService {
     // refrescar() al iniciar sesión y se vuelve a calcular.
     if (!this.authService.idUsuarioActual()) {
       this.modulosPermitidos.set(new Set());
+      this.roles.set([]);
+      this.esAdminSignal.set(false);
       return;
     }
     this.http
       .get<ApiResponse<MiAcceso>>(this.apiUrl)
       .pipe(map((resp) => resp.datos))
       .subscribe({
-        next: (acceso) => this.modulosPermitidos.set(this.aSlugs(acceso)),
+        next: (acceso) => {
+          this.modulosPermitidos.set(this.aSlugs(acceso));
+          this.roles.set(acceso?.roles ?? []);
+          this.esAdminSignal.set(acceso?.esAdmin ?? false);
+        },
         // Si no se pudo saber qué puede ver, no se muestra nada (solo
         // Inicio) en vez de abrirle todo el menú.
-        error: () => this.modulosPermitidos.set(new Set()),
+        error: () => {
+          this.modulosPermitidos.set(new Set());
+          this.roles.set([]);
+          this.esAdminSignal.set(false);
+        },
       });
   }
 

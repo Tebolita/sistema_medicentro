@@ -22,6 +22,7 @@ import { EmpleadoService } from '../../service/empleado.service';
 import { EspecialidadService } from '../../service/especialidad.service';
 import { SalaService } from '../../service/sala.service';
 import { CatalogoService } from '../../service/catalogo.service';
+import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
@@ -95,6 +96,7 @@ export class ConsultaFormulario {
   private empleadoService = inject(EmpleadoService);
   private especialidadService = inject(EspecialidadService);
   private salaService = inject(SalaService);
+  private catalogosService = inject(CatalogosService);
   private catalogoService = inject(CatalogoService);
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
@@ -161,6 +163,11 @@ export class ConsultaFormulario {
   );
 
   // Datos de la cita que el formulario no edita, para no perderlos al guardar.
+  // "Marcar para operación" (SOLICITUD_MOTOR_CONSULTAS.md, sección 5) ya no
+  // se edita aquí: es decisión del médico durante la atención de la
+  // consulta (ver consulta-atencion), no al agendarla/editarla desde
+  // recepción. Esta pantalla solo conserva lo que ya tenía la cita al
+  // guardar (ver citaOriginal en guardar()).
   private citaOriginal: Cita | null = null;
   private tipoConsultaPendiente: string | null = null;
 
@@ -393,6 +400,12 @@ export class ConsultaFormulario {
       motivoConsulta: v.motivoConsulta.trim() || null,
       notas,
       idPoliza: this.citaOriginal?.idPoliza ?? null,
+      // Se decide desde la atención de la consulta (ver consulta-atencion),
+      // no aquí: se conserva tal cual lo que ya tenía (null/false en una
+      // consulta nueva).
+      requiereOperacion: this.citaOriginal?.requiereOperacion ?? false,
+      idTipoOperacion: this.citaOriginal?.idTipoOperacion ?? null,
+      notasOperacion: this.citaOriginal?.notasOperacion ?? null,
       motivoCambio: this.esNueva() ? null : 'Actualizada desde Consulta externa',
     };
 

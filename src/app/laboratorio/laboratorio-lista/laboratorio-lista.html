@@ -2,17 +2,16 @@
   <div class="page-header">
     <div>
       <h1>Laboratorio y Diagnóstico</h1>
-      <p>Órdenes de exámenes de laboratorio, electrocardiogramas, rayos X y ultrasonidos.</p>
+      <p>
+        Órdenes de exámenes de laboratorio, electrocardiogramas, rayos X y ultrasonidos — se
+        solicitan desde la atención de cada consulta, ya no se crean sueltas aquí.
+      </p>
     </div>
     <div class="header-actions">
       <button matButton type="button" class="history-btn" (click)="abrirHistorialGeneral()">
         <mat-icon>history</mat-icon>
         Historial general
       </button>
-      <a matButton="filled" routerLink="/home/laboratorio/nueva" class="new-btn">
-        <mat-icon>science</mat-icon>
-        Nueva orden
-      </a>
     </div>
   </div>
 
@@ -134,6 +133,17 @@
         </div>
         <div class="orden-actions">
           <span class="status-badge" [ngClass]="estadoClase(r.orden.idEstadoOrden)">{{ estadoLabel(r.orden.idEstadoOrden) }}</span>
+
+          @if (r.orden.idCita) {
+            <a
+              matIconButton
+              [matTooltip]="'Ver consulta'"
+              [routerLink]="['/home/consultas', r.orden.idCita, 'atencion']"
+              (click)="$event.stopPropagation()"
+            >
+              <mat-icon>medical_services</mat-icon>
+            </a>
+          }
 
           @if (filtro() === 'activas') {
             <button

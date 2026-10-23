@@ -3,6 +3,9 @@
 export interface Factura {
   idFactura: number;
   idPaciente: number;
+  // Cita que generó esta factura automáticamente (ver
+  // SOLICITUD_MOTOR_CONSULTAS.md); null en facturas manuales/legado.
+  idCita: number | null;
   idTipoDocumentoFiscal: number; // cat TIPO_DOCUMENTO_FISCAL (factura/nota_credito)
   serie: string | null;
   numeroDocumento: string;
@@ -32,6 +35,9 @@ export interface FacturaDetalle {
   idCita: number | null;
   idTratamiento: number | null;
   idMedicamento: number | null;
+  // Línea de receta que originó este cargo, si aplica — al pagar la
+  // factura, descuenta automáticamente ese medicamento del inventario.
+  idRecetaDetalle: number | null;
   descripcion: string;
   cantidad: number;
   precioUnitario: number;

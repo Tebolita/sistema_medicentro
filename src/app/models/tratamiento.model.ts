@@ -8,6 +8,10 @@ export interface Medicamento {
   concentracion: string | null;
   idCategoriaMedicamento: number | null; // cat CATEGORIA_MEDICAMENTO
   requiereReceta: boolean;
+  // Precio de venta al público — con esto se calcula sola la línea de
+  // factura al agregar el medicamento a una receta (ver
+  // SOLICITUD_MOTOR_CONSULTAS.md).
+  precioVentaPublico: number;
   activo: boolean;
   fechaCreacion: string;
   fechaModificacion: string | null;
@@ -50,6 +54,7 @@ export interface Receta {
   idTratamiento: number | null;
   idPaciente: number;
   idMedico: number;
+  idCita: number | null;
   fechaEmision: string;
   firmaDigitalHash: string | null; // huella de la firma electrónica del médico
   firmaDigitalUrl: string | null; // documento firmado almacenado
@@ -64,7 +69,12 @@ export interface Receta {
 export interface RecetaDetalle {
   idRecetaDetalle: number;
   idReceta: number;
-  idMedicamento: number;
+  // Exactamente uno de los dos: medicamento del inventario de la clínica, o
+  // el nombre libre de un medicamento externo (no se maneja en la clínica,
+  // no se valida stock ni se descuenta inventario).
+  idMedicamento: number | null;
+  nombreMedicamentoExterno: string | null;
+  cantidad: number; // cajas/tabletas/etc. según la unidad de medida del item de inventario
   dosis: string;
   frecuencia: string;
   duracion: string | null;
@@ -114,10 +124,12 @@ export interface HistorialClinico {
 // POST /api/expedientes  y  PUT /api/expedientes/{id}  (mismo formato para ambos)
 // La fecha lleva hora: 'YYYY-MM-DDTHH:mm:ss'.
 // El paciente y el médico deben existir, o el backend responde 404.
+// idCita es obligatorio desde SOLICITUD_MOTOR_CONSULTAS.md, sección 2: el
+// expediente ya no se crea suelto, nace de una consulta.
 export interface HistorialClinicoRequest {
   idPaciente: number;
   idMedico: number;
-  idCita: number | null;
+  idCita: number;
   idTratamiento: number | null;
   idTipoRegistro: number;
   idNivelConfidencialidad: number | null;

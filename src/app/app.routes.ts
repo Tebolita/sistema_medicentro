@@ -7,6 +7,7 @@ import { PacientesLista } from './pacientes/pacientes-lista/pacientes-lista';
 import { PacienteFormulario } from './pacientes/paciente-formulario/paciente-formulario';
 import { ConsultasLista } from './consultas-externas/consultas-lista/consultas-lista';
 import { ConsultaFormulario } from './consultas-externas/consulta-formulario/consulta-formulario';
+import { ConsultaAtencion } from './consultas-externas/consulta-atencion/consulta-atencion';
 import { LibroActas } from './libro-actas/libro-actas';
 import { PolizasLista } from './polizas/polizas-lista/polizas-lista';
 import { PolizaFormulario } from './polizas/poliza-formulario/poliza-formulario';
@@ -97,16 +98,21 @@ export const routes: Routes = [
             {path: 'pacientes/:id',component: PacienteFormulario,},
             {path: 'consultas',component: ConsultasLista,},
             {path: 'consultas/nueva',component: ConsultaFormulario,},
+            {path: 'consultas/:id/atencion',component: ConsultaAtencion,},
             {path: 'consultas/:id',component: ConsultaFormulario,},
             {path: 'libro-actas',component: LibroActas,},
             {path: 'polizas',component: PolizasLista,},
             {path: 'polizas/nueva',component: PolizaFormulario,},
             {path: 'polizas/:id',component: PolizaFormulario,},
             {path: 'expedientes',component: ExpedientesLista,},
-            {path: 'expedientes/nuevo',component: ExpedienteFormulario,},
+            // Ya no se crean sueltos (ver SOLICITUD_MOTOR_CONSULTAS.md,
+            // sección 2) — sin ruta "nuevo"; ":id" queda solo para ver/editar
+            // los que ya existan con una cita asociada.
             {path: 'expedientes/:id',component: ExpedienteFormulario,},
             {path: 'laboratorio',component: LaboratorioLista,},
-            {path: 'laboratorio/nueva',component: OrdenFormulario,},
+            // Sin ruta "nueva": una orden nace de la atención de una
+            // consulta (SOLICITUD_MOTOR_CONSULTAS.md, sección 3); ":id"
+            // sigue para ver/editar/cargar resultados de las que ya existen.
             {path: 'laboratorio/:id',component: OrdenFormulario,},
             {path: 'emergencias',component: CasosLista,},
             {path: 'emergencias/nuevo',component: CasoFormulario,},
@@ -127,7 +133,9 @@ export const routes: Routes = [
             {path: 'farmacia/medicamentos/nuevo',component: MedicamentoFormulario,},
             {path: 'farmacia/medicamentos/:id',component: MedicamentoFormulario,},
             {path: 'farmacia/recetas',component: RecetasLista,},
-            {path: 'farmacia/recetas/nueva',component: RecetaFormulario,},
+            // Sin ruta "nueva": una receta nace de la atención de una
+            // consulta (SOLICITUD_MOTOR_CONSULTAS.md, sección 3); ":id"
+            // sigue para ver/editar/anular las que ya existen.
             {path: 'farmacia/recetas/:id',component: RecetaFormulario,},
             {path: 'facturacion',component: FacturasLista,},
             {path: 'facturacion/nueva',component: FacturaFormulario,},

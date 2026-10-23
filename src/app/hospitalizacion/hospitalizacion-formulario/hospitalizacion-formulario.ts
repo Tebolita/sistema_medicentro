@@ -355,6 +355,9 @@ export class HospitalizacionFormulario {
     const registro: Hospitalizacion = {
       idHospitalizacion,
       idPaciente: v.idPaciente!,
+      // No se edita aquí: se conserva si ya venía de una consulta (ver
+      // SOLICITUD_MOTOR_CONSULTAS.md); null si se creó suelta desde este módulo.
+      idCita: this.registro()?.hospitalizacion.idCita ?? null,
       idCama: v.idCama!,
       idMedicoResponsable: v.idMedicoResponsable!,
       fechaIngreso: toIsoDateTime(v.fechaIngreso)!,

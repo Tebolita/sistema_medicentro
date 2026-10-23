@@ -70,10 +70,13 @@
             {{ vista() === 'activos' ? 'Creado' : 'Dado de baja' }} por:
             {{ usuarioLabel(vista() === 'activos' ? m.idUsuarioCreacion : m.idUsuarioModificacion) }}
           </span>
+          <div class="med-badges">
+            <span class="receta-badge pvp-badge">Q{{ m.precioVentaPublico.toFixed(2) }}</span>
+            @if (m.requiereReceta) {
+              <span class="receta-badge">Requiere receta</span>
+            }
+          </div>
         </div>
-        @if (m.requiereReceta) {
-          <span class="receta-badge">Requiere receta</span>
-        }
         @if (vista() === 'activos') {
           <button
             matIconButton

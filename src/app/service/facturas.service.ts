@@ -36,6 +36,7 @@ export interface FacturaInput {
     idCita: number | null;
     idTratamiento: number | null;
     idMedicamento: number | null;
+    idRecetaDetalle: number | null;
     descripcion: string;
     cantidad: number;
     precioUnitario: number;
@@ -215,6 +216,16 @@ export class FacturasService {
           map(() => factura),
         ),
       ),
+      catchError(this.errorService.handleError),
+    );
+  }
+
+  // Factura automática en Q0 generada al crear la cita (ver
+  // SOLICITUD_MOTOR_CONSULTAS.md). null si esa cita todavía no tiene una
+  // (citas de antes de este cambio).
+  RetornarPorCita(idCita: number): Observable<FacturaCompleta | null> {
+    return this.http.get<ApiResponse<FacturaCompleta | null>>(`${this.apiUrl}/por-cita/${idCita}`).pipe(
+      map((resp) => resp.datos ?? null),
       catchError(this.errorService.handleError),
     );
   }

@@ -3,11 +3,20 @@ import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, map, tap, forkJoin } from 'rxjs';
-import { OrdenDetalle, OrdenLaboratorio } from '../models';
+import { OrdenDetalle, OrdenLaboratorio, ResultadoExamen } from '../models';
 
 export interface OrdenCompleta {
   orden: OrdenLaboratorio;
   detalles: OrdenDetalle[];
+}
+
+// ResultadoInputDto del backend.
+export interface ResultadoInput {
+  fechaResultado: string;
+  resultadoTexto: string | null;
+  archivoAdjuntoUrl: string | null;
+  idEstadoResultado: number;
+  idMedicoValida: number | null;
 }
 
 export interface TipoExamen {
@@ -363,6 +372,98 @@ export class LaboratorioService {
 
   RetornarEstadosOrden(): Observable<OpcionCatalogo[]> {
     return this.retornarCatalogo('ESTADO_ORDEN_LABORATORIO');
+  }
+
+  RetornarEstadosResultado(): Observable<OpcionCatalogo[]> {
+    return this.retornarCatalogo('ESTADO_RESULTADO');
+  }
+
+  // =============================================================
+  // RESULTADOS DE EXAMEN (ver "subida de archivo adjunto en laboratorio")
+  // =============================================================
+
+  AgregarResultado(idOrden: number, idOrdenDetalle: number, input: ResultadoInput): Observable<ResultadoExamen> {
+    return this.http
+      .post<ApiResponse<ResultadoExamen>>(
+        `${this.apiUrl}/${idOrden}/detalles/${idOrdenDetalle}/resultados`,
+        input,
+        { headers: this.getHeaders() },
+      )
+      .pipe(
+        map((resp) => resp.datos),
+        tap((resultado) => this.actualizarResultadoEnCache(idOrden, idOrdenDetalle, resultado)),
+      );
+  }
+
+  EditarResultado(
+    idOrden: number,
+    idOrdenDetalle: number,
+    idResultado: number,
+    input: ResultadoInput,
+  ): Observable<ResultadoExamen> {
+    return this.http
+      .put<ApiResponse<ResultadoExamen>>(
+        `${this.apiUrl}/${idOrden}/detalles/${idOrdenDetalle}/resultados/${idResultado}`,
+        input,
+        { headers: this.getHeaders() },
+      )
+      .pipe(
+        map((resp) => resp.datos),
+        tap((resultado) => this.actualizarResultadoEnCache(idOrden, idOrdenDetalle, resultado)),
+      );
+  }
+
+  EliminarResultado(idOrden: number, idOrdenDetalle: number, idResultado: number): Observable<void> {
+    return this.http
+      .delete<ApiResponse<unknown>>(
+        `${this.apiUrl}/${idOrden}/detalles/${idOrdenDetalle}/resultados/${idResultado}`,
+        { headers: this.getHeaders() },
+      )
+      .pipe(
+        map(() => undefined),
+        tap(() => {
+          this.registros.update((list) =>
+            list.map((r) =>
+              r.orden.idOrden !== idOrden
+                ? r
+                : {
+                    ...r,
+                    detalles: r.detalles.map((d) =>
+                      d.idOrdenDetalle !== idOrdenDetalle
+                        ? d
+                        : { ...d, resultados: (d.resultados ?? []).filter((res) => res.idResultado !== idResultado) },
+                    ),
+                  },
+            ),
+          );
+        }),
+      );
+  }
+
+  // Refleja en el signal local (sin volver a pedir la orden completa) el
+  // resultado recién creado/editado, para que la pantalla se actualice al
+  // instante.
+  private actualizarResultadoEnCache(idOrden: number, idOrdenDetalle: number, resultado: ResultadoExamen): void {
+    this.registros.update((list) =>
+      list.map((r) =>
+        r.orden.idOrden !== idOrden
+          ? r
+          : {
+              ...r,
+              detalles: r.detalles.map((d) => {
+                if (d.idOrdenDetalle !== idOrdenDetalle) return d;
+                const existentes = d.resultados ?? [];
+                const yaExiste = existentes.some((res) => res.idResultado === resultado.idResultado);
+                return {
+                  ...d,
+                  resultados: yaExiste
+                    ? existentes.map((res) => (res.idResultado === resultado.idResultado ? resultado : res))
+                    : [resultado, ...existentes],
+                };
+              }),
+            },
+      ),
+    );
   }
 
   // =============================================================

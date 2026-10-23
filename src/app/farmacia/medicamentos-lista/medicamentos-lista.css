@@ -169,16 +169,28 @@
   color: var(--c-text-muted);
 }
 
+.med-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
 .receta-badge {
-  position: absolute;
-  right: 48px;
-  top: 10px;
+  display: inline-flex;
+  align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(245, 124, 0, 0.12);
   color: color-mix(in srgb, #e65100 var(--c-keep), white);
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.pvp-badge {
+  background: rgba(13, 106, 143, 0.12);
+  color: color-mix(in srgb, #0d6a8f var(--c-keep), white);
 }
 
 .med-delete {

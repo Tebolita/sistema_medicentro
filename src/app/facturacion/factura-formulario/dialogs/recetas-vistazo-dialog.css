@@ -1,0 +1,88 @@
+.dialog-title-icon {
+  vertical-align: middle;
+  margin-right: 6px;
+  color: var(--c-accent);
+}
+
+.vistazo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 340px;
+  max-width: 480px;
+  max-height: 60vh;
+}
+
+.vistazo-vacio {
+  margin: 0;
+  color: var(--c-text-soft);
+  font-size: 13px;
+}
+
+.receta-card {
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.receta-anulada {
+  opacity: 0.6;
+  background: color-mix(in srgb, #c62828 4%, transparent);
+}
+
+.receta-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.receta-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.receta-titulo mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.receta-fecha {
+  font-size: 12px;
+  color: var(--c-text-soft);
+}
+
+.receta-estado {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(198, 40, 40, 0.14);
+  color: #c62828;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.medicamento-lista {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.medicamento-nombre {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.medicamento-detalle {
+  display: block;
+  font-size: 12px;
+  color: var(--c-text-soft);
+}

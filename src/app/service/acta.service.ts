@@ -1,7 +1,7 @@
 import { environment } from '../../environments/environment';
 import { Injectable } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
-import { catchError, Observable } from "rxjs";
+import { catchError, map, Observable } from "rxjs";
 
 import { Acta, ActaRequest } from "../models/acta.model";
 
@@ -32,6 +32,15 @@ export class ActaService {
         return this.http.get<ApiResponse<Acta>>(`${this.apiUrl}/${idActa}`).pipe(
             catchError(this.errorService.handleError)
         )
+    }
+
+    // GET /api/Actas/por-cita/{idCita} — null si esa cita todavía no tiene
+    // su acta de cierre (ver SOLICITUD_MOTOR_CONSULTAS.md).
+    RetornarPorCita(idCita: number): Observable<Acta | null> {
+        return this.http.get<ApiResponse<Acta | null>>(`${this.apiUrl}/por-cita/${idCita}`).pipe(
+            map((resp) => resp.datos ?? null),
+            catchError(this.errorService.handleError),
+        );
     }
 
     // POST /api/Actas

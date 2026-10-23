@@ -75,6 +75,10 @@ export class RecetaFormulario {
   guardando = signal(false);
   errorMsg = signal('');
   private fechaEmisionOriginal: string | null = null;
+  // Si la receta nació de la atención de una consulta, se preserva: esta
+  // pantalla no debe desvincularla de su cita al editarla (p. ej. al
+  // anularla), o desaparecería de la consulta y de la factura automática.
+  private idCitaOriginal: number | null = null;
 
   historialAbierto = signal(false);
   bitacoraSignal = signal<BitacoraItem[]>([]);
@@ -95,9 +99,18 @@ export class RecetaFormulario {
   }
 
   private crearDetalleGroup(d?: RecetaDetalle) {
+    // Las líneas de medicamento externo (sin idMedicamento, ver
+    // SOLICITUD_MOTOR_CONSULTAS.md) solo se crean desde la atención de la
+    // consulta; aquí solo se preservan tal cual al editar, sin convertirlas.
+    const nombreExterno = d?.nombreMedicamentoExterno ?? '';
     return this.fb.nonNullable.group({
       id: d?.idRecetaDetalle ?? 0,
-      idMedicamento: this.fb.control<number | null>(d?.idMedicamento ?? null, Validators.required),
+      nombreMedicamentoExterno: this.fb.nonNullable.control<string>(nombreExterno),
+      idMedicamento: this.fb.control<number | null>(
+        d?.idMedicamento ?? null,
+        nombreExterno ? [] : Validators.required,
+      ),
+      cantidad: this.fb.nonNullable.control<number>(d?.cantidad ?? 1, [Validators.required, Validators.min(0.01)]),
       dosis: [d?.dosis ?? '', Validators.required],
       frecuencia: [d?.frecuencia ?? '', Validators.required],
       // Indicaciones queda opcional (son notas libres extra); duración sí se
@@ -118,6 +131,7 @@ export class RecetaFormulario {
   private cargar(registro: RecetaCompleta): void {
     this.idReceta.set(registro.receta.idReceta);
     this.fechaEmisionOriginal = registro.receta.fechaEmision;
+    this.idCitaOriginal = registro.receta.idCita;
     this.cabecera.patchValue({
       idPaciente: registro.receta.idPaciente,
       idMedico: registro.receta.idMedico,
@@ -140,6 +154,7 @@ export class RecetaFormulario {
       idTratamiento: null,
       idPaciente: cab.idPaciente!,
       idMedico: cab.idMedico!,
+      idCita: this.idCitaOriginal,
       fechaEmision: this.fechaEmisionOriginal ?? new Date().toISOString(),
       firmaDigitalHash: null,
       firmaDigitalUrl: null,
@@ -147,7 +162,9 @@ export class RecetaFormulario {
       // idRecetaDetalle 0 = línea nueva; el backend da de baja las que no vengan.
       detalles: this.detalles.getRawValue().map((d) => ({
         idRecetaDetalle: d.id,
-        idMedicamento: d.idMedicamento!,
+        idMedicamento: d.nombreMedicamentoExterno ? null : d.idMedicamento!,
+        nombreMedicamentoExterno: d.nombreMedicamentoExterno || null,
+        cantidad: d.cantidad,
         dosis: d.dosis,
         frecuencia: d.frecuencia,
         duracion: d.duracion || null,

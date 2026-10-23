@@ -95,6 +95,16 @@
   color: var(--c-text);
 }
 
+.detalles-header-acciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.selector-receta {
+  min-width: 260px;
+}
+
 .detalle-card {
   position: relative;
   padding: 20px 48px 16px 20px;
@@ -309,6 +319,27 @@
   margin: 0;
   font-size: 12px;
   color: var(--c-text-soft);
+}
+
+.factura-origen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0d6a8f;
+  text-decoration: none;
+}
+
+.factura-origen:hover {
+  text-decoration: underline;
+}
+
+.factura-origen mat-icon {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
 }
 
 .form-error,

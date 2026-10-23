@@ -89,6 +89,12 @@
             }
           </span>
           <span class="factura-meta"><mat-icon>event</mat-icon>{{ formatFecha(r.factura.fechaEmision) }}</span>
+          @if (r.factura.idCita) {
+            <span class="factura-meta">
+              <mat-icon>medical_services</mat-icon>
+              Consulta #{{ r.factura.idCita }}
+            </span>
+          }
           <span class="factura-meta">
             {{ vista() === 'activas' ? 'Creada' : 'Anulada' }} por:
             {{ usuarioLabel(vista() === 'activas' ? r.factura.idUsuarioCreacion : r.factura.idUsuarioModificacion) }}

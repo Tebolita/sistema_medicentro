@@ -69,6 +69,7 @@ export class MedicamentoFormulario {
     concentracion: [''],
     requiereReceta: [false],
     idCategoriaMedicamento: this.fb.control<number | null>(null),
+    precioVentaPublico: this.fb.nonNullable.control<number>(0, [Validators.required, Validators.min(0)]),
   });
 
   constructor() {
@@ -92,6 +93,7 @@ export class MedicamentoFormulario {
       concentracion: m.concentracion ?? '',
       requiereReceta: m.requiereReceta,
       idCategoriaMedicamento: m.idCategoriaMedicamento,
+      precioVentaPublico: m.precioVentaPublico,
     });
   }
 
@@ -108,6 +110,7 @@ export class MedicamentoFormulario {
       concentracion: v.concentracion.trim() || null,
       idCategoriaMedicamento: v.idCategoriaMedicamento,
       requiereReceta: v.requiereReceta,
+      precioVentaPublico: v.precioVentaPublico,
     };
 
     this.guardando.set(true);

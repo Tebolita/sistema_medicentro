@@ -72,14 +72,29 @@
           </button>
 
           <div class="form-grid">
-            <mat-form-field appearance="outline">
-              <mat-label>Medicamento</mat-label>
-              <mat-select formControlName="idMedicamento">
-                @for (m of medicamentos(); track m.idMedicamento) {
-                  <mat-option [value]="m.idMedicamento">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
+            @if (grupo.controls.nombreMedicamentoExterno.value) {
+              <mat-form-field appearance="outline">
+                <mat-label>Medicamento externo</mat-label>
+                <input matInput formControlName="nombreMedicamentoExterno" readonly />
+              </mat-form-field>
+            } @else {
+              <mat-form-field appearance="outline">
+                <mat-label>Medicamento</mat-label>
+                <mat-select formControlName="idMedicamento">
+                  @for (m of medicamentos(); track m.idMedicamento) {
+                    <mat-option [value]="m.idMedicamento">{{ m.nombre }} · {{ m.presentacion }}</mat-option>
+                  }
+                </mat-select>
+                @if (grupo.controls.idMedicamento.invalid && grupo.controls.idMedicamento.touched) {
+                  <mat-error>Requerido</mat-error>
                 }
-              </mat-select>
-              @if (grupo.controls.idMedicamento.invalid && grupo.controls.idMedicamento.touched) {
+              </mat-form-field>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Cantidad</mat-label>
+              <input matInput type="number" min="0.01" step="0.01" formControlName="cantidad" />
+              @if (grupo.controls.cantidad.invalid && grupo.controls.cantidad.touched) {
                 <mat-error>Requerido</mat-error>
               }
             </mat-form-field>

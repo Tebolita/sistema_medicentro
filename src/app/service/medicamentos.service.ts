@@ -16,6 +16,7 @@ export interface MedicamentoInput {
   concentracion: string | null;
   idCategoriaMedicamento: number | null;
   requiereReceta: boolean;
+  precioVentaPublico: number;
 }
 
 // Fila de bitacora_auditoria (ver compromisos-pago.service.ts). Se usa para
@@ -96,7 +97,8 @@ export class MedicamentosService {
   }
 
   // Nombre para mostrar en listados (receta, inventario).
-  nombreDe(id: number): string | undefined {
+  nombreDe(id: number | null): string | undefined {
+    if (id === null) return undefined;
     return this.obtener(id)?.nombre;
   }
 

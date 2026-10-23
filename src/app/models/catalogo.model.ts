@@ -70,6 +70,7 @@ export const CODIGOS_CATALOGO = {
   TIPO_RECORDATORIO: 'TIPO_RECORDATORIO',
   ESTADO_ENVIO: 'ESTADO_ENVIO',
   TIPO_CONSULTA: 'TIPO_CONSULTA', // Primera vez / Reconsulta (se guarda en citas.notas)
+  TIPO_OPERACION: 'TIPO_OPERACION', // Al marcar una consulta "para operación"
 
   // Seguros médicos
   RAMO_SEGURO: 'RAMO_SEGURO',

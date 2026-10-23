@@ -1,0 +1,438 @@
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-text-soft);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.back-link:hover {
+  color: var(--c-accent);
+}
+
+.estado-carga,
+.estado-error {
+  padding: 24px;
+  text-align: center;
+  color: var(--c-text-muted);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-header h1 {
+  margin: 0 0 4px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.resumen {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+
+.resumen span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.resumen mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.operacion-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-operacion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #c62828 14%, transparent);
+  color: #c62828;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-operacion-btn {
+  border: none !important;
+  height: auto !important;
+}
+
+/* Vistazo rápido debajo del encabezado: motivo/notas/quién registró, sin
+   tener que abrir ningún panel. */
+.vistazo-rapido {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.vistazo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1 1 220px;
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.vistazo-item strong {
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+.vistazo-factura {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.vistazo-factura:hover strong,
+.vistazo-factura:hover span {
+  text-decoration: underline;
+}
+
+.vistazo-item mat-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--c-accent);
+}
+
+.atencion-accordion mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+/* Un color suave por sección, para que el médico la identifique de un
+   vistazo — mismos colores que ya usa cada módulo en el menú principal
+   (Recepción, Farmacia, Laboratorio, Hospitalización), así se reconocen
+   igual en las dos pantallas. */
+.atencion-accordion mat-expansion-panel {
+  border-radius: 10px !important;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.panel-datos { --panel-color: #0d6a8f; }
+.panel-receta { --panel-color: #00838f; }
+.panel-examen { --panel-color: #ef6c00; }
+.panel-hosp { --panel-color: #455a64; }
+.panel-constancia { --panel-color: #5c6bc0; }
+.panel-acta { --panel-color: #6d4c41; }
+
+.atencion-accordion mat-expansion-panel.panel-datos,
+.atencion-accordion mat-expansion-panel.panel-receta,
+.atencion-accordion mat-expansion-panel.panel-examen,
+.atencion-accordion mat-expansion-panel.panel-hosp {
+  border-left: 4px solid var(--panel-color);
+}
+
+.atencion-accordion mat-expansion-panel.panel-datos mat-expansion-panel-header,
+.atencion-accordion mat-expansion-panel.panel-receta mat-expansion-panel-header,
+.atencion-accordion mat-expansion-panel.panel-examen mat-expansion-panel-header,
+.atencion-accordion mat-expansion-panel.panel-hosp mat-expansion-panel-header {
+  background: color-mix(in srgb, var(--panel-color) 8%, var(--c-surface));
+}
+
+.atencion-accordion mat-panel-title mat-icon {
+  color: var(--panel-color);
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.panel-nota {
+  color: var(--c-text-muted);
+  font-size: 13px;
+  margin: 8px 0 12px;
+}
+
+/* Resumen de solo lectura (datos clínicos / constancia) antes de abrir el
+   popup de edición — mantiene el panel limpio sin un formulario siempre ahí. */
+.resumen-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--c-bg);
+}
+
+.resumen-datos p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-text);
+}
+
+.resumen-datos strong {
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+/* Buscador arriba de cada tabla (recetario / exámenes). */
+.tabla-buscador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  max-width: 320px;
+}
+
+.tabla-buscador mat-icon {
+  color: var(--c-text-soft);
+  flex-shrink: 0;
+}
+
+.tabla-buscador input {
+  border: none;
+  outline: none;
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--c-text);
+}
+
+/* Tablas de recetario y exámenes: centradas, con ícono + texto por fila. */
+.tabla-wrap {
+  overflow-x: auto;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--c-border);
+}
+
+.tabla-atencion {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabla-atencion th,
+.tabla-atencion td {
+  padding: 10px 12px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--c-border);
+  white-space: nowrap;
+}
+
+.tabla-atencion tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla-atencion th {
+  background: var(--c-bg);
+  color: var(--c-text-muted);
+  font-weight: 700;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tabla-atencion th mat-icon {
+  vertical-align: middle;
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  margin-right: 4px;
+}
+
+.tabla-atencion tbody tr:hover {
+  background: color-mix(in srgb, var(--c-accent) 5%, transparent);
+}
+
+.tabla-atencion tr.fila-anulada {
+  opacity: 0.55;
+}
+
+.celda-grupo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--panel-color);
+  font-family: monospace;
+}
+
+.celda-nombre {
+  display: table-cell;
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: normal;
+}
+
+.celda-nombre mat-icon {
+  vertical-align: middle;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  color: var(--c-accent);
+}
+
+.celda-acciones {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.estado-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, #c62828 14%, transparent);
+  color: #c62828;
+  white-space: nowrap;
+}
+
+.estado-chip mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.estado-chip-activa {
+  background: color-mix(in srgb, #2e7d32 14%, transparent);
+  color: #2e7d32;
+}
+
+.link-archivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--c-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link-archivo mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.tabla-vacia {
+  text-align: center;
+  padding: 20px;
+  color: var(--c-text-soft);
+  font-style: italic;
+}
+
+.constancia-panel {
+  padding: 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-color) 6%, var(--c-surface));
+  border: 1px solid var(--c-border);
+  border-left: 4px solid var(--panel-color);
+}
+
+.constancia-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--panel-color);
+}
+
+/* ==================== Toolbar de las tablas (buscador + filtros + acción) ==================== */
+.tabla-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.filtro-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--panel-color);
+}
+
+.chip.chip-activo {
+  background: color-mix(in srgb, var(--panel-color) 16%, transparent);
+  border-color: var(--panel-color);
+  color: var(--panel-color);
+}
+
+.btn-imprimir {
+  margin-left: auto;
+}
+
+.btn-imprimir mat-icon {
+  margin-right: 4px;
+}
+
+.checkbox-receta {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--panel-color);
+}

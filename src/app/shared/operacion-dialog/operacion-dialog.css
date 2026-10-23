@@ -1,0 +1,23 @@
+.dialog-title-icon {
+  vertical-align: middle;
+  margin-right: 6px;
+  color: #c62828;
+}
+
+.dialog-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.dialog-aviso {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+
+.full-width {
+  width: 100%;
+}
