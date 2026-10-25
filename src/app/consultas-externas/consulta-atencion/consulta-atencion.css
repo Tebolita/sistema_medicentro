@@ -88,6 +88,11 @@
   height: auto !important;
 }
 
+.badge-solo-laboratorio {
+  background: color-mix(in srgb, #0d6a8f 14%, transparent);
+  color: #0d6a8f;
+}
+
 /* Vistazo rápido debajo del encabezado: motivo/notas/quién registró, sin
    tener que abrir ningún panel. */
 .vistazo-rapido {
@@ -179,6 +184,7 @@
 .panel-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 4px;
 }
 

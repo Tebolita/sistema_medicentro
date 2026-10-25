@@ -1,0 +1,133 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">{{ data.icono }}</mat-icon>
+  {{ data.titulo }}
+</h2>
+
+<mat-dialog-content class="csv-contenido">
+  <div class="csv-paso">
+    <div class="csv-paso-numero">1</div>
+    <div class="csv-paso-texto">
+      <p><strong>Descarga la plantilla</strong> y llénala con los {{ data.nombreEntidadPlural }} que quieras crear.</p>
+      <ul class="csv-columnas">
+        @for (c of data.columnas; track c.clave) {
+          <li>
+            <code>{{ c.clave }}</code>
+            @if (c.requerido) {
+              <span class="csv-requerido">obligatorio</span>
+            }
+            — {{ c.etiqueta }}
+          </li>
+        }
+      </ul>
+      @if (data.ayuda) {
+        <p class="csv-ayuda">{{ data.ayuda }}</p>
+      }
+      <button matButton type="button" (click)="descargarPlantilla()">
+        <mat-icon>download</mat-icon>
+        Descargar plantilla CSV
+      </button>
+    </div>
+  </div>
+
+  <div class="csv-paso">
+    <div class="csv-paso-numero">2</div>
+    <div class="csv-paso-texto">
+      <p><strong>Sube el CSV ya lleno.</strong></p>
+      <label class="csv-subir-btn">
+        <mat-icon>upload_file</mat-icon>
+        {{ nombreArchivo() || 'Elegir archivo...' }}
+        <input type="file" accept=".csv,text/csv" (change)="onArchivoSeleccionado($event)" hidden />
+      </label>
+      @if (errorArchivo()) {
+        <p class="csv-error">{{ errorArchivo() }}</p>
+      }
+    </div>
+  </div>
+
+  @if (filas().length > 0 && !terminado()) {
+    <div class="csv-paso">
+      <div class="csv-paso-numero">3</div>
+      <div class="csv-paso-texto csv-preview-wrap">
+        <p>
+          <strong>Vista previa:</strong>
+          {{ validas().length }} fila(s) lista(s) para importar
+          @if (invalidas().length > 0) {
+            · {{ invalidas().length }} con errores
+          }
+        </p>
+
+        <div class="csv-preview-tabla-wrap">
+          <table class="csv-preview-tabla">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Registro</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of filas(); track f.indice) {
+                <tr [class.fila-error]="f.errores.length > 0">
+                  <td>{{ f.indice + 2 }}</td>
+                  <td>{{ f.resumen }}</td>
+                  <td>
+                    @if (f.errores.length === 0) {
+                      <span class="csv-chip csv-chip-ok">
+                        <mat-icon>check_circle</mat-icon>
+                        Lista
+                      </span>
+                    } @else {
+                      <span class="csv-chip csv-chip-error" [matTooltip]="f.errores.join(' · ')">
+                        <mat-icon>error</mat-icon>
+                        {{ f.errores[0] }}
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (importando()) {
+    <p class="csv-progreso">
+      Importando... {{ resultados().length }} / {{ validas().length }}
+    </p>
+  }
+
+  @if (terminado()) {
+    <div class="csv-resumen-final" [ngClass]="fallidos() > 0 ? 'csv-resumen-con-errores' : 'csv-resumen-ok'">
+      <mat-icon>{{ fallidos() > 0 ? 'warning' : 'check_circle' }}</mat-icon>
+      <span>
+        {{ exitosos() }} {{ data.nombreEntidadPlural }} importado(s) correctamente.
+        @if (fallidos() > 0) {
+          {{ fallidos() }} fallaron.
+        }
+      </span>
+    </div>
+    @if (fallidos() > 0) {
+      <ul class="csv-fallos-lista">
+        @for (r of resultados(); track r.indice) {
+          @if (!r.ok) {
+            <li>Fila {{ r.indice + 2 }} ({{ r.resumen }}): {{ r.error }}</li>
+          }
+        }
+      </ul>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (!terminado()) {
+    <button matButton type="button" (click)="cerrar()">Cancelar</button>
+    <button matButton="filled" type="button" [disabled]="validas().length === 0 || importando()" (click)="importar()">
+      <mat-icon>publish</mat-icon>
+      {{ importando() ? 'Importando...' : 'Importar ' + validas().length + ' registro(s)' }}
+    </button>
+  } @else {
+    <button matButton="filled" type="button" (click)="cerrar()">Cerrar</button>
+  }
+</mat-dialog-actions>

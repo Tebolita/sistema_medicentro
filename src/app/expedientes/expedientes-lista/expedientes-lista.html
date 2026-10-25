@@ -160,6 +160,7 @@
         <a
           class="consulta-card"
           [class.consulta-card-operacion]="c.requiereOperacion"
+          [class.consulta-card-laboratorio]="esLaboratorio(c)"
           [routerLink]="['/home/consultas', c.idCita, 'atencion']"
           [queryParams]="{ paciente: c.idPaciente }"
         >
@@ -173,6 +174,12 @@
               <span class="status-badge status-badge-operacion">
                 <mat-icon>medical_services</mat-icon>
                 Operación
+              </span>
+            }
+            @if (esLaboratorio(c)) {
+              <span class="status-badge status-badge-laboratorio">
+                <mat-icon>biotech</mat-icon>
+                Laboratorio
               </span>
             }
             <span class="status-badge">{{ estadoLabel(c.idEstadoCita) }}</span>

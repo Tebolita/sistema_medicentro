@@ -13,6 +13,10 @@
         <mat-icon>history</mat-icon>
         Historial general
       </button>
+      <button matButton type="button" class="history-btn" (click)="abrirImportarCsv()">
+        <mat-icon>upload_file</mat-icon>
+        Importar CSV
+      </button>
       <a matButton="filled" routerLink="/home/mantenimiento/tipos-examen/nuevo">
         <mat-icon>add</mat-icon>
         Nuevo tipo
@@ -64,6 +68,7 @@
           @if (t.descripcion) {
             <span class="item-meta">{{ t.descripcion }}</span>
           }
+          <span class="pvp-badge">Q{{ t.precioVentaPublico.toFixed(2) }}</span>
         </div>
         @if (vista() === 'activos') {
           <button

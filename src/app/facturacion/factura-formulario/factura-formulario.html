@@ -135,22 +135,53 @@
             <mat-icon>add</mat-icon>
             Agregar línea
           </button>
+          @if (detalles.length > 1) {
+            <button matButton type="button" (click)="toggleMinimizarTodas()">
+              <mat-icon>{{ todasMinimizadas() ? 'unfold_more' : 'unfold_less' }}</mat-icon>
+              {{ todasMinimizadas() ? 'Expandir todas' : 'Minimizar todas' }}
+            </button>
+          }
         </div>
       </div>
 
       @for (grupo of detalles.controls; track grupo; let i = $index) {
-        <div class="detalle-card" [formGroup]="grupo">
-          <button
-            matIconButton
-            type="button"
-            class="detalle-remove"
-            [disabled]="detalles.length === 1"
-            [matTooltip]="'Quitar línea'"
-            (click)="quitarDetalle(i)"
-          >
-            <mat-icon>close</mat-icon>
-          </button>
+        <div class="detalle-card" [class.detalle-card-minimizada]="lineaMinimizada(grupo)" [formGroup]="grupo">
+          <div class="detalle-card-encabezado">
+            <span class="detalle-resumen-tipo">{{ tipoLabelDe(grupo) }}</span>
 
+            <div class="detalle-card-acciones">
+            <button
+              matIconButton
+              type="button"
+              class="detalle-minimizar"
+              [matTooltip]="lineaMinimizada(grupo) ? 'Expandir línea' : 'Minimizar línea'"
+              (click)="toggleMinimizarLinea(grupo)"
+            >
+              <mat-icon>{{ lineaMinimizada(grupo) ? 'expand_more' : 'expand_less' }}</mat-icon>
+            </button>
+
+            <button
+              matIconButton
+              type="button"
+              class="detalle-remove"
+              [disabled]="detalles.length === 1"
+              [matTooltip]="'Quitar línea'"
+              (click)="quitarDetalle(i)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+            </div>
+          </div>
+
+          @if (lineaMinimizada(grupo)) {
+            <div class="detalle-resumen" (click)="toggleMinimizarLinea(grupo)">
+              <span class="detalle-resumen-desc">{{ resumenDescripcionDe(grupo) }}</span>
+              <span class="detalle-resumen-calculo">
+                {{ grupo.controls.cantidad.value }} × {{ formatMonto(grupo.controls.precioUnitario.value) }}
+                = {{ formatMonto(subtotalLinea(grupo)) }}
+              </span>
+            </div>
+          } @else {
           <div class="form-grid">
             <mat-form-field appearance="outline">
               <mat-label>Tipo</mat-label>
@@ -160,6 +191,26 @@
                 }
               </mat-select>
             </mat-form-field>
+
+            @if (tipoEsMedicamento(grupo)) {
+              <mat-form-field appearance="outline" class="span-2" subscriptSizing="dynamic">
+                <mat-label>Medicamento (venta directa, sin receta)</mat-label>
+                <mat-select
+                  [value]="grupo.controls.idMedicamento.value"
+                  (selectionChange)="seleccionarMedicamentoManual(grupo, $event.value)"
+                >
+                  <mat-option [value]="null">— Escribir descripción libre —</mat-option>
+                  @for (m of medicamentos(); track m.idMedicamento) {
+                    <mat-option [value]="m.idMedicamento">{{ m.nombre }} · Q{{ m.precioVentaPublico.toFixed(2) }}</mat-option>
+                  }
+                </mat-select>
+                @if (grupo.controls.idMedicamento.value; as idMed) {
+                  <mat-hint>{{ stockDisponibleDe(idMed) }}</mat-hint>
+                } @else {
+                  <mat-hint>Selecciónalo para que se descuente del inventario al pagar la factura.</mat-hint>
+                }
+              </mat-form-field>
+            }
 
             <mat-form-field appearance="outline" class="span-2">
               <mat-label>Descripción</mat-label>
@@ -198,6 +249,7 @@
               <input matInput type="number" min="0" formControlName="descuento" />
             </mat-form-field>
           </div>
+          }
         </div>
       }
     </div>

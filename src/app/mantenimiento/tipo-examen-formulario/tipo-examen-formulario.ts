@@ -68,6 +68,7 @@ export class TipoExamenFormulario {
     nombre: ['', Validators.required],
     idCategoriaExamen: this.fb.control<number | null>(null, Validators.required),
     descripcion: [''],
+    precioVentaPublico: this.fb.nonNullable.control<number>(0, [Validators.required, Validators.min(0)]),
   });
 
   constructor() {
@@ -88,6 +89,7 @@ export class TipoExamenFormulario {
       nombre: t.nombre,
       idCategoriaExamen: t.idCategoriaExamen,
       descripcion: t.descripcion ?? '',
+      precioVentaPublico: t.precioVentaPublico,
     });
   }
 
@@ -101,6 +103,7 @@ export class TipoExamenFormulario {
       nombre: v.nombre.trim(),
       idCategoriaExamen: v.idCategoriaExamen!,
       descripcion: v.descripcion.trim() || null,
+      precioVentaPublico: v.precioVentaPublico,
     };
 
     this.guardando.set(true);

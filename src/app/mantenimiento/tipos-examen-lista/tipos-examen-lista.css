@@ -287,3 +287,16 @@
     font-size: 15.5px;
   }
 }
+
+.pvp-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+  background: rgba(13, 106, 143, 0.12);
+  color: color-mix(in srgb, #0d6a8f var(--c-keep), white);
+  font-size: 12px;
+  font-weight: 600;
+}

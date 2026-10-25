@@ -7,11 +7,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, MedicamentosService } from '../../service/medicamentos.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, MedicamentoInput, MedicamentosService } from '../../service/medicamentos.service';
 import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { CatalogosService } from '../../service/catalogos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -28,6 +31,12 @@ export class MedicamentosLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
+
+  // Para resolver la columna "categoria" del CSV por nombre (igual que hace
+  // el formulario) — ver abrirImportarCsv().
+  private catalogos = inject(CatalogosService);
+  private categoriasApi = this.catalogos.obtener('CATEGORIA_MEDICAMENTO');
 
   buscar = signal('');
   errorAccion = signal('');
@@ -128,6 +137,91 @@ export class MedicamentosLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'nombre', etiqueta: 'Nombre del medicamento', requerido: true, ejemplo: 'Paracetamol 500mg' },
+    { clave: 'principio_activo', etiqueta: 'Principio activo (opcional)', requerido: false, ejemplo: 'Paracetamol' },
+    { clave: 'presentacion', etiqueta: 'Presentación (opcional)', requerido: false, ejemplo: 'Tableta' },
+    { clave: 'concentracion', etiqueta: 'Concentración (opcional)', requerido: false, ejemplo: '500mg' },
+    { clave: 'categoria', etiqueta: 'Categoría (opcional, nombre tal como está en Catálogos)', requerido: false, ejemplo: 'Analgésico' },
+    { clave: 'requiere_receta', etiqueta: 'Requiere receta: Sí / No', requerido: false, ejemplo: 'No' },
+    { clave: 'precio_venta_publico', etiqueta: 'Precio de venta al público (Q)', requerido: true, ejemplo: '15.00' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: MedicamentoInput | null } {
+    const errores: string[] = [];
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) errores.push('Falta el nombre');
+
+    let idCategoriaMedicamento: number | null = null;
+    const categoriaTexto = (fila['categoria'] ?? '').trim();
+    if (categoriaTexto) {
+      const encontrada = this.categoriasApi().find(
+        (c) => c.codigo.toLowerCase() === categoriaTexto.toLowerCase() || c.nombre.toLowerCase() === categoriaTexto.toLowerCase(),
+      );
+      if (!encontrada) {
+        errores.push(`La categoría "${categoriaTexto}" no existe (revisa Mantenimiento → Catálogos)`);
+      } else {
+        idCategoriaMedicamento = encontrada.id;
+      }
+    }
+
+    const requiereRecetaTexto = (fila['requiere_receta'] ?? '').trim().toLowerCase();
+    let requiereReceta = false;
+    if (['si', 'sí', 'true', '1', 'x'].includes(requiereRecetaTexto)) {
+      requiereReceta = true;
+    } else if (requiereRecetaTexto && !['no', 'false', '0'].includes(requiereRecetaTexto)) {
+      errores.push(`"requiere_receta" debe ser Sí o No (vino "${fila['requiere_receta']}")`);
+    }
+
+    const precioTexto = (fila['precio_venta_publico'] ?? '').trim().replace(',', '.');
+    const precio = Number(precioTexto);
+    if (!precioTexto || isNaN(precio) || precio < 0) {
+      errores.push('El precio de venta al público debe ser un número válido (≥ 0)');
+    }
+
+    if (errores.length > 0) return { errores, datos: null };
+
+    return {
+      errores: [],
+      datos: {
+        nombre,
+        principioActivo: (fila['principio_activo'] ?? '').trim() || null,
+        presentacion: (fila['presentacion'] ?? '').trim() || null,
+        concentracion: (fila['concentracion'] ?? '').trim() || null,
+        idCategoriaMedicamento,
+        requiereReceta,
+        precioVentaPublico: precio,
+      },
+    };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<MedicamentoInput>, ImportarCsvDialogData<MedicamentoInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar medicamentos desde CSV',
+          icono: 'medication',
+          nombreEntidadPlural: 'medicamentos',
+          nombreArchivoPlantilla: 'plantilla_medicamentos.csv',
+          columnas: this.columnasCsv,
+          ayuda:
+            'La columna "categoria" acepta el nombre tal como aparece en Mantenimiento → Catálogos (ej. "Analgésico"); déjala vacía si no aplica.',
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => `${datos.nombre} — Q${datos.precioVentaPublico.toFixed(2)}`,
+          crear: (datos) => this.medicamentosService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.medicamentosService.cargar();
+      });
   }
 
   // ============================================================

@@ -8,10 +8,14 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, AseguradorasService } from '../../service/aseguradoras.service';
+import { MatDialog } from '@angular/material/dialog';
+import { AseguradoraInput, BitacoraItem, AseguradorasService } from '../../service/aseguradoras.service';
+import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { TIPOS_ENTIDAD_ASEGURADORA } from '../aseguradoras-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -27,6 +31,14 @@ export class AseguradorasLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
+
+  private catalogos = inject(CatalogosService);
+  private tiposEntidadApi = this.catalogos.obtener('TIPO_ENTIDAD_ASEGURADORA');
+  private tiposEntidad = computed(() => {
+    const api = this.tiposEntidadApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : TIPOS_ENTIDAD_ASEGURADORA;
+  });
 
   buscar = signal('');
   errorAccion = signal('');
@@ -94,6 +106,73 @@ export class AseguradorasLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'nombre', etiqueta: 'Nombre de la aseguradora', requerido: true, ejemplo: 'Seguros El Roble' },
+    { clave: 'nit', etiqueta: 'NIT (opcional)', requerido: false, ejemplo: '12345678-9' },
+    { clave: 'tipo_entidad', etiqueta: 'Tipo de entidad (opcional: Aseguradora, Mutualidad, Cooperativa)', requerido: false, ejemplo: 'Aseguradora' },
+    { clave: 'contacto', etiqueta: 'Persona de contacto (opcional)', requerido: false, ejemplo: 'Juan Pérez' },
+    { clave: 'telefono', etiqueta: 'Teléfono (opcional)', requerido: false, ejemplo: '22223333' },
+    { clave: 'correo', etiqueta: 'Correo (opcional)', requerido: false, ejemplo: 'contacto@elroble.com' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: AseguradoraInput | null } {
+    const errores: string[] = [];
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) errores.push('Falta el nombre');
+
+    const correo = (fila['correo'] ?? '').trim();
+    if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      errores.push(`El correo "${correo}" no es válido`);
+    }
+
+    // No es un error si no matchea: el backend no valida este id contra
+    // nada (ver aseguradoras-catalogos.ts), así que una fila con un tipo que
+    // no coincide simplemente queda sin tipo en vez de rechazarse.
+    const tipoTexto = (fila['tipo_entidad'] ?? '').trim();
+    const idTipoEntidad = tipoTexto
+      ? this.tiposEntidad().find((t) => t.label.toLowerCase() === tipoTexto.toLowerCase())?.id ?? null
+      : null;
+
+    if (errores.length > 0) return { errores, datos: null };
+
+    return {
+      errores: [],
+      datos: {
+        nombre,
+        nit: (fila['nit'] ?? '').trim() || null,
+        idTipoEntidad,
+        contacto: (fila['contacto'] ?? '').trim() || null,
+        telefono: (fila['telefono'] ?? '').trim() || null,
+        correo: correo || null,
+      },
+    };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<AseguradoraInput>, ImportarCsvDialogData<AseguradoraInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar aseguradoras desde CSV',
+          icono: 'health_and_safety',
+          nombreEntidadPlural: 'aseguradoras',
+          nombreArchivoPlantilla: 'plantilla_aseguradoras.csv',
+          columnas: this.columnasCsv,
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => datos.nombre,
+          crear: (datos) => this.aseguradorasService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.aseguradorasService.cargar();
+      });
   }
 
   // ============================================================

@@ -200,6 +200,21 @@
   border-bottom: 1px solid var(--c-border);
 }
 
+.facturas-filtros {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.facturas-filtros mat-form-field {
+  min-width: 200px;
+}
+
+.facturas-filtros button {
+  margin-top: 8px;
+}
+
 .tab {
   display: flex;
   align-items: center;
@@ -311,6 +326,11 @@
 .status-badge.estado-emitida {
   background: rgba(239, 108, 0, 0.14);
   color: color-mix(in srgb, #ef6c00 var(--c-keep), white);
+}
+
+.status-badge.estado-pendiente {
+  background: rgba(120, 120, 120, 0.14);
+  color: color-mix(in srgb, #616161 var(--c-keep), white);
 }
 
 .status-badge.estado-pagada {

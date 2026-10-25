@@ -42,6 +42,7 @@ import { Hospitalizacion } from '../../models/hospitalizacion.model';
 import { FacturasService, FacturaCompleta } from '../../service/facturas.service';
 import { PermisosMenuService } from '../../service/permisos-menu.service';
 import { OperacionDialog, OperacionDialogResultado } from '../../shared/operacion-dialog/operacion-dialog';
+import { esConsultaDeLaboratorio } from '../../shared/tipo-consulta.util';
 
 // El código del catálogo de estado de receta no está en CODIGOS_CATALOGO
 // (vive en Farmacia, no en Citas) — se usa tal cual lo espera
@@ -106,6 +107,13 @@ export class ConsultaAtencion {
   errorCarga = signal('');
   atencion = signal<AtencionCita | null>(null);
   cita = computed(() => this.atencion()?.cita.cita ?? null);
+
+  // Consulta "Laboratorios" (ver consulta-formulario.ts): el paciente solo
+  // viene a hacerse exámenes, sin médico asignado — por eso aquí solo tiene
+  // sentido dejar habilitados Exámenes, Constancia médica y Acta de cierre;
+  // el resto de paneles (datos clínicos, recetario, hospitalización,
+  // marcar para operación) asumen que hay un médico atendiendo.
+  esSoloLaboratorio = computed(() => esConsultaDeLaboratorio(this.cita()?.notas ?? null));
 
   // "Marcar para operación" (SOLICITUD_MOTOR_CONSULTAS.md, sección 5): es
   // decisión del médico durante la atención, no de quien agenda la cita —
@@ -655,6 +663,13 @@ export class ConsultaAtencion {
 </body>
 </html>`;
 
+    this.abrirVentanaImpresion(html);
+  }
+
+  // Compartido por recetas/constancia/acta: abre una ventana nueva con el
+  // HTML ya armado y lanza el diálogo de impresión del navegador. No se
+  // guarda ningún archivo — se regenera al vuelo cada vez que se imprime.
+  private abrirVentanaImpresion(html: string): void {
     const ventana = window.open('', '_blank', 'width=800,height=600');
     if (!ventana) {
       this.notif.error('El navegador bloqueó la ventana de impresión. Habilita las ventanas emergentes e intenta de nuevo.');
@@ -857,6 +872,58 @@ export class ConsultaAtencion {
     });
   }
 
+  // Formato tomado del certificado médico de ejemplo que compartió el
+  // usuario (encabezado, "A QUIEN INTERESE", párrafo y firma al pie) —
+  // mismo esqueleto para constancia y acta, solo cambia el título y el
+  // cuerpo del párrafo.
+  private htmlDocumentoClinico(titulo: string, cuerpo: string): string {
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const fecha = new Date().toLocaleDateString('es-GT', { day: '2-digit', month: 'long', year: 'numeric' });
+    return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>${esc(titulo)}</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 48px 56px; }
+  .encabezado { text-align: center; margin-bottom: 28px; }
+  .encabezado h1 { font-size: 16px; letter-spacing: 0.04em; margin: 0; text-transform: uppercase; }
+  .encabezado p { color: #666; font-size: 12px; margin: 4px 0 0; }
+  .fecha { margin: 24px 0; font-size: 13px; }
+  .destinatario { font-weight: 700; font-size: 13px; margin: 24px 0 14px; }
+  .cuerpo { font-size: 13.5px; line-height: 1.6; text-align: justify; white-space: pre-line; }
+  .firma { margin-top: 90px; text-align: center; }
+  .firma-linea { border-top: 1px solid #1a1a1a; width: 280px; margin: 0 auto 6px; }
+  .firma p { margin: 0; font-size: 13px; }
+  .firma .cargo { color: #555; font-size: 12px; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <h1>${esc(titulo)}</h1>
+    <p>Sanatorio Medicentro</p>
+  </div>
+  <p class="fecha">Guatemala, ${esc(fecha)}</p>
+  <p class="destinatario">A QUIEN INTERESE:</p>
+  <p class="cuerpo">${esc(cuerpo)}</p>
+  <div class="firma">
+    <div class="firma-linea"></div>
+    <p>${esc(this.nombreMedico())}</p>
+    <p class="cargo">Médico</p>
+  </div>
+</body>
+</html>`;
+  }
+
+  imprimirConstancia(): void {
+    const con = this.constancia();
+    if (!con) return;
+    const paciente = this.nombrePaciente();
+    const diagnostico = con.diagnostico?.trim() ? ` con diagnóstico de ${con.diagnostico.trim()}` : '';
+    const cuerpo = `Este Certificado médico acredita que ${paciente} fue atendido(a) en este centro asistencial${diagnostico}.\n\n${con.contenido}`;
+    this.abrirVentanaImpresion(this.htmlDocumentoClinico('Constancia médica', cuerpo));
+  }
+
   // ==================== Acta de cierre ====================
   abrirDialogoActa(): void {
     const cita = this.cita();
@@ -902,6 +969,16 @@ export class ConsultaAtencion {
       },
       error: (err: HttpErrorResponse) => this.notif.error('No se pudo guardar el acta: ' + (err.error?.mensaje ?? err.message)),
     });
+  }
+
+  imprimirActa(): void {
+    const a = this.acta();
+    if (!a) return;
+    const paciente = this.nombrePaciente();
+    const horaActa = new Date(a.fechaHora).toLocaleString('es-GT', { dateStyle: 'medium', timeStyle: 'short' });
+    const observaciones = a.observaciones?.trim() ? `\n\nObservaciones: ${a.observaciones.trim()}` : '';
+    const cuerpo = `Esta Acta de cierre acredita que ${paciente} fue atendido(a) en este centro asistencial el ${horaActa} por el motivo de consulta: ${a.motivoIngreso}.${observaciones}`;
+    this.abrirVentanaImpresion(this.htmlDocumentoClinico('Acta de cierre de consulta', cuerpo));
   }
 
   // ==================== Hospitalización ====================

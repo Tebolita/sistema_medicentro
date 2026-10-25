@@ -19,7 +19,12 @@
         </p>
       </div>
       <div class="operacion-control">
-        @if (puedeMarcarOperacion()) {
+        @if (esSoloLaboratorio()) {
+          <span class="badge-operacion badge-solo-laboratorio">
+            <mat-icon>biotech</mat-icon>
+            Consulta de solo laboratorio
+          </span>
+        } @else if (puedeMarcarOperacion()) {
           @if (c.requiereOperacion) {
             <button matButton type="button" class="badge-operacion badge-operacion-btn" (click)="abrirDialogoOperacion()">
               <mat-icon>medical_services</mat-icon>
@@ -68,7 +73,9 @@
     </div>
 
     <mat-accordion class="atencion-accordion" multi>
-      <!-- Datos clínicos -->
+      <!-- Datos clínicos: no aplica a una consulta de solo laboratorio (sin
+           médico asignado, nada clínico que registrar aquí). -->
+      @if (!esSoloLaboratorio()) {
       <mat-expansion-panel class="panel-datos">
         <mat-expansion-panel-header>
           <mat-panel-title><mat-icon>assignment</mat-icon> Datos de la consulta</mat-panel-title>
@@ -91,7 +98,7 @@
         </div>
       </mat-expansion-panel>
 
-      <!-- Recetario -->
+      <!-- Recetario: requiere médico asignado, no aplica a solo laboratorio. -->
       <mat-expansion-panel class="panel-receta">
         <mat-expansion-panel-header>
           <mat-panel-title><mat-icon>receipt_long</mat-icon> Recetario ({{ recetas().length }})</mat-panel-title>
@@ -220,6 +227,7 @@
           </button>
         </div>
       </mat-expansion-panel>
+      }
 
       <!-- Exámenes -->
       <mat-expansion-panel class="panel-examen">
@@ -318,7 +326,8 @@
         </div>
       </mat-expansion-panel>
 
-      <!-- Hospitalización -->
+      <!-- Hospitalización: requiere médico asignado, no aplica a solo laboratorio. -->
+      @if (!esSoloLaboratorio()) {
       <mat-expansion-panel class="panel-hosp">
         <mat-expansion-panel-header>
           <mat-panel-title><mat-icon>bed</mat-icon> Hospitalización</mat-panel-title>
@@ -346,6 +355,7 @@
           </div>
         }
       </mat-expansion-panel>
+      }
     </mat-accordion>
 
     <!-- Constancia médica: siempre al final de la consulta, no va acoplada -->
@@ -366,6 +376,12 @@
           <mat-icon>{{ constancia() ? 'edit' : 'add' }}</mat-icon>
           {{ constancia() ? 'Editar constancia' : 'Generar constancia' }}
         </button>
+        @if (constancia()) {
+          <button matButton type="button" (click)="imprimirConstancia()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+        }
       </div>
     </div>
 
@@ -388,6 +404,12 @@
           <mat-icon>{{ acta() ? 'edit' : 'add' }}</mat-icon>
           {{ acta() ? 'Editar acta' : 'Generar acta' }}
         </button>
+        @if (acta()) {
+          <button matButton type="button" (click)="imprimirActa()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+        }
       </div>
     </div>
   }

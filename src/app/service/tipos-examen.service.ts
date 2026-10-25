@@ -14,6 +14,7 @@ export interface TipoExamen {
   nombre: string;
   idCategoriaExamen: number;
   descripcion: string | null;
+  precioVentaPublico: number;
   activo: boolean;
   fechaCreacion: string;
   fechaModificacion: string | null;
@@ -25,6 +26,7 @@ export interface TipoExamenInput {
   nombre: string;
   idCategoriaExamen: number;
   descripcion: string | null;
+  precioVentaPublico: number;
 }
 
 // Bitácora de auditoría (patrón igual a SalasService/CompromisosPagoService):

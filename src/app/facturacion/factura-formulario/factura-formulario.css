@@ -106,18 +106,73 @@
 }
 
 .detalle-card {
-  position: relative;
-  padding: 20px 48px 16px 20px;
+  padding: 12px 20px 16px 20px;
   border-radius: 14px;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-.detalle-remove {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+.detalle-card-encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px -8px 4px 0;
+}
+
+.detalle-card-acciones {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.detalle-resumen-tipo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(13, 106, 143, 0.12);
+  color: color-mix(in srgb, #0d6a8f var(--c-keep), white);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.detalle-card-minimizada {
+  padding: 8px 20px 8px 20px;
+}
+
+.detalle-card-minimizada .detalle-card-encabezado {
+  margin-bottom: 0;
+}
+
+.detalle-resumen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 24px;
+  padding-right: 8px;
+  cursor: pointer;
+}
+
+.detalle-resumen-desc {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.detalle-resumen-calculo {
+  font-size: 12px;
+  color: var(--c-text-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .totales-panel {

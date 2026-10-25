@@ -22,6 +22,7 @@ import { PacienteListado } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { esConsultaDeLaboratorio } from '../../shared/tipo-consulta.util';
 
 // La tabla `citas` no tiene columna de tipo de consulta (Primera vez /
 // Reconsulta): el formulario lo guarda al inicio de `notas` con este prefijo.
@@ -39,6 +40,7 @@ interface ConsultaFila {
   idTipoConsulta: number | null; // id del catálogo TIPO_CONSULTA
   motivoConsulta: string | null;
   requiereOperacion: boolean;
+  requiereLaboratorio: boolean;
   fechaModificacion: string | null;
   idUsuarioModificacion: number | null;
 }
@@ -169,6 +171,7 @@ export class ConsultasLista {
       idTipoConsulta: this.idTipoConsultaDesdeNotas(c.notas),
       motivoConsulta: c.motivoConsulta,
       requiereOperacion: c.requiereOperacion,
+      requiereLaboratorio: esConsultaDeLaboratorio(c.notas),
       fechaModificacion: c.fechaModificacion,
       idUsuarioModificacion: c.idUsuarioModificacion,
     };

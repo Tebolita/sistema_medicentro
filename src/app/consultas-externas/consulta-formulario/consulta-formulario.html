@@ -36,34 +36,46 @@
         <mat-error>{{ error(form.controls.idPaciente) }}</mat-error>
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Médico</mat-label>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Médico{{ esTipoLaboratorio() ? ' (opcional)' : '' }}</mat-label>
         <mat-select formControlName="idMedico">
           @for (m of medicos; track m.id) {
             <mat-option [value]="m.id">{{ m.nombre }} · {{ m.especialidad }}</mat-option>
           }
         </mat-select>
-        <mat-error>{{ error(form.controls.idMedico) }}</mat-error>
+        @if (esTipoLaboratorio()) {
+          <mat-hint>Consulta de solo laboratorio: no hace falta asignar médico.</mat-hint>
+        } @else {
+          <mat-error>{{ error(form.controls.idMedico) }}</mat-error>
+        }
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Fecha</mat-label>
         <input matInput [matDatepicker]="picker" [min]="esNueva() ? hoy : null" formControlName="fecha" />
         <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
-        <mat-error>{{ error(form.controls.fecha) }}</mat-error>
+        @if (esTipoLaboratorio()) {
+          <mat-hint>Siempre es la fecha de hoy (consulta de solo laboratorio).</mat-hint>
+        } @else {
+          <mat-error>{{ error(form.controls.fecha) }}</mat-error>
+        }
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Hora</mat-label>
         <input matInput type="time" formControlName="hora" />
-        <mat-error>{{ error(form.controls.hora) }}</mat-error>
+        @if (esTipoLaboratorio()) {
+          <mat-hint>Siempre es la hora actual (consulta de solo laboratorio).</mat-hint>
+        } @else {
+          <mat-error>{{ error(form.controls.hora) }}</mat-error>
+        }
       </mat-form-field>
 
       <mat-form-field appearance="outline">
         <mat-label>Tipo de consulta</mat-label>
         <mat-select formControlName="idTipoConsulta">
-          @for (t of tiposConsulta; track t.id) {
+          @for (t of tiposConsulta(); track t.id) {
             <mat-option [value]="t.id">{{ t.label }}</mat-option>
           }
         </mat-select>
@@ -115,6 +127,34 @@
       </mat-form-field>
 
     </div>
+
+    @if (esNueva() && esTipoLaboratorio()) {
+      <div class="examenes-lab">
+        <h2>
+          <mat-icon>biotech</mat-icon>
+          Exámenes a realizar
+        </h2>
+        <p class="panel-nota">Selecciona los exámenes que el paciente va a realizarse en esta visita.</p>
+
+        @if (tiposExamenLab().length) {
+          <div class="examenes-lab-lista">
+            @for (t of tiposExamenLab(); track t.idTipoExamen) {
+              <mat-checkbox
+                [checked]="examenesSeleccionados().has(t.idTipoExamen)"
+                (change)="toggleExamenLab(t.idTipoExamen)"
+              >
+                {{ t.nombre }}
+              </mat-checkbox>
+            }
+          </div>
+          @if (examenesSeleccionados().size === 0) {
+            <p class="examenes-lab-error">Selecciona al menos un examen.</p>
+          }
+        } @else {
+          <p class="panel-nota">Todavía no hay tipos de examen registrados en Mantenimiento.</p>
+        }
+      </div>
+    }
 
     <div class="form-actions">
       <a matButton routerLink="/home/consultas">Cancelar</a>

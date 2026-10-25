@@ -38,6 +38,10 @@ export interface FacturaDetalle {
   // Línea de receta que originó este cargo, si aplica — al pagar la
   // factura, descuenta automáticamente ese medicamento del inventario.
   idRecetaDetalle: number | null;
+  // Examen de orden de laboratorio que originó este cargo, si aplica (ver
+  // FacturasService.SincronizarLineasDesdeExamenesAsync) — igual que
+  // idRecetaDetalle, la factura la crea/actualiza sola.
+  idOrdenDetalle: number | null;
   descripcion: string;
   cantidad: number;
   precioUnitario: number;

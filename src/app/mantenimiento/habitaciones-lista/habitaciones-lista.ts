@@ -8,11 +8,13 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, HabitacionesService, UsuarioOpcion } from '../../service/habitaciones.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, HabitacionInput, HabitacionesService, UsuarioOpcion } from '../../service/habitaciones.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { TIPOS_HABITACION, ESTADOS_HABITACION } from '../habitaciones-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -29,6 +31,7 @@ export class HabitacionesLista {
 
   private catalogos = inject(CatalogosService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
   private tiposApi = this.catalogos.obtener('TIPO_HABITACION');
   private tipos = computed(() => {
     const api = this.tiposApi();
@@ -123,6 +126,69 @@ export class HabitacionesLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'numero', etiqueta: 'Número de habitación', requerido: true, ejemplo: '201' },
+    { clave: 'piso', etiqueta: 'Piso (opcional)', requerido: false, ejemplo: '2' },
+    { clave: 'tipo', etiqueta: 'Tipo (opcional, ej. Individual, Compartida, UCI)', requerido: false, ejemplo: 'Individual' },
+    { clave: 'estado', etiqueta: 'Estado (ej. Disponible, Ocupada)', requerido: true, ejemplo: 'Disponible' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: HabitacionInput | null } {
+    const errores: string[] = [];
+    const numero = (fila['numero'] ?? '').trim();
+    if (!numero) errores.push('Falta el número de habitación');
+
+    let piso: number | null = null;
+    const pisoTexto = (fila['piso'] ?? '').trim();
+    if (pisoTexto) {
+      piso = Number(pisoTexto);
+      if (isNaN(piso)) errores.push('El piso debe ser un número');
+    }
+
+    const tipoTexto = (fila['tipo'] ?? '').trim();
+    const idTipoHabitacion = tipoTexto ? this.tipos().find((t) => t.label.toLowerCase() === tipoTexto.toLowerCase())?.id ?? null : null;
+    if (tipoTexto && idTipoHabitacion === null) errores.push(`El tipo "${tipoTexto}" no existe (revisa Mantenimiento → Catálogos)`);
+
+    const estadoTexto = (fila['estado'] ?? '').trim();
+    let idEstadoHabitacion: number | null = null;
+    if (!estadoTexto) {
+      errores.push('Falta el estado');
+    } else {
+      idEstadoHabitacion = this.estados().find((e) => e.label.toLowerCase() === estadoTexto.toLowerCase())?.id ?? null;
+      if (idEstadoHabitacion === null) errores.push(`El estado "${estadoTexto}" no existe (revisa Mantenimiento → Catálogos)`);
+    }
+
+    if (errores.length > 0 || idEstadoHabitacion === null) return { errores, datos: null };
+
+    return { errores: [], datos: { numero, piso, idTipoHabitacion, idEstadoHabitacion } };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<HabitacionInput>, ImportarCsvDialogData<HabitacionInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar habitaciones desde CSV',
+          icono: 'bed',
+          nombreEntidadPlural: 'habitaciones',
+          nombreArchivoPlantilla: 'plantilla_habitaciones.csv',
+          columnas: this.columnasCsv,
+          ayuda: 'Las camas de cada habitación se agregan después, desde la pantalla de la habitación. Las columnas "tipo" y "estado" aceptan el nombre tal como aparece en Mantenimiento → Catálogos.',
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => `Habitación ${datos.numero}`,
+          crear: (datos) => this.habitacionesService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.habitacionesService.cargar();
+      });
   }
 
   // ============================================================

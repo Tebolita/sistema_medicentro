@@ -47,6 +47,7 @@
         class="consulta-card"
         [class.inactivo]="vista() === 'eliminadas'"
         [class.consulta-card-operacion]="c.requiereOperacion"
+        [class.consulta-card-laboratorio]="c.requiereLaboratorio"
         [routerLink]="vista() === 'activas' ? ['/home/consultas', c.idCita] : null"
       >
         <div class="patient-avatar">{{ iniciales(c.idPaciente) }}</div>
@@ -59,6 +60,12 @@
             <span class="consulta-meta consulta-meta-operacion">
               <mat-icon>medical_services</mat-icon>
               Marcada para operación
+            </span>
+          }
+          @if (c.requiereLaboratorio) {
+            <span class="consulta-meta consulta-meta-laboratorio">
+              <mat-icon>biotech</mat-icon>
+              Solo laboratorio
             </span>
           }
           @if (vista() === 'eliminadas') {

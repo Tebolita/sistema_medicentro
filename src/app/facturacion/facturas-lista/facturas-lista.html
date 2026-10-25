@@ -62,6 +62,52 @@
     </button>
   </div>
 
+  <div class="facturas-filtros">
+    <mat-form-field appearance="outline">
+      <mat-label>Paciente</mat-label>
+      <mat-select [ngModel]="filtroPaciente()" (ngModelChange)="filtroPaciente.set($event)">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (p of pacientes(); track p.idPaciente) {
+          <mat-option [value]="p.idPaciente">{{ p.primerNombre }} {{ p.primerApellido }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Usuario</mat-label>
+      <mat-select [ngModel]="filtroUsuario()" (ngModelChange)="filtroUsuario.set($event)">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (u of usuarios(); track u.idUsuario) {
+          <mat-option [value]="u.idUsuario">{{ u.nombreUsuario }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo de pago</mat-label>
+      <mat-select [ngModel]="filtroFormaPago()" (ngModelChange)="filtroFormaPago.set($event)">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (f of formasPago(); track f.id) {
+          <mat-option [value]="f.id">{{ f.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (e of estadosFactura(); track e.id) {
+          <mat-option [value]="e.id">{{ e.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (hayFiltrosActivos()) {
+      <button matButton type="button" (click)="limpiarFiltros()">Limpiar filtros</button>
+    }
+  </div>
+
   @if (errorCarga() || errorAccion()) {
     <p class="carga-error">{{ errorCarga() || errorAccion() }}</p>
   }

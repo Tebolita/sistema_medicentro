@@ -8,12 +8,14 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, SalasService } from '../../service/salas.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, SalaInput, SalasService } from '../../service/salas.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { TIPOS_SALA, ESTADOS_SALA } from '../salas-catalogos';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -31,6 +33,7 @@ export class SalasLista {
 
   private catalogos = inject(CatalogosService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
   private tiposApi = this.catalogos.obtener('TIPO_SALA');
   private tipos = computed(() => {
     const api = this.tiposApi();
@@ -124,6 +127,67 @@ export class SalasLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'nombre', etiqueta: 'Nombre de la sala', requerido: true, ejemplo: 'Consultorio 3' },
+    { clave: 'tipo', etiqueta: 'Tipo (opcional, ej. Consultorio, Quirófano)', requerido: false, ejemplo: 'Consultorio' },
+    { clave: 'estado', etiqueta: 'Estado (ej. Disponible, Ocupada)', requerido: true, ejemplo: 'Disponible' },
+    { clave: 'capacidad', etiqueta: 'Capacidad (número de personas)', requerido: true, ejemplo: '1' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: SalaInput | null } {
+    const errores: string[] = [];
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) errores.push('Falta el nombre');
+
+    const tipoTexto = (fila['tipo'] ?? '').trim();
+    const idTipoSala = tipoTexto ? this.tipos().find((t) => t.label.toLowerCase() === tipoTexto.toLowerCase())?.id ?? null : null;
+    if (tipoTexto && idTipoSala === null) errores.push(`El tipo "${tipoTexto}" no existe (revisa Mantenimiento → Catálogos)`);
+
+    const estadoTexto = (fila['estado'] ?? '').trim();
+    let idEstadoSala: number | null = null;
+    if (!estadoTexto) {
+      errores.push('Falta el estado');
+    } else {
+      idEstadoSala = this.estados().find((e) => e.label.toLowerCase() === estadoTexto.toLowerCase())?.id ?? null;
+      if (idEstadoSala === null) errores.push(`El estado "${estadoTexto}" no existe (revisa Mantenimiento → Catálogos)`);
+    }
+
+    const capacidad = Number((fila['capacidad'] ?? '').trim());
+    if (!fila['capacidad']?.trim() || isNaN(capacidad) || capacidad < 1) {
+      errores.push('La capacidad debe ser un número entero mayor a 0');
+    }
+
+    if (errores.length > 0 || idEstadoSala === null) return { errores, datos: null };
+
+    return { errores: [], datos: { nombre, idTipoSala, idEstadoSala, capacidad } };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<SalaInput>, ImportarCsvDialogData<SalaInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar salas desde CSV',
+          icono: 'meeting_room',
+          nombreEntidadPlural: 'salas',
+          nombreArchivoPlantilla: 'plantilla_salas.csv',
+          columnas: this.columnasCsv,
+          ayuda: 'Las columnas "tipo" y "estado" aceptan el nombre tal como aparece en Mantenimiento → Catálogos.',
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => datos.nombre,
+          crear: (datos) => this.salasService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.salasService.cargar();
+      });
   }
 
   // ============================================================

@@ -8,11 +8,20 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, ConveniosService } from '../../service/convenios.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, ConvenioInput, ConveniosService } from '../../service/convenios.service';
 import { AseguradorasService } from '../../service/aseguradoras.service';
+import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
+
+const ESTADOS_CONVENIO_EJEMPLO = [
+  { id: 1, label: 'Vigente' },
+  { id: 2, label: 'Vencido' },
+  { id: 3, label: 'Suspendido' },
+];
 
 @Component({
   selector: 'app-convenios-lista',
@@ -27,6 +36,14 @@ export class ConveniosLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
+
+  private catalogos = inject(CatalogosService);
+  private estadosApi = this.catalogos.obtener('ESTADO_CONVENIO');
+  private estados = computed(() => {
+    const api = this.estadosApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : ESTADOS_CONVENIO_EJEMPLO;
+  });
 
   buscar = signal('');
   errorAccion = signal('');
@@ -87,6 +104,97 @@ export class ConveniosLista {
       next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'aseguradora', etiqueta: 'Nombre exacto de la aseguradora', requerido: true, ejemplo: 'Seguros El Roble' },
+    { clave: 'nombre_convenio', etiqueta: 'Nombre del convenio', requerido: true, ejemplo: 'Convenio corporativo 2026' },
+    { clave: 'fecha_inicio', etiqueta: 'Fecha de inicio (AAAA-MM-DD)', requerido: true, ejemplo: '2026-01-01' },
+    { clave: 'fecha_fin', etiqueta: 'Fecha de fin (opcional, AAAA-MM-DD)', requerido: false, ejemplo: '2026-12-31' },
+    { clave: 'cobertura_general', etiqueta: 'Porcentaje de cobertura general (opcional, 0-100)', requerido: false, ejemplo: '80' },
+    { clave: 'estado', etiqueta: 'Estado (ej. Vigente, Vencido, Suspendido)', requerido: true, ejemplo: 'Vigente' },
+    { clave: 'condiciones', etiqueta: 'Condiciones (opcional)', requerido: false, ejemplo: 'Aplica a consulta externa y laboratorio' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: ConvenioInput | null } {
+    const errores: string[] = [];
+
+    const aseguradoraTexto = (fila['aseguradora'] ?? '').trim();
+    const idAseguradora = aseguradoraTexto
+      ? this.aseguradorasService.listar().find((a) => a.nombre.toLowerCase() === aseguradoraTexto.toLowerCase())?.idAseguradora ?? null
+      : null;
+    if (!aseguradoraTexto) errores.push('Falta la aseguradora');
+    else if (idAseguradora === null) errores.push(`No existe una aseguradora llamada "${aseguradoraTexto}"`);
+
+    const nombreConvenio = (fila['nombre_convenio'] ?? '').trim();
+    if (!nombreConvenio) errores.push('Falta el nombre del convenio');
+
+    const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const fechaInicio = (fila['fecha_inicio'] ?? '').trim();
+    if (!fechaInicio) errores.push('Falta la fecha de inicio');
+    else if (!fechaRegex.test(fechaInicio)) errores.push('La fecha de inicio debe tener el formato AAAA-MM-DD');
+
+    const fechaFin = (fila['fecha_fin'] ?? '').trim();
+    if (fechaFin && !fechaRegex.test(fechaFin)) errores.push('La fecha de fin debe tener el formato AAAA-MM-DD');
+
+    let porcentajeCoberturaGeneral: number | null = null;
+    const coberturaTexto = (fila['cobertura_general'] ?? '').trim();
+    if (coberturaTexto) {
+      porcentajeCoberturaGeneral = Number(coberturaTexto);
+      if (isNaN(porcentajeCoberturaGeneral) || porcentajeCoberturaGeneral < 0 || porcentajeCoberturaGeneral > 100) {
+        errores.push('El porcentaje de cobertura debe ser un número entre 0 y 100');
+      }
+    }
+
+    const estadoTexto = (fila['estado'] ?? '').trim();
+    let idEstadoConvenio: number | null = null;
+    if (!estadoTexto) {
+      errores.push('Falta el estado');
+    } else {
+      idEstadoConvenio = this.estados().find((e) => e.label.toLowerCase() === estadoTexto.toLowerCase())?.id ?? null;
+      if (idEstadoConvenio === null) errores.push(`El estado "${estadoTexto}" no existe (revisa Mantenimiento → Catálogos)`);
+    }
+
+    if (errores.length > 0 || idAseguradora === null || idEstadoConvenio === null) return { errores, datos: null };
+
+    return {
+      errores: [],
+      datos: {
+        idAseguradora,
+        nombreConvenio,
+        fechaInicio,
+        fechaFin: fechaFin || null,
+        porcentajeCoberturaGeneral,
+        idEstadoConvenio,
+        condiciones: (fila['condiciones'] ?? '').trim() || null,
+      },
+    };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<ConvenioInput>, ImportarCsvDialogData<ConvenioInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar convenios desde CSV',
+          icono: 'handshake',
+          nombreEntidadPlural: 'convenios',
+          nombreArchivoPlantilla: 'plantilla_convenios.csv',
+          columnas: this.columnasCsv,
+          ayuda: 'La aseguradora debe escribirse exactamente igual a como aparece en Mantenimiento → Aseguradoras.',
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => datos.nombreConvenio,
+          crear: (datos) => this.conveniosService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.conveniosService.cargar();
+      });
   }
 
   // ============================================================

@@ -12,6 +12,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { provideNativeDateAdapter } from '@angular/material/core';
 import { forkJoin } from 'rxjs';
 import { listaOpcional } from '../../shared/lista-opcional';
@@ -24,12 +25,23 @@ import { SalaService } from '../../service/sala.service';
 import { CatalogoService } from '../../service/catalogo.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
+import { LaboratorioService, OrdenCompleta } from '../../service/laboratorio.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { AuditoriaInfo } from '../../shared/auditoria-info/auditoria-info';
 import { LARGOS, mensajeError } from '../../shared/validadores';
 import { Cita, CitaRequest, Sala } from '../../models/cita.model';
 import { PacienteListado } from '../../models/paciente.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
+
+// Empleado "placeholder" para consultas de solo laboratorio (ver
+// SOLICITUD_MOTOR_CONSULTAS.md): id_medico sigue siendo obligatorio en la
+// base (NOT NULL, usado por hospitalización/atención/factura en todo el
+// sistema), así que en vez de volverlo NULL-able se le asigna este empleado
+// real sin especialidad (por eso nunca aparece en el dropdown de médicos:
+// RetornarMedicos() solo trae empleados con especialidad). Se crea con
+// scripts/crear_empleado_laboratorio.sql.
+const NOMBRE_EMPLEADO_LABORATORIO = 'Laboratorio';
+const APELLIDO_EMPLEADO_LABORATORIO = '(Sin médico asignado)';
 
 // Formas que espera el HTML en cada <mat-option>.
 interface OpcionCatalogo {
@@ -80,6 +92,7 @@ function formatoHora(fecha: Date): string {
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatCheckboxModule,
     AuditoriaInfo,
   ],
   providers: [provideNativeDateAdapter()],
@@ -99,6 +112,7 @@ export class ConsultaFormulario {
   private catalogosService = inject(CatalogosService);
   private catalogoService = inject(CatalogoService);
   private usuariosService = inject(UsuariosService);
+  private laboratorioService = inject(LaboratorioService);
   private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
 
@@ -115,7 +129,10 @@ export class ConsultaFormulario {
 
   // Citas activas, para avisar si el médico o el paciente ya tienen una
   // consulta en ese mismo horario.
-  private citasRegistradas: Cita[] = [];
+  // Signal (no un campo plano): "tienePacienteConsultasPrevias" depende de
+  // esto y necesita recalcularse en cuanto cargarListas() lo llena, no solo
+  // cuando cambia el paciente elegido.
+  private citasRegistradas = signal<Cita[]>([]);
 
   // Cita cargada (en edición): también sirve para mostrar quién la creó y modificó.
   registro = signal<Cita | null>(null);
@@ -144,7 +161,23 @@ export class ConsultaFormulario {
   }
 
   get medicos() { return this.medicosApi(); }
-  get tiposConsulta() { return this.opciones(CODIGOS_CATALOGO.TIPO_CONSULTA); }
+
+  // "Primera vez" no tiene sentido si el paciente ya tiene otras consultas
+  // registradas (cualquier estado, menos esta misma si se está editando).
+  private pacienteSeleccionado = signal<number | null>(null);
+  tienePacienteConsultasPrevias = computed(() => {
+    const idPaciente = this.pacienteSeleccionado();
+    if (!idPaciente) return false;
+    return this.citasRegistradas().some((c) => c.idPaciente === idPaciente && c.idCita !== this.idCita());
+  });
+
+  tiposConsulta = computed(() => {
+    const todas = this.opciones(CODIGOS_CATALOGO.TIPO_CONSULTA);
+    if (!this.tienePacienteConsultasPrevias()) return todas;
+    const valoresCatalogo = this.catalogos()[CODIGOS_CATALOGO.TIPO_CONSULTA] ?? [];
+    return todas.filter((t) => valoresCatalogo.find((v) => v.id === t.id)?.codigo !== 'PRIMERA_VEZ');
+  });
+
   get estadosCita() { return this.opciones(CODIGOS_CATALOGO.ESTADO_CITA); }
   get motivosCancelacion() { return this.opciones(CODIGOS_CATALOGO.MOTIVO_CANCELACION); }
 
@@ -161,6 +194,36 @@ export class ConsultaFormulario {
   esCancelada = computed(
     () => this.codigoPorId(CODIGOS_CATALOGO.ESTADO_CITA, this.estadoSeleccionado()) === 'CANCELADA',
   );
+
+  // "Laboratorios" (ver SOLICITUD_MOTOR_CONSULTAS.md): consulta de solo
+  // exámenes, sin médico asignado por recepción — la hora/fecha es siempre
+  // la actual (es un walk-in, no se agenda para después).
+  private tipoConsultaSeleccionado = signal<number | null>(null);
+  esTipoLaboratorio = computed(
+    () => this.codigoPorId(CODIGOS_CATALOGO.TIPO_CONSULTA, this.tipoConsultaSeleccionado()) === 'LABORATORIOS',
+  );
+  private idMedicoLaboratorio = signal<number | null>(null);
+
+  // Exámenes a realizar: se eligen aquí mismo, antes de guardar, para que la
+  // orden de laboratorio nazca junto con la cita (en vez de obligar a entrar
+  // luego a "Atención de la consulta" solo para solicitarlos). Solo aplica
+  // al crear una consulta nueva de tipo Laboratorios.
+  tiposExamenLab = signal<{ idTipoExamen: number; nombre: string }[]>([]);
+  examenesSeleccionados = signal<Set<number>>(new Set());
+  private idPrioridadLabDefault: number | null = null;
+  private idEstadoOrdenLabDefault: number | null = null;
+
+  toggleExamenLab(idTipoExamen: number): void {
+    this.examenesSeleccionados.update((actual) => {
+      const nuevo = new Set(actual);
+      if (nuevo.has(idTipoExamen)) {
+        nuevo.delete(idTipoExamen);
+      } else {
+        nuevo.add(idTipoExamen);
+      }
+      return nuevo;
+    });
+  }
 
   // Datos de la cita que el formulario no edita, para no perderlos al guardar.
   // "Marcar para operación" (SOLICITUD_MOTOR_CONSULTAS.md, sección 5) ya no
@@ -189,6 +252,25 @@ export class ConsultaFormulario {
     this.form.controls.idEstadoCita.valueChanges.pipe(takeUntilDestroyed()).subscribe((estado) => {
       this.estadoSeleccionado.set(estado);
       this.actualizarReglaCancelacion();
+    });
+
+    // "Laboratorios": médico opcional (se asigna el placeholder) y fecha/hora
+    // fijas a "ahora".
+    this.form.controls.idTipoConsulta.valueChanges.pipe(takeUntilDestroyed()).subscribe((idTipo) => {
+      this.tipoConsultaSeleccionado.set(idTipo);
+      this.actualizarReglaLaboratorio();
+    });
+
+    // "Primera vez" deja de ser válido si el paciente elegido ya tiene otras
+    // consultas — si quedó esa opción puesta, se cambia a "Reconsulta".
+    this.form.controls.idPaciente.valueChanges.pipe(takeUntilDestroyed()).subscribe((idPaciente) => {
+      this.pacienteSeleccionado.set(idPaciente);
+      const idActual = this.form.controls.idTipoConsulta.value;
+      const sigueDisponible = this.tiposConsulta().some((t) => t.id === idActual);
+      if (idActual !== null && !sigueDisponible) {
+        const idReconsulta = this.idPorCodigo(CODIGOS_CATALOGO.TIPO_CONSULTA, 'RECONSULTA');
+        this.form.controls.idTipoConsulta.setValue(idReconsulta);
+      }
     });
 
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -238,18 +320,61 @@ export class ConsultaFormulario {
     control.updateValueAndValidity({ emitEvent: false });
   }
 
+  private actualizarReglaLaboratorio(): void {
+    const idMedicoControl = this.form.controls.idMedico;
+    const fechaControl = this.form.controls.fecha;
+    const horaControl = this.form.controls.hora;
+
+    if (this.esTipoLaboratorio()) {
+      idMedicoControl.clearValidators();
+      const idLab = this.idMedicoLaboratorio();
+      if (idLab !== null) {
+        idMedicoControl.setValue(idLab, { emitEvent: false });
+      }
+      idMedicoControl.updateValueAndValidity({ emitEvent: false });
+
+      // Solo al crear: al editar una ya existente se conserva la fecha/hora
+      // original (igual que la duración, ver guardar()), no se vuelve a
+      // poner "ahora" cada vez que se abre para editarla.
+      if (this.esNueva()) {
+        const ahora = new Date();
+        fechaControl.setValue(ahora, { emitEvent: false });
+        horaControl.setValue(
+          `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`,
+          { emitEvent: false },
+        );
+      }
+      fechaControl.disable({ emitEvent: false });
+      horaControl.disable({ emitEvent: false });
+    } else {
+      idMedicoControl.setValidators(Validators.required);
+      // Si había quedado puesto el médico placeholder, se limpia para
+      // obligar a elegir uno real.
+      if (idMedicoControl.value !== null && idMedicoControl.value === this.idMedicoLaboratorio()) {
+        idMedicoControl.setValue(null, { emitEvent: false });
+      }
+      idMedicoControl.updateValueAndValidity({ emitEvent: false });
+      fechaControl.enable({ emitEvent: false });
+      horaControl.enable({ emitEvent: false });
+    }
+  }
+
   private cargarListas(): void {
     const c = CODIGOS_CATALOGO;
     forkJoin({
       pacientes: this.pacienteService.RetornarPacientes(),
       pacientesEliminados: this.pacienteService.RetornarPacientesEliminados().pipe(listaOpcional()),
       medicos: this.empleadoService.RetornarMedicos(),
+      empleadosTodos: this.empleadoService.RetornarEmpleados(),
       especialidades: this.especialidadService.RetornarEspecialidades(),
       salas: this.salaService.RetornarSalas(),
       tiposConsulta: this.catalogoService.RetornarCatalogo(c.TIPO_CONSULTA),
       estados: this.catalogoService.RetornarCatalogo(c.ESTADO_CITA),
       motivos: this.catalogoService.RetornarCatalogo(c.MOTIVO_CANCELACION),
       citas: this.citaService.RetornarCitas(),
+      tiposExamen: this.laboratorioService.RetornarTiposExamen(),
+      prioridadesLab: this.laboratorioService.RetornarPrioridades(),
+      estadosOrdenLab: this.laboratorioService.RetornarEstadosOrden(),
     }).subscribe({
       next: (r) => {
         const especialidades = r.especialidades.datos ?? [];
@@ -269,7 +394,16 @@ export class ConsultaFormulario {
           [c.ESTADO_CITA]: r.estados.datos ?? [],
           [c.MOTIVO_CANCELACION]: r.motivos.datos ?? [],
         });
-        this.citasRegistradas = (r.citas.datos ?? []).map((x) => x.cita);
+        this.citasRegistradas.set((r.citas.datos ?? []).map((x) => x.cita));
+
+        const empleadoLaboratorio = (r.empleadosTodos.datos ?? []).find(
+          (e) => e.primerNombre === NOMBRE_EMPLEADO_LABORATORIO && e.primerApellido === APELLIDO_EMPLEADO_LABORATORIO,
+        );
+        this.idMedicoLaboratorio.set(empleadoLaboratorio?.idEmpleado ?? null);
+
+        this.tiposExamenLab.set(r.tiposExamen.map((t) => ({ idTipoExamen: t.idTipoExamen, nombre: t.nombre })));
+        this.idPrioridadLabDefault = r.prioridadesLab.find((p) => p.codigo === 'NORMAL')?.id ?? r.prioridadesLab[0]?.id ?? null;
+        this.idEstadoOrdenLabDefault = r.estadosOrdenLab.find((e) => e.codigo === 'PENDIENTE')?.id ?? r.estadosOrdenLab[0]?.id ?? null;
 
         if (this.esNueva() && this.form.controls.idEstadoCita.value === null) {
           this.form.controls.idEstadoCita.setValue(this.idPorCodigo(c.ESTADO_CITA, 'PROGRAMADA'));
@@ -277,6 +411,8 @@ export class ConsultaFormulario {
         this.estadoSeleccionado.set(this.form.controls.idEstadoCita.value);
         this.actualizarReglaCancelacion();
         this.aplicarTipoConsultaPendiente();
+        this.tipoConsultaSeleccionado.set(this.form.controls.idTipoConsulta.value);
+        this.actualizarReglaLaboratorio();
       },
       error: (err: Error) => this.notificaciones.error('No se pudieron cargar las listas del formulario: ' + err.message),
     });
@@ -321,7 +457,7 @@ export class ConsultaFormulario {
   // Busca otra cita activa del mismo médico o del mismo paciente que se cruce
   // con el horario [inicio, fin).
   private buscarChoque(inicio: Date, fin: Date, idMedico: number, idPaciente: number): string | null {
-    for (const c of this.citasRegistradas) {
+    for (const c of this.citasRegistradas()) {
       if (c.idCita === this.idCita() || this.liberaHorario(c.idEstadoCita)) {
         continue;
       }
@@ -331,7 +467,10 @@ export class ConsultaFormulario {
         continue;
       }
       const rango = `${formatoHora(otroInicio)} a ${formatoHora(otroFin)}`;
-      if (c.idMedico === idMedico) {
+      // El médico placeholder de "Laboratorios" no es un recurso real que se
+      // pueda chocar: muchas consultas de solo exámenes comparten ese mismo
+      // "médico" al mismo tiempo sin problema.
+      if (c.idMedico === idMedico && idMedico !== this.idMedicoLaboratorio()) {
         return `El médico ya tiene una consulta de ${rango}`;
       }
       if (c.idPaciente === idPaciente) {
@@ -351,10 +490,25 @@ export class ConsultaFormulario {
       return;
     }
 
+    const requiereSeleccionDeExamenes = this.esNueva() && this.esTipoLaboratorio();
+    if (requiereSeleccionDeExamenes && this.examenesSeleccionados().size === 0) {
+      this.notificaciones.error('Selecciona al menos un examen para esta consulta de laboratorio.');
+      return;
+    }
+
     const v = this.form.getRawValue();
-    const [horas, minutos] = v.hora.split(':').map(Number);
-    const inicio = new Date(v.fecha!);
-    inicio.setHours(horas, minutos, 0, 0);
+    // "Laboratorios" siempre es ahora mismo (es un walk-in, no se agenda):
+    // se recalcula aquí en vez de confiar en lo que haya en los controles
+    // (deshabilitados, pueden llevar unos segundos de retraso desde que se
+    // armó el formulario).
+    let inicio: Date;
+    if (this.esTipoLaboratorio()) {
+      inicio = new Date();
+    } else {
+      const [horas, minutos] = v.hora.split(':').map(Number);
+      inicio = new Date(v.fecha!);
+      inicio.setHours(horas, minutos, 0, 0);
+    }
 
     // Al editar se conserva la duración original; al crear se usan 30 minutos.
     const duracionMs = this.citaOriginal
@@ -366,14 +520,17 @@ export class ConsultaFormulario {
     // (una consulta ya atendida conserva su fecha original).
     const cambioHorario =
       !this.citaOriginal || new Date(this.citaOriginal.fechaHoraInicio).getTime() !== inicio.getTime();
-    if (cambioHorario && inicio.getTime() < Date.now()) {
+    if (cambioHorario && inicio.getTime() < Date.now() && !this.esTipoLaboratorio()) {
       this.form.controls.hora.setErrors({ fechaPasada: true });
       this.notificaciones.error('No se puede agendar una consulta en una fecha u hora pasada.');
       return;
     }
 
-    // Choque de horario con otra consulta del mismo médico o paciente.
-    if (!this.liberaHorario(v.idEstadoCita)) {
+    // Choque de horario con otra consulta del mismo médico o paciente: no
+    // aplica a "Laboratorios" — son walk-ins de solo exámenes, siempre a la
+    // hora actual, y es normal que el paciente tenga otra consulta agendada
+    // (o varias visitas de laboratorio) al mismo tiempo.
+    if (!this.liberaHorario(v.idEstadoCita) && !this.esTipoLaboratorio()) {
       const choque = this.buscarChoque(inicio, fin, v.idMedico!, v.idPaciente!);
       if (choque) {
         this.form.controls.hora.setErrors({ choque });
@@ -382,7 +539,7 @@ export class ConsultaFormulario {
       }
     }
 
-    const tipoTexto = this.tiposConsulta.find((t) => t.id === v.idTipoConsulta)?.label;
+    const tipoTexto = this.tiposConsulta().find((t) => t.id === v.idTipoConsulta)?.label;
     const notasTexto = v.notas.trim();
     const notas = [tipoTexto ? `Tipo de consulta: ${tipoTexto}.` : '', notasTexto].filter(Boolean).join(' ') || null;
     const medico = this.medicos.find((m) => m.id === v.idMedico);
@@ -416,7 +573,16 @@ export class ConsultaFormulario {
       : this.citaService.ActualizarCita(this.idCita(), request);
 
     peticion.subscribe({
-      next: () => {
+      next: (resp) => {
+        const citaCreada = resp.datos?.cita;
+        if (requiereSeleccionDeExamenes && citaCreada) {
+          this.crearOrdenExamenesLab(citaCreada, () => {
+            this.guardando.set(false);
+            this.notificaciones.exito('Consulta y exámenes registrados correctamente');
+            this.router.navigate(['/home/consultas']);
+          });
+          return;
+        }
         this.guardando.set(false);
         this.notificaciones.exito(esNueva ? 'Consulta registrada correctamente' : 'Consulta actualizada correctamente');
         this.router.navigate(['/home/consultas']);
@@ -424,6 +590,51 @@ export class ConsultaFormulario {
       error: (err: Error) => {
         this.guardando.set(false);
         this.notificaciones.error('No se pudo guardar la consulta: ' + err.message);
+      },
+    });
+  }
+
+  // La cita ya existe (recién creada): arma la orden de laboratorio con los
+  // exámenes elegidos antes de guardar y la crea, ligada por idCita (mismo
+  // patrón que consulta-atencion.ts al "Solicitar examen").
+  private crearOrdenExamenesLab(cita: Cita, alTerminar: () => void): void {
+    if (this.idPrioridadLabDefault === null || this.idEstadoOrdenLabDefault === null) {
+      this.notificaciones.error('La consulta se guardó, pero no se pudo resolver el catálogo de laboratorio para crear la orden de exámenes.');
+      alTerminar();
+      return;
+    }
+
+    const ahora = toIsoDateTimeLocal(new Date());
+    const registro: OrdenCompleta = {
+      orden: {
+        idOrden: 0,
+        idPaciente: cita.idPaciente,
+        idMedico: cita.idMedico,
+        idCita: cita.idCita,
+        fechaOrden: ahora,
+        idPrioridad: this.idPrioridadLabDefault,
+        idEstadoOrden: this.idEstadoOrdenLabDefault,
+        notas: null,
+        activo: true,
+        fechaCreacion: ahora,
+        fechaModificacion: null,
+        idUsuarioCreacion: null,
+        idUsuarioModificacion: null,
+      },
+      detalles: [...this.examenesSeleccionados()].map((idTipoExamen) => ({
+        idOrdenDetalle: 0,
+        idOrden: 0,
+        idTipoExamen,
+        activo: true,
+        fechaCreacion: ahora,
+      })),
+    };
+
+    this.laboratorioService.guardar(registro).subscribe({
+      next: () => alTerminar(),
+      error: (err: Error) => {
+        this.notificaciones.error('La consulta se guardó, pero no se pudo registrar la orden de exámenes: ' + err.message);
+        alTerminar();
       },
     });
   }

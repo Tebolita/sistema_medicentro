@@ -81,6 +81,17 @@
 --   PARTE 14 — Rol ADMIN (acceso a los 9 módulos) creado y asignado a ese
 --              usuario 'admin' — ya puedes iniciar sesión y usar todo el
 --              sistema apenas termine de correr este script.
+--   PARTE 15 — Columna tipos_examen.precio_venta_publico (precio con el que
+--              se cobra cada examen dentro de la factura).
+--   PARTE 16 — Catálogo TIPO_CONSULTA, código LABORATORIOS ("consulta" que
+--              solo es para que el paciente se haga exámenes, sin médico
+--              obligatorio) + empleado de relleno "Laboratorio" (sin
+--              especialidad, así nunca aparece en los selectores de médico)
+--              que el frontend asigna automáticamente a esas consultas.
+--   PARTE 17 — Columna factura_detalle.id_orden_detalle: liga una línea de
+--              factura al examen de laboratorio que la originó, para
+--              cobrarlo automáticamente con el precio de tipos_examen (igual
+--              que ya pasa con los medicamentos de receta).
 --
 -- QUÉ NO HACE (adrede, hay que hacerlo aparte, a mano):
 --   - Crear OTROS usuarios además del admin de la PARTE 13 (recepcionistas,
@@ -1140,3 +1151,99 @@ WHERE t.codigo IN (
 )
 GROUP BY t.codigo
 ORDER BY t.codigo;
+
+-- =============================================================================
+-- PARTE 15: columna tipos_examen.precio_venta_publico — con esto se calcula
+-- la línea de factura de cada examen (mismo patrón que
+-- medicamentos.precio_venta_publico de la PARTE 11).
+-- =============================================================================
+BEGIN TRANSACTION;
+BEGIN TRY
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.tipos_examen') AND name = 'precio_venta_publico')
+BEGIN
+    ALTER TABLE dbo.tipos_examen ADD precio_venta_publico DECIMAL(12,2) NULL;
+    UPDATE dbo.tipos_examen SET precio_venta_publico = 0 WHERE precio_venta_publico IS NULL;
+    ALTER TABLE dbo.tipos_examen ALTER COLUMN precio_venta_publico DECIMAL(12,2) NOT NULL;
+END
+
+COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+
+-- =============================================================================
+-- PARTE 16: catálogo TIPO_CONSULTA código LABORATORIOS + empleado de relleno
+-- "Laboratorio" / "(Sin médico asignado)" que consulta-formulario.ts asigna
+-- automáticamente a las consultas de solo-exámenes (sin id_especialidad, así
+-- que EmpleadosService.ListarMedicosAsync() —que filtra
+-- WHERE e.Activo && e.IdEspecialidad != null— nunca lo lista como médico).
+-- Idempotente: si el valor de catálogo o el empleado ya existen, no hace nada.
+-- =============================================================================
+BEGIN TRANSACTION;
+BEGIN TRY
+
+DECLARE @IdTipoCatalogoConsulta BIGINT = (SELECT id_tipo_catalogo FROM dbo.cat_tipo_catalogo WHERE codigo = 'TIPO_CONSULTA');
+IF @IdTipoCatalogoConsulta IS NULL
+    THROW 50000, 'No existe el tipo de catálogo TIPO_CONSULTA — revisa que la PARTE 2 haya corrido bien.', 1;
+
+IF NOT EXISTS (SELECT 1 FROM dbo.cat_valor_catalogo WHERE id_tipo_catalogo = @IdTipoCatalogoConsulta AND codigo = 'LABORATORIOS')
+    INSERT INTO dbo.cat_valor_catalogo (id_tipo_catalogo, codigo, nombre, orden, activo, fecha_creacion)
+    VALUES (@IdTipoCatalogoConsulta, 'LABORATORIOS', N'Laboratorios', 3, 1, SYSUTCDATETIME());
+
+IF NOT EXISTS (SELECT 1 FROM dbo.empleados WHERE primer_nombre = N'Laboratorio' AND primer_apellido = N'(Sin médico asignado)')
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dbo.puestos WHERE nombre = N'Laboratorio (sin médico)')
+        INSERT INTO dbo.puestos (nombre, activo, fecha_creacion) VALUES (N'Laboratorio (sin médico)', 1, SYSUTCDATETIME());
+
+    DECLARE @IdPuestoLaboratorio BIGINT = (SELECT id_puesto FROM dbo.puestos WHERE nombre = N'Laboratorio (sin médico)');
+
+    DECLARE @IdEstadoEmpleadoActivoLab BIGINT = (
+        SELECT v.id_valor_catalogo FROM dbo.cat_valor_catalogo v
+        JOIN dbo.cat_tipo_catalogo t ON t.id_tipo_catalogo = v.id_tipo_catalogo
+        WHERE t.codigo = 'ESTADO_EMPLEADO' AND v.codigo = 'ACTIVO'
+    );
+    IF @IdEstadoEmpleadoActivoLab IS NULL
+        THROW 50000, 'No se pudo resolver ESTADO_EMPLEADO/ACTIVO — revisa que la PARTE 2 haya corrido bien.', 1;
+
+    -- id_especialidad se deja NULL adrede: así nunca aparece como médico seleccionable.
+    INSERT INTO dbo.empleados (
+        primer_nombre, primer_apellido, id_puesto, id_especialidad, fecha_ingreso, id_estado_empleado, activo, fecha_creacion
+    )
+    VALUES (
+        N'Laboratorio', N'(Sin médico asignado)', @IdPuestoLaboratorio, NULL, CAST(SYSUTCDATETIME() AS DATE), @IdEstadoEmpleadoActivoLab, 1, SYSUTCDATETIME()
+    );
+END
+
+COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+
+-- Verificación: debe devolver una fila, con id_especialidad en NULL.
+SELECT e.id_empleado, e.primer_nombre, e.primer_apellido, e.id_especialidad, cv.codigo AS codigo_tipo_consulta
+FROM dbo.empleados e
+CROSS JOIN (
+    SELECT v.codigo FROM dbo.cat_valor_catalogo v
+    JOIN dbo.cat_tipo_catalogo t ON t.id_tipo_catalogo = v.id_tipo_catalogo
+    WHERE t.codigo = 'TIPO_CONSULTA' AND v.codigo = 'LABORATORIOS'
+) cv
+WHERE e.primer_nombre = N'Laboratorio' AND e.primer_apellido = N'(Sin médico asignado)';
+
+-- =============================================================================
+-- PARTE 17: factura_detalle.id_orden_detalle — liga una línea de factura al
+-- examen de laboratorio que la originó (mismo patrón que id_receta_detalle
+-- con los medicamentos de receta), para que FacturasService.
+-- SincronizarLineasDesdeExamenesAsync pueda cobrar cada examen agregado a
+-- una orden de laboratorio con el precio_venta_publico de tipos_examen
+-- (PARTE 15), igual que ya pasa con los medicamentos de una receta.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.factura_detalle') AND name = 'id_orden_detalle')
+    ALTER TABLE dbo.factura_detalle ADD id_orden_detalle BIGINT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'fk_factura_detalle_orden_detalle')
+AND EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.factura_detalle') AND name = 'id_orden_detalle')
+    ALTER TABLE dbo.factura_detalle ADD CONSTRAINT fk_factura_detalle_orden_detalle FOREIGN KEY (id_orden_detalle) REFERENCES dbo.orden_detalle (id_orden_detalle);

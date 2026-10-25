@@ -8,10 +8,12 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, ProveedoresService } from '../../service/proveedores.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, ProveedorInput, ProveedoresService } from '../../service/proveedores.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 @Component({
   selector: 'app-proveedores-lista',
@@ -25,6 +27,7 @@ export class ProveedoresLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -66,6 +69,63 @@ export class ProveedoresLista {
       next: () => this.notificaciones.exito('Eliminado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'nombre', etiqueta: 'Nombre del proveedor', requerido: true, ejemplo: 'Droguería Central' },
+    { clave: 'nit', etiqueta: 'NIT (opcional)', requerido: false, ejemplo: '12345678-9' },
+    { clave: 'telefono', etiqueta: 'Teléfono (opcional)', requerido: false, ejemplo: '22223333' },
+    { clave: 'correo', etiqueta: 'Correo (opcional)', requerido: false, ejemplo: 'contacto@drogueria.com' },
+    { clave: 'direccion', etiqueta: 'Dirección (opcional)', requerido: false, ejemplo: 'Zona 1, Guatemala' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: ProveedorInput | null } {
+    const errores: string[] = [];
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) errores.push('Falta el nombre');
+
+    const correo = (fila['correo'] ?? '').trim();
+    if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      errores.push(`El correo "${correo}" no es válido`);
+    }
+
+    if (errores.length > 0) return { errores, datos: null };
+
+    return {
+      errores: [],
+      datos: {
+        nombre,
+        nit: (fila['nit'] ?? '').trim() || null,
+        telefono: (fila['telefono'] ?? '').trim() || null,
+        correo: correo || null,
+        direccion: (fila['direccion'] ?? '').trim() || null,
+      },
+    };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<ProveedorInput>, ImportarCsvDialogData<ProveedorInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar proveedores desde CSV',
+          icono: 'local_shipping',
+          nombreEntidadPlural: 'proveedores',
+          nombreArchivoPlantilla: 'plantilla_proveedores.csv',
+          columnas: this.columnasCsv,
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => datos.nombre,
+          crear: (datos) => this.proveedoresService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.proveedoresService.cargar();
+      });
   }
 
   // ============================================================

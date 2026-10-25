@@ -8,13 +8,16 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import {
   BitacoraItem,
+  TipoConsentimientoInput,
   TiposConsentimientoService,
   UsuarioOpcion,
 } from '../../service/tipos-consentimiento.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -29,6 +32,7 @@ export class TiposConsentimientoLista {
   private accionAuditoria = inject(AuditoriaAccionService);
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -99,6 +103,51 @@ export class TiposConsentimientoLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'codigo', etiqueta: 'Código único (solo letras, números y _)', requerido: true, ejemplo: 'CIRUGIA_MENOR' },
+    { clave: 'nombre', etiqueta: 'Nombre a mostrar', requerido: true, ejemplo: 'Consentimiento de cirugía menor' },
+    { clave: 'plantilla_texto', etiqueta: 'Texto de la plantilla (opcional)', requerido: false, ejemplo: 'Yo, el paciente, autorizo...' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: TipoConsentimientoInput | null } {
+    const errores: string[] = [];
+    const codigo = (fila['codigo'] ?? '').trim().toUpperCase();
+    if (!codigo) errores.push('Falta el código');
+    else if (!/^[A-Za-z0-9_]+$/.test(codigo)) errores.push('El código solo puede tener letras, números y guión bajo');
+
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) errores.push('Falta el nombre');
+
+    if (errores.length > 0) return { errores, datos: null };
+
+    return { errores: [], datos: { codigo, nombre, plantillaTexto: (fila['plantilla_texto'] ?? '').trim() || null } };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<TipoConsentimientoInput>, ImportarCsvDialogData<TipoConsentimientoInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar tipos de consentimiento desde CSV',
+          icono: 'description',
+          nombreEntidadPlural: 'tipos de consentimiento',
+          nombreArchivoPlantilla: 'plantilla_tipos_consentimiento.csv',
+          columnas: this.columnasCsv,
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => `${datos.nombre} (${datos.codigo})`,
+          crear: (datos) => this.tiposService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.tiposService.cargar();
+      });
   }
 
   // ============================================================

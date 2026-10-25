@@ -17,6 +17,7 @@ import { CatalogoService } from '../../service/catalogo.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { Cita } from '../../models/cita.model';
+import { esConsultaDeLaboratorio } from '../../shared/tipo-consulta.util';
 import { PacienteListado, PacienteAlergia, PacienteAntecedente } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
 import { CatalogoOpcion, CODIGOS_CATALOGO } from '../../models/catalogo.model';
@@ -186,6 +187,10 @@ export class ExpedientesLista {
   ultimaOperacion = computed<Cita | null>(
     () => this.consultasDelPaciente().find((c) => c.requiereOperacion) ?? null,
   );
+
+  esLaboratorio(c: Cita): boolean {
+    return esConsultaDeLaboratorio(c.notas);
+  }
 
   pacienteActual = computed<PacienteListado | null>(() => {
     const id = this.pacienteSeleccionado();

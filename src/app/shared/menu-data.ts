@@ -71,11 +71,6 @@ export const MENU_SECTIONS: MenuSection[] = [
         route: '/home/expedientes',
         queryParams: { tipo: 'INGRESADO' },
       },
-      {
-        icon: 'note_add',
-        label: 'Nuevo expediente',
-        route: '/home/expedientes/nuevo',
-      },
     ],
   },
   {

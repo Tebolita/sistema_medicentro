@@ -1,5 +1,5 @@
 import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, of } from 'rxjs';
 import { finalize } from 'rxjs/operators';
@@ -16,6 +16,7 @@ import { FacturaDetalle } from '../../models';
 import { RecetasService, RecetaCompleta } from '../../service/recetas.service';
 import { CitaService } from '../../service/cita.service';
 import { MedicamentosService } from '../../service/medicamentos.service';
+import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { RecetasVistazoDialog } from './dialogs/recetas-vistazo-dialog';
 import { NgClass, DatePipe } from '@angular/common';
 import { BitacoraItem, FacturaCompleta, FacturaInput, FacturasService } from '../../service/facturas.service';
@@ -59,8 +60,17 @@ export class FacturaFormulario {
   private notificaciones = inject(NotificacionesService);
   private recetasService = inject(RecetasService);
   private medicamentosService = inject(MedicamentosService);
+  private inventarioFarmaciaService = inject(InventarioFarmaciaService);
   private citaService = inject(CitaService);
   private dialog = inject(MatDialog);
+  private destroyRef = inject(DestroyRef);
+
+  // Venta directa de medicamento sin receta (caja extra para el paciente,
+  // medicamento de venta libre, etc. — ver SOLICITUD_MOTOR_CONSULTAS.md):
+  // al elegir "Medicamento" como tipo de línea, se puede escoger el
+  // medicamento real del inventario para que se descuente stock al pagar,
+  // igual que las líneas que vienen de una receta.
+  medicamentos = this.medicamentosService.listar;
 
   // Para identificar de dónde salió esta factura (ver
   // SOLICITUD_MOTOR_CONSULTAS.md: toda cita nace con su factura en Q0).
@@ -136,20 +146,29 @@ export class FacturaFormulario {
   private subtotalSignal = signal(0);
   subtotal = computed(() => this.subtotalSignal());
 
+  // Aritmética de punto flotante: sumar/restar decimales en JS puede dar
+  // "44.80000000000001" en vez de 44.8 (0.1 + 0.2 !== 0.3, el clásico).
+  // formatMonto() lo disimula con toFixed(2), pero el campo de "Monto" del
+  // pago es un <input type="number"> que muestra el valor crudo tal cual
+  // — hay que redondear el número en sí, no solo cómo se ve.
+  private redondear(valor: number): number {
+    return Math.round((valor + Number.EPSILON) * 100) / 100;
+  }
+
   private recalcularSubtotal(): void {
     const total = this.detalles.controls.reduce((sum, g) => {
       const v = g.getRawValue();
-      return sum + Math.max(0, v.cantidad * v.precioUnitario - v.descuento);
+      return sum + this.redondear(Math.max(0, v.cantidad * v.precioUnitario - v.descuento));
     }, 0);
-    this.subtotalSignal.set(total);
+    this.subtotalSignal.set(this.redondear(total));
   }
 
   descuentoHeader = signal(0);
-  impuesto = computed(() => Math.round((this.subtotal() - this.descuentoHeader()) * TASA_IVA * 100) / 100);
-  total = computed(() => Math.round((this.subtotal() - this.descuentoHeader() + this.impuesto()) * 100) / 100);
+  impuesto = computed(() => this.redondear((this.subtotal() - this.descuentoHeader()) * TASA_IVA));
+  total = computed(() => this.redondear(this.subtotal() - this.descuentoHeader() + this.impuesto()));
 
   totalPagado = computed(() => (this.esNueva() ? 0 : this.facturasService.totalPagado(this.idFactura())));
-  saldoPendiente = computed(() => Math.max(0, this.total() - this.totalPagado()));
+  saldoPendiente = computed(() => this.redondear(Math.max(0, this.total() - this.totalPagado())));
 
   guardando = signal(false);
   errorMsg = signal('');
@@ -237,6 +256,39 @@ export class FacturaFormulario {
     });
   }
 
+  idTipoMedicamentoResuelto = computed(
+    () => this.catalogos.idPorCodigo('TIPO_ITEM_FACTURA', 'MEDICAMENTO') ?? this.tiposItem()[0]?.id ?? 1,
+  );
+
+  tipoEsMedicamento(grupo: ReturnType<typeof this.crearDetalleGroup>): boolean {
+    return grupo.controls.idTipoItem.value === this.idTipoMedicamentoResuelto();
+  }
+
+  // Al elegir un medicamento real del inventario para una línea manual (no
+  // viene de una receta): autocompleta descripción y precio con el PVP, y
+  // deja la línea marcada como venta directa (idRecetaDetalle null, pero
+  // idMedicamento puesto) para que el backend la descuente del inventario
+  // al pagar, igual que una línea de receta.
+  seleccionarMedicamentoManual(grupo: ReturnType<typeof this.crearDetalleGroup>, idMedicamento: number | null): void {
+    if (idMedicamento === null) {
+      grupo.patchValue({ idMedicamento: null });
+      return;
+    }
+    const medicamento = this.medicamentosService.obtener(idMedicamento);
+    grupo.patchValue({
+      idMedicamento,
+      idRecetaDetalle: null,
+      descripcion: medicamento?.nombre ?? grupo.controls.descripcion.value,
+      precioUnitario: medicamento?.precioVentaPublico || grupo.controls.precioUnitario.value,
+    });
+  }
+
+  stockDisponibleDe(idMedicamento: number): string {
+    const item = this.inventarioFarmaciaService.listar().find((i) => i.idMedicamento === idMedicamento);
+    if (!item) return 'Este medicamento no se maneja en el inventario de la clínica (no se descontará stock).';
+    return `Stock disponible: ${item.stockActual}`;
+  }
+
   agregarLineaDesdeReceta(idRecetaDetalle: number): void {
     const linea = this.medicamentosRecetaDisponibles().find((m) => m.idRecetaDetalle === idRecetaDetalle);
     if (!linea) return;
@@ -257,12 +309,27 @@ export class FacturaFormulario {
 
   constructor() {
     this.recetasService.cargar();
+    this.medicamentosService.cargar();
+    this.inventarioFarmaciaService.cargar();
 
     this.cabecera.controls.descuento.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe((v) => this.descuentoHeader.set(v));
 
     this.detalles.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.recalcularSubtotal());
+
+    // El monto a cobrar se mantiene igual al saldo pendiente a medida que se
+    // agregan/editan líneas de la factura, para que recepción no tenga que
+    // recalcularlo a mano. Deja de auto-actualizarse en cuanto el usuario
+    // escribe un monto distinto a mano (pago parcial) — se retoma al
+    // registrar el pago o al cargar otra factura (pagoForm.reset lo deja
+    // "pristine" de nuevo).
+    effect(() => {
+      const saldo = this.saldoPendiente();
+      if (!this.pagoForm.controls.monto.dirty) {
+        this.pagoForm.controls.monto.setValue(saldo, { emitEvent: false });
+      }
+    });
 
     // Angular reutiliza esta misma instancia del componente al navegar entre
     // dos facturas distintas sin salir de esta ruta (p. ej. desde las
@@ -309,6 +376,7 @@ export class FacturaFormulario {
     while (this.detalles.length) {
       this.detalles.removeAt(0);
     }
+    this.lineasMinimizadas.set(new Set());
     this.descuentoHeader.set(0);
     this.comprobanteUrlGuardado.set(null);
     this.liberarPreviewLocal();
@@ -322,18 +390,82 @@ export class FacturaFormulario {
   }
 
   private crearDetalleGroup(d?: Partial<FacturaDetalle>) {
-    return this.fb.nonNullable.group({
+    const grupo = this.fb.nonNullable.group({
       id: d?.idFacturaDetalle ?? 0,
       idTipoItem: this.fb.control<number | null>(d?.idTipoItem ?? 1, Validators.required),
-      // Solo se llenan al importar una línea desde una receta (ver
-      // agregarLineaDesdeReceta); en una línea manual quedan en null.
+      // Se llenan al importar una línea desde una receta (ver
+      // agregarLineaDesdeReceta) o al escoger un medicamento real para una
+      // venta directa (ver seleccionarMedicamentoManual); en una línea
+      // manual de otro tipo quedan en null.
       idMedicamento: this.fb.control<number | null>(d?.idMedicamento ?? null),
       idRecetaDetalle: this.fb.control<number | null>(d?.idRecetaDetalle ?? null),
+      // Igual que idRecetaDetalle: solo se llena al traer una línea ya
+      // sincronizada desde un examen de laboratorio (ver
+      // SincronizarLineasDesdeExamenesAsync) — nunca se edita desde aquí,
+      // solo se preserva para que no se pierda el vínculo al guardar.
+      idOrdenDetalle: this.fb.control<number | null>(d?.idOrdenDetalle ?? null),
       descripcion: [d?.descripcion ?? '', [Validators.required, Validators.maxLength(200)]],
       cantidad: [d?.cantidad ?? 1, [Validators.required, Validators.min(1)]],
       precioUnitario: [d?.precioUnitario ?? 0, [Validators.required, Validators.min(0.01)]],
       descuento: [d?.descuento ?? 0, [Validators.required, Validators.min(0)]],
     });
+
+    // Si cambian el tipo de línea a algo distinto de "Medicamento", se
+    // suelta cualquier medicamento/receta que hubiera quedado puesto — si
+    // no, quedaría una línea de otro tipo pero ligada igual a un
+    // medicamento, y el pago la descontaría del inventario por error.
+    grupo.controls.idTipoItem.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((idTipoItem) => {
+      if (idTipoItem !== this.idTipoMedicamentoResuelto() && (grupo.controls.idMedicamento.value !== null || grupo.controls.idRecetaDetalle.value !== null)) {
+        grupo.patchValue({ idMedicamento: null, idRecetaDetalle: null });
+      }
+    });
+
+    return grupo;
+  }
+
+  // Minimizar líneas (ver solicitud: "que no abarquen tanto espacio" cuando
+  // hay varias). Por referencia del FormGroup, no por índice — un índice se
+  // corre al quitar una línea de en medio y dejaría minimizada la línea
+  // equivocada.
+  private lineasMinimizadas = signal<Set<ReturnType<typeof this.crearDetalleGroup>>>(new Set());
+
+  lineaMinimizada(grupo: ReturnType<typeof this.crearDetalleGroup>): boolean {
+    return this.lineasMinimizadas().has(grupo);
+  }
+
+  toggleMinimizarLinea(grupo: ReturnType<typeof this.crearDetalleGroup>): void {
+    this.lineasMinimizadas.update((set) => {
+      const nuevo = new Set(set);
+      if (nuevo.has(grupo)) nuevo.delete(grupo);
+      else nuevo.add(grupo);
+      return nuevo;
+    });
+  }
+
+  todasMinimizadas = computed(() => this.detalles.length > 0 && this.lineasMinimizadas().size === this.detalles.length);
+
+  toggleMinimizarTodas(): void {
+    this.lineasMinimizadas.set(this.todasMinimizadas() ? new Set() : new Set(this.detalles.controls));
+  }
+
+  subtotalLinea(grupo: ReturnType<typeof this.crearDetalleGroup>): number {
+    const v = grupo.getRawValue();
+    return this.redondear(Math.max(0, v.cantidad * v.precioUnitario - v.descuento));
+  }
+
+  tipoLabelDe(grupo: ReturnType<typeof this.crearDetalleGroup>): string {
+    const idTipoItem = grupo.controls.idTipoItem.value;
+    return this.tiposItem().find((t) => t.id === idTipoItem)?.label ?? 'Sin tipo';
+  }
+
+  // Línea minimizada: si es una venta directa de medicamento, antepone su
+  // nombre a la descripción (ej. "Paracetamol · jarabe 120ml") para
+  // identificarla de un vistazo sin tener que expandir la línea.
+  resumenDescripcionDe(grupo: ReturnType<typeof this.crearDetalleGroup>): string {
+    const descripcion = grupo.controls.descripcion.value || 'Sin descripción';
+    const idMedicamento = grupo.controls.idMedicamento.value;
+    const nombreMedicamento = idMedicamento ? this.medicamentos().find((m) => m.idMedicamento === idMedicamento)?.nombre : null;
+    return nombreMedicamento ? `${nombreMedicamento} · ${descripcion}` : descripcion;
   }
 
   agregarDetalle(): void {
@@ -341,7 +473,14 @@ export class FacturaFormulario {
   }
 
   quitarDetalle(index: number): void {
+    const grupo = this.detalles.at(index);
     this.detalles.removeAt(index);
+    this.lineasMinimizadas.update((set) => {
+      if (!set.has(grupo)) return set;
+      const nuevo = new Set(set);
+      nuevo.delete(grupo);
+      return nuevo;
+    });
   }
 
   private cargar(registro: FacturaCompleta): void {
@@ -359,6 +498,10 @@ export class FacturaFormulario {
     });
     this.descuentoHeader.set(registro.factura.descuento);
     registro.detalles.forEach((d) => this.detalles.push(this.crearDetalleGroup(d)));
+    // Al cargar una factura ya guardada, todas las líneas empiezan
+    // minimizadas (puede haber varias) — se expanden solo las que se vayan
+    // a editar.
+    this.lineasMinimizadas.set(new Set(this.detalles.controls));
 
     // La URL del comprobante viaja en la factura (columna comprobante_url);
     // solo se busca por nombre de archivo en el servidor Node como respaldo
@@ -370,8 +513,6 @@ export class FacturaFormulario {
         .buscar(registro.factura.idFactura)
         .subscribe((url) => this.comprobanteUrlGuardado.set(url));
     }
-
-    this.pagoForm.patchValue({ monto: this.saldoPendiente() });
 
     this.citaOrigenFecha.set(null);
     if (registro.factura.idCita !== null) {
@@ -541,6 +682,7 @@ export class FacturaFormulario {
         idTratamiento: null,
         idMedicamento: d.idMedicamento,
         idRecetaDetalle: d.idRecetaDetalle,
+        idOrdenDetalle: d.idOrdenDetalle,
         descripcion: d.descripcion,
         cantidad: d.cantidad,
         precioUnitario: d.precioUnitario,
@@ -583,6 +725,7 @@ export class FacturaFormulario {
                     idTratamiento: d.idTratamiento,
                     idMedicamento: d.idMedicamento,
                     idRecetaDetalle: d.idRecetaDetalle,
+                    idOrdenDetalle: d.idOrdenDetalle,
                     descripcion: d.descripcion,
                     cantidad: d.cantidad,
                     precioUnitario: d.precioUnitario,

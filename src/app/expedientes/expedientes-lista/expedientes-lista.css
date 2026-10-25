@@ -323,6 +323,31 @@
   height: 13px;
 }
 
+/* Solo laboratorio: mismo naranja que usa el módulo de Laboratorio en el
+   resto del sistema, distinto del rojo de operación. */
+.consulta-card-laboratorio {
+  background: color-mix(in srgb, #ef6c00 6%, var(--c-surface));
+  border-color: color-mix(in srgb, #ef6c00 35%, var(--c-border));
+}
+
+.consulta-card-laboratorio:hover {
+  border-color: #ef6c00;
+}
+
+.status-badge-laboratorio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 108, 0, 0.14);
+  color: #ef6c00;
+}
+
+.status-badge-laboratorio mat-icon {
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+}
+
 .resumen-paciente {
   display: flex;
   flex-wrap: wrap;

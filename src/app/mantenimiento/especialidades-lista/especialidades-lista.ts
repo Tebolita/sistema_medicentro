@@ -8,10 +8,12 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, EspecialidadesService } from '../../service/especialidades.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, EspecialidadInput, EspecialidadesService } from '../../service/especialidades.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activas' | 'eliminadas';
 
@@ -27,6 +29,7 @@ export class EspecialidadesLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
 
   buscar = signal('');
   errorAccion = signal('');
@@ -92,6 +95,42 @@ export class EspecialidadesLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'nombre', etiqueta: 'Nombre de la especialidad', requerido: true, ejemplo: 'Pediatría' },
+    { clave: 'descripcion', etiqueta: 'Descripción (opcional)', requerido: false, ejemplo: 'Atención médica de niños' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: EspecialidadInput | null } {
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) return { errores: ['Falta el nombre'], datos: null };
+    return { errores: [], datos: { nombre, descripcion: (fila['descripcion'] ?? '').trim() || null } };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<EspecialidadInput>, ImportarCsvDialogData<EspecialidadInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar especialidades desde CSV',
+          icono: 'medical_services',
+          nombreEntidadPlural: 'especialidades',
+          nombreArchivoPlantilla: 'plantilla_especialidades.csv',
+          columnas: this.columnasCsv,
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => datos.nombre,
+          crear: (datos) => this.especialidadesService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.especialidadesService.cargar();
+      });
   }
 
   // ============================================================

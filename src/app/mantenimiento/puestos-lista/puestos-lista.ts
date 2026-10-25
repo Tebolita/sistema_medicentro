@@ -8,10 +8,12 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, PuestosService } from '../../service/puestos.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, PuestoInput, PuestosService } from '../../service/puestos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -27,6 +29,7 @@ export class PuestosLista {
   private usuariosService = inject(UsuariosService);
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
 
   // ============================================================
   // Historial general de Puestos
@@ -92,6 +95,42 @@ export class PuestosLista {
   usuarioLabel(id: number | null): string {
     if (!id) return 'Sistema';
     return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'nombre', etiqueta: 'Nombre del puesto', requerido: true, ejemplo: 'Enfermero/a' },
+    { clave: 'descripcion', etiqueta: 'Descripción (opcional)', requerido: false, ejemplo: 'Atención y cuidado de pacientes' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: PuestoInput | null } {
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) return { errores: ['Falta el nombre'], datos: null };
+    return { errores: [], datos: { nombre, descripcion: (fila['descripcion'] ?? '').trim() || null } };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<PuestoInput>, ImportarCsvDialogData<PuestoInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar puestos desde CSV',
+          icono: 'work',
+          nombreEntidadPlural: 'puestos',
+          nombreArchivoPlantilla: 'plantilla_puestos.csv',
+          columnas: this.columnasCsv,
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => datos.nombre,
+          crear: (datos) => this.puestosService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.puestosService.cargar();
+      });
   }
 
   // ============================================================

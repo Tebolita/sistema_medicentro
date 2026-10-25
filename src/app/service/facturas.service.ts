@@ -37,6 +37,7 @@ export interface FacturaInput {
     idTratamiento: number | null;
     idMedicamento: number | null;
     idRecetaDetalle: number | null;
+    idOrdenDetalle: number | null;
     descripcion: string;
     cantidad: number;
     precioUnitario: number;
@@ -171,9 +172,11 @@ export class FacturasService {
 
   totalPagado(idFactura: number): number {
     const idAplicado = this.idEstadoPagoAplicado();
-    return this.pagos()
+    const suma = this.pagos()
       .filter((p) => p.idFactura === idFactura && p.idEstadoPago === idAplicado)
       .reduce((suma, p) => suma + p.monto, 0);
+    // Sumar decimales en JS puede dar 44.80000000000001 en vez de 44.8.
+    return Math.round((suma + Number.EPSILON) * 100) / 100;
   }
 
   // Trae facturas y, con ellas, los pagos de cada una.

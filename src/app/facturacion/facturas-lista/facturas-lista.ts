@@ -7,8 +7,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { BitacoraItem, FacturasService } from '../../service/facturas.service';
-import { ESTADOS_FACTURA } from '../facturacion-catalogos';
+import { ESTADOS_FACTURA, FORMAS_PAGO } from '../facturacion-catalogos';
 import { PacientesService } from '../../service/pacientes.service';
 import { MENU_SECTIONS } from '../../shared/menu-data';
 import { CatalogosService } from '../../service/catalogos.service';
@@ -20,7 +22,7 @@ type Vista = 'activas' | 'eliminadas';
 
 @Component({
   selector: 'app-facturas-lista',
-  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule, MatFormFieldModule, MatSelectModule],
   templateUrl: './facturas-lista.html',
   styleUrl: './facturas-lista.css',
 })
@@ -32,6 +34,7 @@ export class FacturasLista {
   private catalogos = inject(CatalogosService);
   private usuariosService = inject(UsuariosService);
   private estadosFacturaApi = this.catalogos.obtener('ESTADO_FACTURA');
+  private formasPagoApi = this.catalogos.obtener('FORMA_PAGO');
   private notificaciones = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
 
@@ -40,6 +43,42 @@ export class FacturasLista {
   buscar = signal('');
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
+
+  // ==================== Filtros ====================
+  pacientes = computed(() =>
+    [...this.pacientesService.directorio()].sort((a, b) =>
+      `${a.primerNombre} ${a.primerApellido}`.localeCompare(`${b.primerNombre} ${b.primerApellido}`),
+    ),
+  );
+  usuarios = this.usuariosService.listar;
+  estadosFactura = computed(() => {
+    const api = this.estadosFacturaApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : ESTADOS_FACTURA;
+  });
+  formasPago = computed(() => {
+    const api = this.formasPagoApi();
+    return api.length ? api.map((v) => ({ id: v.id, label: v.nombre })) : FORMAS_PAGO;
+  });
+
+  filtroPaciente = signal<number | null>(null);
+  filtroUsuario = signal<number | null>(null);
+  filtroFormaPago = signal<number | null>(null);
+  filtroEstado = signal<number | null>(null);
+
+  hayFiltrosActivos = computed(
+    () =>
+      this.filtroPaciente() !== null ||
+      this.filtroUsuario() !== null ||
+      this.filtroFormaPago() !== null ||
+      this.filtroEstado() !== null,
+  );
+
+  limpiarFiltros(): void {
+    this.filtroPaciente.set(null);
+    this.filtroUsuario.set(null);
+    this.filtroFormaPago.set(null);
+    this.filtroEstado.set(null);
+  }
 
   opcionesFacturacion = MENU_SECTIONS.find((s) => s.slug === 'facturacion-cobros')?.items ?? [];
 
@@ -77,17 +116,37 @@ export class FacturasLista {
 
   facturas = computed(() => {
     const term = this.buscar().trim().toLowerCase();
-    const lista = this.vista() === 'activas' ? this.facturasService.listar() : this.facturasService.listarEliminadas();
-    if (!term) {
-      return lista;
+    const idPaciente = this.filtroPaciente();
+    const idUsuario = this.filtroUsuario();
+    const idFormaPago = this.filtroFormaPago();
+    const idEstado = this.filtroEstado();
+    const esActivas = this.vista() === 'activas';
+
+    let lista = esActivas ? this.facturasService.listar() : this.facturasService.listarEliminadas();
+
+    if (idPaciente !== null) {
+      lista = lista.filter((r) => r.factura.idPaciente === idPaciente);
     }
-    return lista.filter((r) =>
-      [this.nombrePaciente(r.factura.idPaciente), r.factura.numeroDocumento]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(term),
-    );
+    if (term) {
+      lista = lista.filter((r) =>
+        [this.nombrePaciente(r.factura.idPaciente), r.factura.numeroDocumento]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(term),
+      );
+    }
+    if (idUsuario !== null) {
+      lista = lista.filter((r) => (esActivas ? r.factura.idUsuarioCreacion : r.factura.idUsuarioModificacion) === idUsuario);
+    }
+    if (idEstado !== null) {
+      lista = lista.filter((r) => r.factura.idEstadoFactura === idEstado);
+    }
+    if (idFormaPago !== null) {
+      lista = lista.filter((r) => this.facturasService.pagosDe(r.factura.idFactura).some((p) => p.idFormaPago === idFormaPago));
+    }
+
+    return lista;
   });
 
   verActivas(): void {
@@ -124,6 +183,7 @@ export class FacturasLista {
   estadoClase(idEstadoFactura: number): string {
     if (idEstadoFactura === (this.catalogos.idPorCodigo('ESTADO_FACTURA', 'PAGADA') ?? 2)) return 'estado-pagada';
     if (idEstadoFactura === (this.catalogos.idPorCodigo('ESTADO_FACTURA', 'ANULADA') ?? 3)) return 'estado-anulada';
+    if (idEstadoFactura === this.catalogos.idPorCodigo('ESTADO_FACTURA', 'PENDIENTE')) return 'estado-pendiente';
     return 'estado-emitida';
   }
 

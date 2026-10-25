@@ -9,11 +9,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BitacoraItem, TiposExamenService } from '../../service/tipos-examen.service';
+import { MatDialog } from '@angular/material/dialog';
+import { BitacoraItem, TipoExamenInput, TiposExamenService } from '../../service/tipos-examen.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { UsuariosService } from '../../service/usuarios.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import { ColumnaCsv, ImportarCsvDialog, ImportarCsvDialogData } from '../../shared/importar-csv/importar-csv-dialog';
 
 type Vista = 'activos' | 'eliminados';
 
@@ -38,6 +40,7 @@ export class TiposExamenLista {
 
   private catalogos = inject(CatalogosService);
   private confirmacion = inject(ConfirmacionService);
+  private dialog = inject(MatDialog);
   private categoriasApi = this.catalogos.obtener('CATEGORIA_EXAMEN');
 
   // ✅ Solo desde la BD. Sin fallback hardcodeado.
@@ -102,6 +105,78 @@ export class TiposExamenLista {
       next: () => this.notificaciones.exito('Reactivado correctamente'),
       error: (err: Error) => this.errorAccion.set(err.message),
     });
+  }
+
+  // ============================================================
+  // IMPORTAR CSV
+  // ============================================================
+
+  private readonly columnasCsv: ColumnaCsv[] = [
+    { clave: 'nombre', etiqueta: 'Nombre del examen', requerido: true, ejemplo: 'Hemograma completo' },
+    { clave: 'categoria', etiqueta: 'Categoría (nombre tal como está en Catálogos)', requerido: true, ejemplo: 'Laboratorio' },
+    { clave: 'descripcion', etiqueta: 'Descripción (opcional)', requerido: false, ejemplo: 'Conteo de células sanguíneas' },
+    { clave: 'precio_venta_publico', etiqueta: 'Precio de venta al público (Q)', requerido: true, ejemplo: '50.00' },
+  ];
+
+  private validarFilaCsv(fila: Record<string, string>): { errores: string[]; datos: TipoExamenInput | null } {
+    const errores: string[] = [];
+    const nombre = (fila['nombre'] ?? '').trim();
+    if (!nombre) errores.push('Falta el nombre');
+
+    let idCategoriaExamen: number | null = null;
+    const categoriaTexto = (fila['categoria'] ?? '').trim();
+    if (!categoriaTexto) {
+      errores.push('Falta la categoría');
+    } else {
+      const encontrada = this.categoriasApi().find(
+        (c) => c.codigo.toLowerCase() === categoriaTexto.toLowerCase() || c.nombre.toLowerCase() === categoriaTexto.toLowerCase(),
+      );
+      if (!encontrada) {
+        errores.push(`La categoría "${categoriaTexto}" no existe (revisa Mantenimiento → Catálogos)`);
+      } else {
+        idCategoriaExamen = encontrada.id;
+      }
+    }
+
+    const precioTexto = (fila['precio_venta_publico'] ?? '').trim().replace(',', '.');
+    const precio = Number(precioTexto);
+    if (!precioTexto || isNaN(precio) || precio < 0) {
+      errores.push('El precio de venta al público debe ser un número válido (≥ 0)');
+    }
+
+    if (errores.length > 0 || idCategoriaExamen === null) return { errores, datos: null };
+
+    return {
+      errores: [],
+      datos: {
+        nombre,
+        idCategoriaExamen,
+        descripcion: (fila['descripcion'] ?? '').trim() || null,
+        precioVentaPublico: precio,
+      },
+    };
+  }
+
+  abrirImportarCsv(): void {
+    this.dialog
+      .open<ImportarCsvDialog<TipoExamenInput>, ImportarCsvDialogData<TipoExamenInput>>(ImportarCsvDialog, {
+        autoFocus: false,
+        data: {
+          titulo: 'Importar tipos de examen desde CSV',
+          icono: 'biotech',
+          nombreEntidadPlural: 'tipos de examen',
+          nombreArchivoPlantilla: 'plantilla_tipos_examen.csv',
+          columnas: this.columnasCsv,
+          ayuda: 'La columna "categoria" acepta el nombre tal como aparece en Mantenimiento → Catálogos (ej. "Laboratorio" o "Imagen / Diagnóstico").',
+          validarFila: (fila) => this.validarFilaCsv(fila),
+          resumenFila: (datos) => `${datos.nombre} — Q${datos.precioVentaPublico.toFixed(2)}`,
+          crear: (datos) => this.tiposService.crear(datos),
+        },
+      })
+      .afterClosed()
+      .subscribe((recargar) => {
+        if (recargar) this.tiposService.cargar();
+      });
   }
 
   // ============================================================
