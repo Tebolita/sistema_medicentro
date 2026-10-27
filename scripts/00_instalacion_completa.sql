@@ -92,6 +92,17 @@
 --              factura al examen de laboratorio que la originó, para
 --              cobrarlo automáticamente con el precio de tipos_examen (igual
 --              que ya pasa con los medicamentos de receta).
+--   PARTE 18 — Tabla ficha_consulta_externa: ficha clínica de la
+--              consulta externa (signos vitales, planes), 1:1 con la cita,
+--              igual patrón que constancia_medica.
+--   PARTE 19 — Código TOXICO en TIPO_ANTECEDENTE, catálogo TIPO_VACUNA y
+--              tabla vacuna_aplicada (qué vacunas se inyectaron en cada
+--              consulta).
+--   PARTE 20 — Columnas religion/ocupacion en pacientes y tabla
+--              ficha_clinica_general: segunda ficha clínica (distinta de
+--              ficha_consulta_externa), con antecedentes gineco-obstétricos,
+--              prenatales, revisión por sistemas y examen físico por
+--              aparatos.
 --
 -- QUÉ NO HACE (adrede, hay que hacerlo aparte, a mano):
 --   - Crear OTROS usuarios además del admin de la PARTE 13 (recepcionistas,
@@ -1247,3 +1258,173 @@ IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.factur
 IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'fk_factura_detalle_orden_detalle')
 AND EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.factura_detalle') AND name = 'id_orden_detalle')
     ALTER TABLE dbo.factura_detalle ADD CONSTRAINT fk_factura_detalle_orden_detalle FOREIGN KEY (id_orden_detalle) REFERENCES dbo.orden_detalle (id_orden_detalle);
+
+-- =============================================================================
+-- PARTE 18: tabla ficha_consulta_externa — ficha clínica de la
+-- consulta externa (signos vitales, planes diagnóstico/terapéutico,
+-- estudios complementarios), 1:1 con la cita, igual patrón que
+-- constancia_medica. Los datos generales del paciente (carnet, DPI, nombre,
+-- fecha de nacimiento, edad), los antecedentes FAM/MED/QX/TOX y las
+-- alergias no se guardan aquí: ya viven en pacientes/citas y en el
+-- expediente del paciente (pacientes.alergias/antecedentes, con TOX como un
+-- valor más de TIPO_ANTECEDENTE — ver PARTE 19), y se arman al imprimir. Las
+-- vacunas tampoco: se registran por consulta en vacuna_aplicada (PARTE 19),
+-- no sueltas en texto libre aquí.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ficha_consulta_externa' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.ficha_consulta_externa (
+        id_ficha                    BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                     BIGINT NOT NULL,
+        id_paciente                 BIGINT NOT NULL,
+        id_medico                   BIGINT NOT NULL,
+        peso                        NUMERIC(6,2) NULL,
+        talla                       NUMERIC(6,2) NULL,
+        presion_arterial            NVARCHAR(20) NULL,
+        frecuencia_cardiaca         INT NULL,
+        frecuencia_respiratoria     INT NULL,
+        temperatura                 NUMERIC(5,2) NULL,
+        motivo_historia_actual      NVARCHAR(MAX) NOT NULL,
+        examen_fisico               NVARCHAR(MAX) NULL,
+        plan_diagnostico            NVARCHAR(MAX) NULL,
+        plan_terapeutico            NVARCHAR(MAX) NULL,
+        estudios_complementarios    NVARCHAR(MAX) NULL,
+        activo                      BIT NOT NULL DEFAULT 1,
+        fecha_creacion              DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion          DATETIME2 NULL,
+        id_usuario_creacion         BIGINT NULL,
+        id_usuario_modificacion     BIGINT NULL,
+        CONSTRAINT fk_ficha_ce_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_ficha_ce_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_ficha_ce_medico FOREIGN KEY (id_medico) REFERENCES dbo.empleados (id_empleado),
+        CONSTRAINT uq_ficha_ce_cita UNIQUE (id_cita)
+    );
+END
+
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ficha_consulta_externa' AND schema_id = SCHEMA_ID('dbo'))
+AND NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE name = 'uq_ficha_ce_cita')
+    ALTER TABLE dbo.ficha_consulta_externa ADD CONSTRAINT uq_ficha_ce_cita UNIQUE (id_cita);
+
+-- Defensivo: si esta base ya había corrido una versión anterior de la
+-- PARTE 18 (con antecedentes_toxicos/vacunas como texto libre), se quitan —
+-- ya se resuelven por catálogo/consulta (ver PARTE 19).
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ficha_consulta_externa') AND name = 'antecedentes_toxicos')
+    ALTER TABLE dbo.ficha_consulta_externa DROP COLUMN antecedentes_toxicos;
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ficha_consulta_externa') AND name = 'vacunas')
+    ALTER TABLE dbo.ficha_consulta_externa DROP COLUMN vacunas;
+
+-- =============================================================================
+-- PARTE 19: refuerza el expediente del paciente y la consulta en vez de
+-- repetir texto libre en la ficha clínica:
+--   - TIPO_ANTECEDENTE gana el código TOXICO ("Tóxico" — tabaco, alcohol,
+--     drogas...), un valor más junto a Personal/Familiar/Quirúrgico; se
+--     registra igual que los demás en Pacientes -> Antecedentes, sin tocar
+--     ninguna pantalla (el dropdown ya sale del catálogo).
+--   - Catálogo TIPO_VACUNA (sin valores fijos — el equipo clínico agrega las
+--     que maneje desde Mantenimiento -> Catálogos, como TIPO_OPERACION).
+--   - Tabla vacuna_aplicada: qué vacunas se inyectaron en CADA consulta
+--     (no es historial reutilizable del paciente como alergias/antecedentes,
+--     es un registro por cita — un paciente puede recibir varias vacunas
+--     distintas en la misma consulta, de ahí que no sea 1:1 con la cita).
+-- =============================================================================
+BEGIN TRANSACTION;
+BEGIN TRY
+
+DECLARE @IdTipoAntecedente BIGINT = (SELECT id_tipo_catalogo FROM dbo.cat_tipo_catalogo WHERE codigo = 'TIPO_ANTECEDENTE');
+IF @IdTipoAntecedente IS NULL
+    THROW 50000, 'No existe el tipo de catálogo TIPO_ANTECEDENTE — revisa que la PARTE 2 haya corrido bien.', 1;
+
+IF NOT EXISTS (SELECT 1 FROM dbo.cat_valor_catalogo WHERE id_tipo_catalogo = @IdTipoAntecedente AND codigo = 'TOXICO')
+    INSERT INTO dbo.cat_valor_catalogo (id_tipo_catalogo, codigo, nombre, orden, activo, fecha_creacion)
+    VALUES (@IdTipoAntecedente, 'TOXICO', N'Tóxico', 4, 1, SYSUTCDATETIME());
+
+IF NOT EXISTS (SELECT 1 FROM dbo.cat_tipo_catalogo WHERE codigo = 'TIPO_VACUNA')
+    INSERT INTO dbo.cat_tipo_catalogo (codigo, nombre, codigo_modulo, activo, fecha_creacion)
+    VALUES ('TIPO_VACUNA', N'Tipo de vacuna', 'EXPEDIENTES_CLINICOS', 1, SYSUTCDATETIME());
+
+COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'vacuna_aplicada' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.vacuna_aplicada (
+        id_vacuna_aplicada       BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                  BIGINT NOT NULL,
+        id_paciente               BIGINT NOT NULL,
+        id_tipo_vacuna            BIGINT NOT NULL,
+        dosis                     NVARCHAR(50) NULL,
+        fecha_aplicacion          DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        observaciones             NVARCHAR(255) NULL,
+        activo                    BIT NOT NULL DEFAULT 1,
+        fecha_creacion            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion        DATETIME2 NULL,
+        id_usuario_creacion       BIGINT NULL,
+        id_usuario_modificacion   BIGINT NULL,
+        CONSTRAINT fk_vacuna_aplicada_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_vacuna_aplicada_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_vacuna_aplicada_tipo FOREIGN KEY (id_tipo_vacuna) REFERENCES dbo.cat_valor_catalogo (id_valor_catalogo)
+    );
+END
+
+-- =============================================================================
+-- PARTE 20: columnas religion/ocupacion en pacientes (datos propios del
+-- paciente, no cambian consulta a consulta, igual que nombre/dirección) y
+-- tabla ficha_clinica_general — segunda ficha clínica (distinta de
+-- ficha_consulta_externa, PARTE 18), con antecedentes gineco-obstétricos,
+-- prenatales, revisión por sistemas y examen físico por aparatos. Los
+-- antecedentes FAM/MED/QX/hábitos y alergias tampoco viven aquí: salen del
+-- expediente del paciente, igual que en ficha_consulta_externa.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.pacientes') AND name = 'religion')
+    ALTER TABLE dbo.pacientes ADD religion NVARCHAR(100) NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.pacientes') AND name = 'ocupacion')
+    ALTER TABLE dbo.pacientes ADD ocupacion NVARCHAR(100) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ficha_clinica_general' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.ficha_clinica_general (
+        id_ficha                 BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                  BIGINT NOT NULL,
+        id_paciente               BIGINT NOT NULL,
+        id_medico                 BIGINT NOT NULL,
+        motivo_consulta           NVARCHAR(MAX) NOT NULL,
+        historia_enfermedad       NVARCHAR(MAX) NULL,
+        prenatales                NVARCHAR(MAX) NULL,
+        vacunacion                NVARCHAR(MAX) NULL,
+        menarquia                 NVARCHAR(50) NULL,
+        ciclo                     NVARCHAR(50) NULL,
+        dolor                     NVARCHAR(100) NULL,
+        ultima_regla              DATETIME2 NULL,
+        revision_sistemas         NVARCHAR(MAX) NULL,
+        estado_general            NVARCHAR(255) NULL,
+        presion_arterial          NVARCHAR(20) NULL,
+        pulso                     INT NULL,
+        respiracion               INT NULL,
+        temperatura               NUMERIC(5,2) NULL,
+        piel_faneras              NVARCHAR(MAX) NULL,
+        cabeza_cuello             NVARCHAR(MAX) NULL,
+        cardio_pulmonar           NVARCHAR(MAX) NULL,
+        abdomen                   NVARCHAR(MAX) NULL,
+        dorso_raquis              NVARCHAR(MAX) NULL,
+        extremidades              NVARCHAR(MAX) NULL,
+        neurologico               NVARCHAR(MAX) NULL,
+        otros                     NVARCHAR(MAX) NULL,
+        activo                    BIT NOT NULL DEFAULT 1,
+        fecha_creacion            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion        DATETIME2 NULL,
+        id_usuario_creacion       BIGINT NULL,
+        id_usuario_modificacion   BIGINT NULL,
+        CONSTRAINT fk_ficha_cg_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_ficha_cg_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_ficha_cg_medico FOREIGN KEY (id_medico) REFERENCES dbo.empleados (id_empleado),
+        CONSTRAINT uq_ficha_cg_cita UNIQUE (id_cita)
+    );
+END
+
+-- Verificación.
+SELECT c.name FROM sys.columns c WHERE c.object_id = OBJECT_ID('dbo.pacientes') AND c.name IN ('religion', 'ocupacion');
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'ficha_clinica_general';

@@ -162,6 +162,10 @@
 .panel-hosp { --panel-color: #455a64; }
 .panel-constancia { --panel-color: #5c6bc0; }
 .panel-acta { --panel-color: #6d4c41; }
+.panel-ficha-cea { --panel-color: #1565c0; }
+/* Rosa: mismo color del papel real de esta ficha (Sanatorio Medicentro
+   Barberena), para distinguirla de un vistazo de la ficha de arriba. */
+.panel-ficha-cg { --panel-color: #c2185b; }
 
 .atencion-accordion mat-expansion-panel.panel-datos,
 .atencion-accordion mat-expansion-panel.panel-receta,

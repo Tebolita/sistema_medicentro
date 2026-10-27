@@ -114,6 +114,18 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
+              <mat-label>Religión (opcional)</mat-label>
+              <input matInput formControlName="religion" [maxlength]="largos.DESCRIPCION_CORTA" />
+              <mat-error>{{ error(datosGenerales.controls.religion) }}</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ocupación (opcional)</mat-label>
+              <input matInput formControlName="ocupacion" [maxlength]="largos.DESCRIPCION_CORTA" />
+              <mat-error>{{ error(datosGenerales.controls.ocupacion) }}</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>Tipo de sangre</mat-label>
               <mat-select formControlName="idTipoSangre">
                 @for (t of tiposSangre; track t.id) {

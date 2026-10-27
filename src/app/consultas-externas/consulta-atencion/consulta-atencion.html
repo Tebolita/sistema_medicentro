@@ -326,6 +326,57 @@
         </div>
       </mat-expansion-panel>
 
+      <!-- Vacunas aplicadas: por consulta, no es historial reutilizable del
+           paciente (eso vive en Pacientes -> Alergias/Antecedentes). -->
+      @if (!esSoloLaboratorio()) {
+      <mat-expansion-panel class="panel-vacunas">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>vaccines</mat-icon> Vacunas aplicadas ({{ vacunasAplicadas().length }})</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        @if (vacunasAplicadas().length) {
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th><mat-icon>vaccines</mat-icon> Vacuna</th>
+                  <th>Dosis</th>
+                  <th>Observaciones</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (v of vacunasAplicadas(); track v.idVacunaAplicada) {
+                  <tr>
+                    <td class="celda-nombre">
+                      <mat-icon>vaccines</mat-icon>
+                      {{ tipoVacunaLabel(v.idTipoVacuna) }}
+                    </td>
+                    <td>{{ v.dosis || '—' }}</td>
+                    <td>{{ v.observaciones || '—' }}</td>
+                    <td class="celda-acciones">
+                      <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarVacuna(v)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="panel-nota">Todavía no se ha registrado ninguna vacuna aplicada en esta consulta.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton="filled" type="button" (click)="abrirDialogoVacuna()">
+            <mat-icon>add</mat-icon>
+            Registrar vacuna
+          </button>
+        </div>
+      </mat-expansion-panel>
+      }
+
       <!-- Hospitalización: requiere médico asignado, no aplica a solo laboratorio. -->
       @if (!esSoloLaboratorio()) {
       <mat-expansion-panel class="panel-hosp">
@@ -358,26 +409,29 @@
       }
     </mat-accordion>
 
-    <!-- Constancia médica: siempre al final de la consulta, no va acoplada -->
-    <div class="constancia-panel panel-constancia">
-      <h2><mat-icon>description</mat-icon> Constancia médica</h2>
+    <!-- Ficha clínica (consulta externa adulto): digitalización del
+         formulario de papel del Sanatorio Medicentro. -->
+    <div class="constancia-panel panel-ficha-cea">
+      <h2><mat-icon>assignment</mat-icon> Ficha clínica — Consulta externa adulto</h2>
 
-      @if (constancia(); as con) {
+      @if (fichaConsultaExternaAdulto(); as fcea) {
         <div class="resumen-datos">
-          <p><strong>Diagnóstico:</strong> {{ con.diagnostico || '—' }}</p>
-          <p><strong>Contenido:</strong> {{ con.contenido }}</p>
+          <p><strong>Motivo / historia:</strong> {{ fcea.motivoHistoriaActual }}</p>
+          @if (fcea.planDiagnostico) {
+            <p><strong>Plan diagnóstico:</strong> {{ fcea.planDiagnostico }}</p>
+          }
         </div>
       } @else {
-        <p class="panel-nota">Genera una constancia médica para el paciente si es necesario. Esta consulta todavía no tiene una generada.</p>
+        <p class="panel-nota">Esta consulta todavía no tiene su ficha clínica generada.</p>
       }
 
       <div class="panel-actions">
-        <button matButton="filled" type="button" (click)="abrirDialogoConstancia()">
-          <mat-icon>{{ constancia() ? 'edit' : 'add' }}</mat-icon>
-          {{ constancia() ? 'Editar constancia' : 'Generar constancia' }}
+        <button matButton="filled" type="button" (click)="abrirDialogoFichaConsultaExternaAdulto()">
+          <mat-icon>{{ fichaConsultaExternaAdulto() ? 'edit' : 'add' }}</mat-icon>
+          {{ fichaConsultaExternaAdulto() ? 'Editar ficha' : 'Generar ficha' }}
         </button>
-        @if (constancia()) {
-          <button matButton type="button" (click)="imprimirConstancia()">
+        @if (fichaConsultaExternaAdulto()) {
+          <button matButton type="button" (click)="imprimirFichaConsultaExternaAdulto()">
             <mat-icon>print</mat-icon>
             Imprimir
           </button>
@@ -385,32 +439,38 @@
       </div>
     </div>
 
-    <!-- Acta de cierre: igual que la constancia, al final de todo el
-         proceso (ya no se llena suelta en Recepción al ingreso). -->
-    <div class="constancia-panel panel-acta">
-      <h2><mat-icon>menu_book</mat-icon> Acta de cierre</h2>
+    <!-- Ficha clínica general (papel rosa, Sanatorio Medicentro Barberena):
+         DISTINTA de la ficha de consulta externa adulto de arriba. -->
+    <div class="constancia-panel panel-ficha-cg">
+      <h2><mat-icon>assignment</mat-icon> Ficha clínica general</h2>
 
-      @if (acta(); as a) {
+      @if (fichaClinicaGeneral(); as fcg) {
         <div class="resumen-datos">
-          <p><strong>Motivo:</strong> {{ a.motivoIngreso }}</p>
-          <p><strong>Observaciones:</strong> {{ a.observaciones || '—' }}</p>
+          <p><strong>Motivo de consulta:</strong> {{ fcg.motivoConsulta }}</p>
+          @if (fcg.historiaEnfermedad) {
+            <p><strong>Historia de la enfermedad:</strong> {{ fcg.historiaEnfermedad }}</p>
+          }
         </div>
       } @else {
-        <p class="panel-nota">Esta consulta todavía no tiene su acta de cierre generada.</p>
+        <p class="panel-nota">Esta consulta todavía no tiene su ficha clínica general generada.</p>
       }
 
       <div class="panel-actions">
-        <button matButton="filled" type="button" (click)="abrirDialogoActa()">
-          <mat-icon>{{ acta() ? 'edit' : 'add' }}</mat-icon>
-          {{ acta() ? 'Editar acta' : 'Generar acta' }}
+        <button matButton="filled" type="button" (click)="abrirDialogoFichaClinicaGeneral()">
+          <mat-icon>{{ fichaClinicaGeneral() ? 'edit' : 'add' }}</mat-icon>
+          {{ fichaClinicaGeneral() ? 'Editar ficha' : 'Generar ficha' }}
         </button>
-        @if (acta()) {
-          <button matButton type="button" (click)="imprimirActa()">
+        @if (fichaClinicaGeneral()) {
+          <button matButton type="button" (click)="imprimirFichaClinicaGeneral()">
             <mat-icon>print</mat-icon>
             Imprimir
           </button>
         }
       </div>
     </div>
+
+    <!-- Constancia médica y Acta de cierre: quitadas de la vista por ahora
+         (ver consulta-atencion.ts — el código y los datos siguen intactos,
+         solo no se muestran, para poder reactivarlas fácil más adelante). -->
   }
 </div>

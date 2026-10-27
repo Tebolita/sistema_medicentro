@@ -1,0 +1,141 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">assignment</mat-icon>
+  {{ esNueva ? 'Generar ficha clínica general' : 'Editar ficha clínica general' }}
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid ficha-cea-form">
+    <p class="ficha-cea-nota full-width">
+      Los antecedentes (familiares, médicos, quirúrgicos y hábitos) y las alergias ya se registran en el
+      expediente del paciente (Pacientes → Alergias / Antecedentes). Religión y ocupación se editan en el
+      registro del paciente.
+    </p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Motivo de consulta (M. de C.)</mat-label>
+      <textarea matInput formControlName="motivoConsulta" rows="2"></textarea>
+      @if (form.controls.motivoConsulta.invalid && form.controls.motivoConsulta.touched) {
+        <mat-error>Este campo es obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Historia de la enfermedad (Hx. De la Enf.)</mat-label>
+      <textarea matInput formControlName="historiaEnfermedad" rows="3"></textarea>
+    </mat-form-field>
+
+    <h3 class="ficha-cea-seccion full-width">Antecedentes</h3>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Prenatales (opcional)</mat-label>
+      <input matInput formControlName="prenatales" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Vacunación (opcional)</mat-label>
+      <input matInput formControlName="vacunacion" placeholder="Ej. Completa" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Menarquía (opcional)</mat-label>
+      <input matInput formControlName="menarquia" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ciclo (opcional)</mat-label>
+      <input matInput formControlName="ciclo" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Dolor (opcional)</mat-label>
+      <input matInput formControlName="dolor" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Última regla (opcional)</mat-label>
+      <input matInput [matDatepicker]="pickerRegla" formControlName="ultimaRegla" />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerRegla"></mat-datepicker-toggle>
+      <mat-datepicker #pickerRegla></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Revisión por sistemas (R.X Sistemas)</mat-label>
+      <textarea matInput formControlName="revisionSistemas" rows="2"></textarea>
+    </mat-form-field>
+
+    <h3 class="ficha-cea-seccion full-width">Examen físico</h3>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Estado general</mat-label>
+      <input matInput formControlName="estadoGeneral" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Presión arterial</mat-label>
+      <input matInput placeholder="Ej. 120/80" formControlName="presionArterial" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Pulso</mat-label>
+      <input matInput type="number" formControlName="pulso" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Respiración</mat-label>
+      <input matInput type="number" formControlName="respiracion" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Temperatura</mat-label>
+      <input matInput type="number" step="0.1" formControlName="temperatura" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Piel / Faneras</mat-label>
+      <input matInput formControlName="pielFaneras" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cabeza / Cuello</mat-label>
+      <input matInput formControlName="cabezaCuello" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Cardio-pulmonar</mat-label>
+      <input matInput formControlName="cardioPulmonar" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Abdomen</mat-label>
+      <input matInput formControlName="abdomen" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Dorso y raquis</mat-label>
+      <input matInput formControlName="dorsoRaquis" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Extremidades</mat-label>
+      <input matInput formControlName="extremidades" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Neurológico</mat-label>
+      <input matInput formControlName="neurologico" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Otros</mat-label>
+      <textarea matInput formControlName="otros" rows="2"></textarea>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>save</mat-icon>
+      {{ esNueva ? 'Generar' : 'Guardar cambios' }}
+    </button>
+  </mat-dialog-actions>
+</form>

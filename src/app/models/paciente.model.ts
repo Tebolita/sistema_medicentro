@@ -16,6 +16,8 @@ export interface Paciente {
   telefonoSecundario: string | null;
   correo: string | null;
   direccion: string | null;
+  religion: string | null;
+  ocupacion: string | null;
   idTipoSangre: number | null; // cat TIPO_SANGRE
   idNivelConfidencialidad: number | null; // cat NIVEL_CONFIDENCIALIDAD
   idEstadoPaciente: number; // cat ESTADO_PACIENTE
@@ -108,6 +110,8 @@ export interface DatosPacienteRequest {
   telefonoSecundario: string | null;
   correo: string | null;
   direccion: string | null;
+  religion: string | null;
+  ocupacion: string | null;
   idTipoSangre: number | null;
   idNivelConfidencialidad: number | null;
   idEstadoPaciente: number;

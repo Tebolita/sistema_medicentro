@@ -54,3 +54,23 @@
   font-size: 13px;
   color: var(--c-text-soft);
 }
+
+.ficha-cea-form {
+  max-width: 640px;
+}
+
+.ficha-cea-seccion {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--c-accent);
+}
+
+.ficha-cea-nota {
+  margin: -4px 0 4px;
+  font-size: 12px;
+  color: var(--c-text-soft);
+  font-style: italic;
+}

@@ -24,11 +24,26 @@ import { ConstanciaService } from '../../service/constancia.service';
 import { ActaService } from '../../service/acta.service';
 import { Acta, ActaRequest } from '../../models/acta.model';
 import { ActaDialog, ActaDialogResultado } from './dialogs/acta-dialog';
+import { FichaConsultaExternaAdultoService } from '../../service/ficha-consulta-externa-adulto.service';
+import { FichaConsultaExternaAdulto } from '../../models/ficha-consulta-externa-adulto.model';
+import {
+  FichaConsultaExternaAdultoDialog,
+  FichaConsultaExternaAdultoDialogResultado,
+} from './dialogs/ficha-consulta-externa-adulto-dialog';
+import { VacunaAplicadaService } from '../../service/vacuna-aplicada.service';
+import { VacunaAplicada } from '../../models/vacuna-aplicada.model';
+import { VacunaDialog, VacunaDialogResultado } from './dialogs/vacuna-dialog';
+import { FichaClinicaGeneralService } from '../../service/ficha-clinica-general.service';
+import { FichaClinicaGeneral } from '../../models/ficha-clinica-general.model';
+import {
+  FichaClinicaGeneralDialog,
+  FichaClinicaGeneralDialogResultado,
+} from './dialogs/ficha-clinica-general-dialog';
 import { UsuariosService } from '../../service/usuarios.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { AtencionCita, CitaRequest } from '../../models/cita.model';
-import { PacienteListado } from '../../models/paciente.model';
+import { PacienteListado, PacienteAlergia, PacienteAntecedente } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
 import { CODIGOS_CATALOGO } from '../../models/catalogo.model';
 import { ConstanciaMedica } from '../../models/constancia.model';
@@ -87,6 +102,9 @@ export class ConsultaAtencion {
   private catalogosService = inject(CatalogosService);
   private constanciaService = inject(ConstanciaService);
   private actaService = inject(ActaService);
+  private fichaConsultaExternaAdultoService = inject(FichaConsultaExternaAdultoService);
+  private vacunaAplicadaService = inject(VacunaAplicadaService);
+  private fichaClinicaGeneralService = inject(FichaClinicaGeneralService);
   private usuariosService = inject(UsuariosService);
   private hospitalizacionesService = inject(HospitalizacionesService);
   private facturasService = inject(FacturasService);
@@ -127,8 +145,26 @@ export class ConsultaAtencion {
   private pacientes = signal<PacienteListado[]>([]);
   private medicos = signal<Medico[]>([]);
 
+  // Alergias y antecedentes del paciente (ya estructurados en su
+  // expediente — ver paciente-formulario): se cargan aparte al resolver la
+  // cita, solo para armar la impresión de la ficha clínica (ver
+  // imprimirFichaConsultaExternaAdulto), no bloquean el resto de la pantalla.
+  private alergiasPaciente = signal<PacienteAlergia[]>([]);
+  private antecedentesPaciente = signal<PacienteAntecedente[]>([]);
+  private tiposAntecedenteApi = this.catalogosService.obtener('TIPO_ANTECEDENTE');
+  private tiposAlergiaApi = this.catalogosService.obtener('TIPO_ALERGIA');
+  private severidadApi = this.catalogosService.obtener('SEVERIDAD');
+
+  // ==================== Vacunas aplicadas en esta consulta ====================
+  // No es historial reutilizable del paciente (como alergias/antecedentes):
+  // cada consulta tiene su propio registro de qué se inyectó ahí mismo.
+  private tiposVacunaApi = this.catalogosService.obtener('TIPO_VACUNA');
+  tiposVacuna = computed(() => this.tiposVacunaApi().map((v) => ({ id: v.id, label: v.nombre })));
+  vacunasAplicadas = signal<VacunaAplicada[]>([]);
+
+  private pacienteActual = computed(() => this.pacientes().find((x) => x.idPaciente === this.cita()?.idPaciente) ?? null);
   nombrePaciente = computed(() => {
-    const p = this.pacientes().find((x) => x.idPaciente === this.cita()?.idPaciente);
+    const p = this.pacienteActual();
     return p ? `${p.primerNombre} ${p.primerApellido}` : '—';
   });
   nombreMedico = computed(() => {
@@ -315,6 +351,18 @@ export class ConsultaAtencion {
     })),
   );
 
+  // ==================== Ficha clínica (consulta externa adulto) ====================
+  // Digitalización del formulario de papel "Ficha Clínica Consulta Externa
+  // Adulto" del Sanatorio Medicentro — 1:1 con la cita, igual patrón que la
+  // constancia médica.
+  fichaConsultaExternaAdulto = signal<FichaConsultaExternaAdulto | null>(null);
+
+  // ==================== Ficha clínica general ====================
+  // Digitalización del formulario de papel "Ficha Clínica" del Sanatorio
+  // Medicentro Barberena — DISTINTA de la ficha de consulta externa adulto
+  // (otros campos: gineco-obstétricos, prenatales, examen por aparatos).
+  fichaClinicaGeneral = signal<FichaClinicaGeneral | null>(null);
+
   // ==================== Constancia médica ====================
   constancia = signal<ConstanciaMedica | null>(null);
 
@@ -349,6 +397,9 @@ export class ConsultaAtencion {
       estadosOrden: this.laboratorioService.RetornarEstadosOrden(),
       constancia: this.constanciaService.RetornarPorCita(this.idCita),
       acta: this.actaService.RetornarPorCita(this.idCita),
+      fichaConsultaExternaAdulto: this.fichaConsultaExternaAdultoService.RetornarPorCita(this.idCita),
+      fichaClinicaGeneral: this.fichaClinicaGeneralService.RetornarPorCita(this.idCita),
+      vacunasAplicadas: this.vacunaAplicadaService.RetornarPorCita(this.idCita),
       camas: this.hospitalizacionesService.RetornarCamas(),
       // Mejor sin factura visible que romper toda la pantalla si este
       // endpoint falla por cualquier motivo — no es información crítica.
@@ -369,7 +420,23 @@ export class ConsultaAtencion {
         this.estadoOrdenInicial = r.estadosOrden[0]?.id ?? null;
         this.constancia.set(r.constancia);
         this.acta.set(r.acta);
+        this.fichaConsultaExternaAdulto.set(r.fichaConsultaExternaAdulto);
+        this.fichaClinicaGeneral.set(r.fichaClinicaGeneral);
+        this.vacunasAplicadas.set(r.vacunasAplicadas);
         this.cargando.set(false);
+
+        // Aparte y sin bloquear la pantalla: solo hace falta para imprimir
+        // la ficha clínica.
+        const idPaciente = r.atencion.datos?.cita.cita.idPaciente;
+        if (idPaciente) {
+          this.pacienteService.RetornarPaciente(idPaciente).subscribe({
+            next: (resp) => {
+              this.alergiasPaciente.set((resp.datos?.alergias ?? []).filter((a) => a.activo));
+              this.antecedentesPaciente.set((resp.datos?.antecedentes ?? []).filter((a) => a.activo));
+            },
+            error: () => {},
+          });
+        }
       },
       error: (err: Error) => {
         this.errorCarga.set('No se pudo cargar la atención de esta consulta: ' + err.message);
@@ -828,6 +895,418 @@ export class ConsultaAtencion {
 
   nombreTipoExamen(idTipoExamen: number): string {
     return this.tiposExamen().find((t) => t.idTipoExamen === idTipoExamen)?.nombre ?? `#${idTipoExamen}`;
+  }
+
+  // ==================== Vacunas aplicadas ====================
+  tipoVacunaLabel(idTipoVacuna: number): string {
+    return this.tiposVacuna().find((t) => t.id === idTipoVacuna)?.label ?? `#${idTipoVacuna}`;
+  }
+
+  abrirDialogoVacuna(): void {
+    this.dialog
+      .open(VacunaDialog, {
+        autoFocus: false,
+        data: { tiposVacuna: this.tiposVacuna() },
+      })
+      .afterClosed()
+      .subscribe((resultado: VacunaDialogResultado | null) => {
+        if (resultado) this.agregarVacuna(resultado);
+      });
+  }
+
+  private agregarVacuna(v: VacunaDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idTipoVacuna: v.idTipoVacuna,
+      dosis: v.dosis,
+      fechaAplicacion: ahoraIsoLocal(),
+      observaciones: v.observaciones,
+    };
+
+    this.vacunaAplicadaService.crear(request).subscribe({
+      next: (nueva) => {
+        this.notif.exito('Vacuna registrada');
+        this.vacunasAplicadas.update((lista) => [nueva, ...lista]);
+      },
+      error: (err: Error) => this.notif.error('No se pudo registrar la vacuna: ' + err.message),
+    });
+  }
+
+  async eliminarVacuna(v: VacunaAplicada): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Quitar el registro de la vacuna "${this.tipoVacunaLabel(v.idTipoVacuna)}"?`))) {
+      return;
+    }
+    this.vacunaAplicadaService.eliminar(v.idVacunaAplicada).subscribe({
+      next: () => {
+        this.notif.exito('Vacuna eliminada');
+        this.vacunasAplicadas.update((lista) => lista.filter((x) => x.idVacunaAplicada !== v.idVacunaAplicada));
+      },
+      error: (err: Error) => this.notif.error('No se pudo eliminar la vacuna: ' + err.message),
+    });
+  }
+
+  // ==================== Ficha clínica (consulta externa adulto) ====================
+  abrirDialogoFichaConsultaExternaAdulto(): void {
+    const existente = this.fichaConsultaExternaAdulto();
+    this.dialog
+      .open(FichaConsultaExternaAdultoDialog, {
+        autoFocus: false,
+        data: { valorInicial: existente },
+      })
+      .afterClosed()
+      .subscribe((resultado: FichaConsultaExternaAdultoDialogResultado | null) => {
+        if (resultado) this.guardarFichaConsultaExternaAdulto(resultado);
+      });
+  }
+
+  private guardarFichaConsultaExternaAdulto(v: FichaConsultaExternaAdultoDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idMedico: cita.idMedico,
+      ...v,
+    };
+
+    const existente = this.fichaConsultaExternaAdulto();
+    const peticion = existente
+      ? this.fichaConsultaExternaAdultoService.actualizar(existente.idFicha, request)
+      : this.fichaConsultaExternaAdultoService.crear(request);
+
+    peticion.subscribe({
+      next: (nueva) => {
+        this.notif.exito('Ficha clínica guardada');
+        this.fichaConsultaExternaAdulto.set(nueva);
+      },
+      error: (err: Error) => this.notif.error('No se pudo guardar la ficha clínica: ' + err.message),
+    });
+  }
+
+  private edadPaciente(fechaNacimiento: string): number {
+    const [y, m, d] = fechaNacimiento.slice(0, 10).split('-').map(Number);
+    const nacimiento = new Date(y, m - 1, d);
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const aunNoCumple =
+      hoy.getMonth() < nacimiento.getMonth() || (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
+    if (aunNoCumple) edad--;
+    return edad;
+  }
+
+  // Antecedentes del paciente que coincidan con ese código (FAMILIAR/
+  // PERSONAL/QUIRURGICO de TIPO_ANTECEDENTE), unidos en una sola línea —
+  // "MED" del papel corresponde al tipo "Personal" del expediente.
+  private antecedentesPorTipo(codigo: string): string | null {
+    const idTipo = this.tiposAntecedenteApi().find((t) => t.codigo === codigo)?.id;
+    if (idTipo === undefined) return null;
+    const descripciones = this.antecedentesPaciente()
+      .filter((a) => a.idTipoAntecedente === idTipo)
+      .map((a) => a.descripcion);
+    return descripciones.length ? descripciones.join('; ') : null;
+  }
+
+  // Alergias del paciente, cada una como "descripción (tipo, severidad)".
+  private alergiasPacienteTexto(): string | null {
+    const tipos = this.tiposAlergiaApi();
+    const severidades = this.severidadApi();
+    const lista = this.alergiasPaciente().map((a) => {
+      const tipo = tipos.find((t) => t.id === a.idTipoAlergia)?.nombre ?? '';
+      const severidad = severidades.find((s) => s.id === a.idSeveridad)?.nombre ?? '';
+      const detalle = [tipo, severidad].filter(Boolean).join(', ');
+      return detalle ? `${a.descripcion} (${detalle})` : a.descripcion;
+    });
+    return lista.length ? lista.join('; ') : null;
+  }
+
+  // Vacunas registradas en ESTA consulta (ver panel "Vacunas aplicadas"),
+  // cada una como "nombre (dosis)".
+  private vacunasAplicadasTexto(): string | null {
+    const lista = this.vacunasAplicadas().map((v) => {
+      const nombre = this.tipoVacunaLabel(v.idTipoVacuna);
+      return v.dosis ? `${nombre} (${v.dosis})` : nombre;
+    });
+    return lista.length ? lista.join('; ') : null;
+  }
+
+  imprimirFichaConsultaExternaAdulto(): void {
+    const f = this.fichaConsultaExternaAdulto();
+    const paciente = this.pacienteActual();
+    const cita = this.cita();
+    if (!f || !paciente || !cita) return;
+
+    const esc = (s: string | null | undefined) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const nd = (v: number | string | null | undefined, sufijo = '') => (v === null || v === undefined || v === '' ? '—' : `${esc(String(v))}${sufijo}`);
+    const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const fechaNacimiento = new Date(paciente.fechaNacimiento.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-GT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    const nombrePaciente = [paciente.primerNombre, paciente.segundoNombre, paciente.primerApellido, paciente.segundoApellido]
+      .filter(Boolean)
+      .join(' ');
+
+    const seccion = (titulo: string, contenido: string) => `
+  <div class="seccion-titulo">${esc(titulo)}</div>
+  <div class="seccion-cuerpo">${contenido}</div>`;
+
+    const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Ficha clínica consulta externa adulto</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1565c0; padding-bottom: 10px; margin-bottom: 4px; }
+  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
+  .encabezado-logo img { height: 68px; width: auto; }
+  .encabezado h1 { font-size: 17px; margin: 0; color: #1565c0; }
+  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
+  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #1565c0; padding: 4px; margin: 6px 0; }
+  table.datos-generales { width: 100%; border-collapse: collapse; border: 1px solid #1565c0; margin-bottom: 4px; }
+  table.datos-generales caption { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border-bottom: 1px solid #1565c0; padding: 3px; }
+  table.datos-generales td { border-top: 1px solid #1565c0; padding: 4px 8px; }
+  table.datos-generales .etiqueta { font-weight: 700; white-space: nowrap; }
+  .seccion-titulo { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border: 1px solid #1565c0; border-bottom: none; padding: 3px; margin-top: 4px; }
+  .seccion-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; min-height: 18px; white-space: pre-line; }
+  .vitales-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
+  .vitales-cuerpo div { margin-bottom: 2px; }
+  .vitales-cuerpo b { display: inline-block; width: 70px; }
+  .antecedentes-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
+  .antecedentes-cuerpo div { margin-bottom: 2px; }
+  .antecedentes-cuerpo b { display: inline-block; width: 90px; }
+  .firma { margin-top: 36px; text-align: center; }
+  .firma-linea { border-top: 1px solid #1a1a1a; width: 280px; margin: 0 auto 4px; }
+  .firma p { margin: 0; font-size: 12px; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <div class="encabezado-logo">
+      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
+      <h1>Sanatorio Medicentro</h1>
+    </div>
+    <div class="encabezado-contacto">
+      7ª. Ave. 2-28 Zona 1 Barberena Santa Rosa<br />
+      Tels.: 7887-1348 – 52159179<br />
+      Emergencias las 24 Hrs.
+    </div>
+  </div>
+
+  <div class="titulo-ficha">FICHA CLÍNICA CONSULTA EXTERNA ADULTO</div>
+
+  <table class="datos-generales">
+    <caption>DATOS GENERALES</caption>
+    <tr><td class="etiqueta">Fecha de consulta:</td><td>${nd(fechaConsulta)}</td></tr>
+    <tr><td class="etiqueta">Número de carnet:</td><td>${nd(paciente.codigoExpediente)}</td><td class="etiqueta">DPI:</td><td>${nd(paciente.numeroDocumento)}</td></tr>
+    <tr><td class="etiqueta">Nombres y apellidos:</td><td colspan="3">${nd(nombrePaciente)}</td></tr>
+    <tr><td class="etiqueta">Fecha de nacimiento:</td><td>${nd(fechaNacimiento)}</td><td class="etiqueta">Edad:</td><td>${nd(this.edadPaciente(paciente.fechaNacimiento), ' años')}</td></tr>
+  </table>
+
+  <div class="seccion-titulo">HISTORIA CLÍNICA Y EXPLORACIÓN</div>
+  <div class="seccion-cuerpo">${esc(f.motivoHistoriaActual)}</div>
+
+  <div class="vitales-cuerpo">
+    <div><b>W (peso):</b> ${nd(f.peso, ' kg')}</div>
+    <div><b>T (talla):</b> ${nd(f.talla, ' cm')}</div>
+    <div><b>PA:</b> ${nd(f.presionArterial)}</div>
+    <div><b>FC:</b> ${nd(f.frecuenciaCardiaca, ' lpm')}</div>
+    <div><b>FR:</b> ${nd(f.frecuenciaRespiratoria, ' rpm')}</div>
+    <div><b>T°:</b> ${nd(f.temperatura, ' °C')}</div>
+    <div><b>Examen físico (+):</b> ${f.examenFisico ? esc(f.examenFisico) : '—'}</div>
+  </div>
+
+  <div class="seccion-titulo">ANTECEDENTES DE IMPORTANCIA</div>
+  <div class="antecedentes-cuerpo">
+    <div><b>FAM:</b> ${nd(this.antecedentesPorTipo('FAMILIAR'))}</div>
+    <div><b>MED:</b> ${nd(this.antecedentesPorTipo('PERSONAL'))}</div>
+    <div><b>QX:</b> ${nd(this.antecedentesPorTipo('QUIRURGICO'))}</div>
+    <div><b>TOX:</b> ${nd(this.antecedentesPorTipo('TOXICO'))}</div>
+    <div><b>ALERGIAS:</b> ${nd(this.alergiasPacienteTexto())}</div>
+    <div><b>VACUNAS:</b> ${nd(this.vacunasAplicadasTexto())}</div>
+  </div>
+${seccion('PLAN DIAGNÓSTICO', f.planDiagnostico ? esc(f.planDiagnostico) : '—')}
+${seccion('PLAN TERAPEUTICO/ RP', f.planTerapeutico ? esc(f.planTerapeutico) : '—')}
+${seccion('ESTUDIOS COMPLEMENTARIOS', f.estudiosComplementarios ? esc(f.estudiosComplementarios) : '—')}
+
+  <div class="firma">
+    <div class="firma-linea"></div>
+    <p>${esc(this.nombreMedico())}</p>
+    <p style="font-weight:400;">Médico tratante</p>
+  </div>
+</body>
+</html>`;
+
+    this.abrirVentanaImpresion(html);
+  }
+
+  // ==================== Ficha clínica general ====================
+  abrirDialogoFichaClinicaGeneral(): void {
+    const existente = this.fichaClinicaGeneral();
+    this.dialog
+      .open(FichaClinicaGeneralDialog, {
+        autoFocus: false,
+        data: { valorInicial: existente },
+      })
+      .afterClosed()
+      .subscribe((resultado: FichaClinicaGeneralDialogResultado | null) => {
+        if (resultado) this.guardarFichaClinicaGeneral(resultado);
+      });
+  }
+
+  private guardarFichaClinicaGeneral(v: FichaClinicaGeneralDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idMedico: cita.idMedico,
+      ...v,
+    };
+
+    const existente = this.fichaClinicaGeneral();
+    const peticion = existente
+      ? this.fichaClinicaGeneralService.actualizar(existente.idFicha, request)
+      : this.fichaClinicaGeneralService.crear(request);
+
+    peticion.subscribe({
+      next: (nueva) => {
+        this.notif.exito('Ficha clínica general guardada');
+        this.fichaClinicaGeneral.set(nueva);
+      },
+      error: (err: Error) => this.notif.error('No se pudo guardar la ficha clínica general: ' + err.message),
+    });
+  }
+
+  imprimirFichaClinicaGeneral(): void {
+    const f = this.fichaClinicaGeneral();
+    const paciente = this.pacienteActual();
+    const cita = this.cita();
+    if (!f || !paciente || !cita) return;
+
+    const esc = (s: string | null | undefined) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const nd = (v: number | string | null | undefined, sufijo = '') => (v === null || v === undefined || v === '' ? '—' : `${esc(String(v))}${sufijo}`);
+    const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const nombrePaciente = [paciente.primerNombre, paciente.segundoNombre, paciente.primerApellido, paciente.segundoApellido]
+      .filter(Boolean)
+      .join(' ');
+    const estadoCivil = paciente.idEstadoCivil
+      ? this.catalogosService.obtener('ESTADO_CIVIL')().find((e) => e.id === paciente.idEstadoCivil)?.nombre ?? null
+      : null;
+    const ultimaRegla = f.ultimaRegla
+      ? new Date(f.ultimaRegla.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : null;
+
+    const seccion = (titulo: string, contenido: string) => `
+  <div class="seccion-titulo">${esc(titulo)}</div>
+  <div class="seccion-cuerpo">${contenido}</div>`;
+
+    const html = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Ficha clínica</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1565c0; padding-bottom: 10px; margin-bottom: 4px; }
+  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
+  .encabezado-logo img { height: 68px; width: auto; }
+  .encabezado h1 { font-size: 17px; margin: 0; color: #1565c0; }
+  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
+  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #1565c0; padding: 4px; margin: 6px 0; }
+  table.datos-generales { width: 100%; border-collapse: collapse; border: 1px solid #1565c0; margin-bottom: 4px; }
+  table.datos-generales caption { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border-bottom: 1px solid #1565c0; padding: 3px; }
+  table.datos-generales td { border-top: 1px solid #1565c0; padding: 4px 8px; }
+  table.datos-generales .etiqueta { font-weight: 700; white-space: nowrap; }
+  .seccion-titulo { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border: 1px solid #1565c0; border-bottom: none; padding: 3px; margin-top: 4px; }
+  .seccion-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; min-height: 18px; white-space: pre-line; }
+  .vitales-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
+  .vitales-cuerpo div { margin-bottom: 2px; }
+  .vitales-cuerpo b { display: inline-block; width: 110px; }
+  .antecedentes-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
+  .antecedentes-cuerpo div { margin-bottom: 2px; }
+  .antecedentes-cuerpo b { display: inline-block; width: 90px; }
+  .firma { margin-top: 36px; text-align: center; }
+  .firma-linea { border-top: 1px solid #1a1a1a; width: 280px; margin: 0 auto 4px; }
+  .firma p { margin: 0; font-size: 12px; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <div class="encabezado-logo">
+      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
+      <h1>Sanatorio Medicentro</h1>
+    </div>
+    <div class="encabezado-contacto">
+      7ª. Ave. 2-28 Zona 1 Barberena Santa Rosa<br />
+      Tels.: 7887-1348 – 52159179<br />
+      Emergencias las 24 Hrs.
+    </div>
+  </div>
+
+  <div class="titulo-ficha">FICHA CLÍNICA</div>
+
+  <table class="datos-generales">
+    <caption>DATOS GENERALES</caption>
+    <tr><td class="etiqueta">Fecha:</td><td>${nd(fechaConsulta)}</td></tr>
+    <tr><td class="etiqueta">Nombre:</td><td colspan="3">${nd(nombrePaciente)}</td><td class="etiqueta">Edad:</td><td>${nd(this.edadPaciente(paciente.fechaNacimiento), ' años')}</td></tr>
+    <tr><td class="etiqueta">Dirección:</td><td colspan="3">${nd(paciente.direccion)}</td></tr>
+    <tr><td class="etiqueta">Estado civil:</td><td>${nd(estadoCivil)}</td><td class="etiqueta">Religión:</td><td>${nd(paciente.religion)}</td></tr>
+    <tr><td class="etiqueta">Ocupación:</td><td colspan="3">${nd(paciente.ocupacion)}</td></tr>
+  </table>
+
+  <div class="seccion-titulo">M. DE C.</div>
+  <div class="seccion-cuerpo">${esc(f.motivoConsulta)}</div>
+
+  <div class="seccion-titulo">HX. DE LA ENF.</div>
+  <div class="seccion-cuerpo">${f.historiaEnfermedad ? esc(f.historiaEnfermedad) : '—'}</div>
+
+  <div class="seccion-titulo">ANTECEDENTES</div>
+  <div class="antecedentes-cuerpo">
+    <div><b>Familiares:</b> ${nd(this.antecedentesPorTipo('FAMILIAR'))}</div>
+    <div><b>Médicos:</b> ${nd(this.antecedentesPorTipo('PERSONAL'))}</div>
+    <div><b>Qx y Tx:</b> ${nd(this.antecedentesPorTipo('QUIRURGICO'))}</div>
+    <div><b>Alérgicos:</b> ${nd(this.alergiasPacienteTexto())}</div>
+    <div><b>Hábitos:</b> ${nd(this.antecedentesPorTipo('TOXICO'))}</div>
+    <div><b>Prenatales:</b> ${nd(f.prenatales)}</div>
+    <div><b>Vacunación:</b> ${nd(f.vacunacion)}</div>
+    <div><b>G-O Menarquía:</b> ${nd(f.menarquia)} · <b style="width:auto;">Ciclo:</b> ${nd(f.ciclo)} · <b style="width:auto;">Dolor:</b> ${nd(f.dolor)} · <b style="width:auto;">Última R.:</b> ${nd(ultimaRegla)}</div>
+  </div>
+${seccion('R.X SISTEMAS', f.revisionSistemas ? esc(f.revisionSistemas) : '—')}
+
+  <div class="seccion-titulo">EXAMEN FÍSICO</div>
+  <div class="vitales-cuerpo">
+    <div><b>Estado general:</b> ${nd(f.estadoGeneral)}</div>
+    <div><b>Presión arterial:</b> ${nd(f.presionArterial)}</div>
+    <div><b>Pulso:</b> ${nd(f.pulso, ' lpm')}</div>
+    <div><b>Respiración:</b> ${nd(f.respiracion, ' rpm')}</div>
+    <div><b>Temperatura:</b> ${nd(f.temperatura, ' °C')}</div>
+    <div><b>Piel / Faneras:</b> ${nd(f.pielFaneras)}</div>
+    <div><b>Cabeza / Cuello:</b> ${nd(f.cabezaCuello)}</div>
+    <div><b>Cardio-pulmonar:</b> ${nd(f.cardioPulmonar)}</div>
+    <div><b>Abdomen:</b> ${nd(f.abdomen)}</div>
+    <div><b>Dorso y raquis:</b> ${nd(f.dorsoRaquis)}</div>
+    <div><b>Extremidades:</b> ${nd(f.extremidades)}</div>
+    <div><b>Neurológico:</b> ${nd(f.neurologico)}</div>
+    <div><b>Otros:</b> ${nd(f.otros)}</div>
+  </div>
+
+  <div class="firma">
+    <div class="firma-linea"></div>
+    <p>${esc(this.nombreMedico())}</p>
+    <p style="font-weight:400;">Médico tratante</p>
+  </div>
+</body>
+</html>`;
+
+    this.abrirVentanaImpresion(html);
   }
 
   // ==================== Constancia médica ====================
