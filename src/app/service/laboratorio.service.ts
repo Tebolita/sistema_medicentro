@@ -2,7 +2,7 @@ import { environment } from '../../environments/environment';
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap, forkJoin } from 'rxjs';
+import { Observable, map, tap, forkJoin, of } from 'rxjs';
 import { OrdenDetalle, OrdenLaboratorio, ResultadoExamen } from '../models';
 
 export interface OrdenCompleta {
@@ -329,6 +329,7 @@ export class LaboratorioService {
   // =============================================================
 
   RetornarMedicos(): Observable<MedicoOpcion[]> {
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(this.apiUrlMedicos, {
       headers: this.getHeaders(),
     }).pipe(

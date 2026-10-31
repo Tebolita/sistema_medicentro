@@ -15,6 +15,7 @@ export interface MedicamentoInput {
   presentacion: string | null;
   concentracion: string | null;
   idCategoriaMedicamento: number | null;
+  idDestinoMedicamento: number | null;
   requiereReceta: boolean;
   precioVentaPublico: number;
 }

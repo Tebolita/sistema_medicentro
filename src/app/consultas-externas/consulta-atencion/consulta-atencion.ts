@@ -1,9 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatExpansionModule } from '@angular/material/expansion';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -33,6 +33,36 @@ import {
 import { VacunaAplicadaService } from '../../service/vacuna-aplicada.service';
 import { VacunaAplicada } from '../../models/vacuna-aplicada.model';
 import { VacunaDialog, VacunaDialogResultado } from './dialogs/vacuna-dialog';
+import { OrdenMedicaConsultaService } from '../../service/orden-medica-consulta.service';
+import { OrdenMedicaConsulta } from '../../models/orden-medica-consulta.model';
+import {
+  OrdenMedicaConsultaDialog,
+  OrdenMedicaConsultaDialogResultado,
+} from './dialogs/orden-medica-consulta-dialog';
+import { NotaEvolucionConsultaService } from '../../service/nota-evolucion-consulta.service';
+import { NotaEvolucionConsulta } from '../../models/nota-evolucion-consulta.model';
+import {
+  NotaEvolucionConsultaDialog,
+  NotaEvolucionConsultaDialogResultado,
+} from './dialogs/nota-evolucion-consulta-dialog';
+import { NotaEnfermeriaConsultaService } from '../../service/nota-enfermeria-consulta.service';
+import { NotaEnfermeriaConsulta } from '../../models/nota-enfermeria-consulta.model';
+import {
+  NotaEnfermeriaConsultaDialog,
+  NotaEnfermeriaConsultaDialogResultado,
+} from './dialogs/nota-enfermeria-consulta-dialog';
+import { ControlSignosConsultaService } from '../../service/control-signos-consulta.service';
+import { ControlSignosConsulta } from '../../models/control-signos-consulta.model';
+import {
+  ControlSignosConsultaDialog,
+  ControlSignosConsultaDialogResultado,
+} from './dialogs/control-signos-consulta-dialog';
+import { CostoPacienteConsultaService } from '../../service/costo-paciente-consulta.service';
+import { CostoPacienteConsulta } from '../../models/costo-paciente-consulta.model';
+import {
+  CostoPacienteConsultaDialog,
+  CostoPacienteConsultaDialogResultado,
+} from './dialogs/costo-paciente-consulta-dialog';
 import { FichaClinicaGeneralService } from '../../service/ficha-clinica-general.service';
 import { FichaClinicaGeneral } from '../../models/ficha-clinica-general.model';
 import {
@@ -54,6 +84,25 @@ import { ConstanciaDialog, ConstanciaDialogResultado } from './dialogs/constanci
 import { HospitalizacionDialog, HospitalizacionDialogResultado } from './dialogs/hospitalizacion-dialog';
 import { HospitalizacionesService, CamaOpcion } from '../../service/hospitalizaciones.service';
 import { Hospitalizacion } from '../../models/hospitalizacion.model';
+import {
+  construirHtmlOrdenes,
+  construirHtmlEnfermeria,
+  construirHtmlEvolucion,
+  construirHtmlControlMedicamentos,
+  construirHtmlControlSignos,
+  construirHtmlCostoPaciente,
+} from '../../hospitalizacion/hospitalizacion-impresiones';
+import {
+  nombreCompletoPaciente,
+  edadPaciente,
+  construirHtmlFichaConsultaExternaAdulto,
+  construirHtmlFichaClinicaGeneral,
+  construirHtmlOrdenesMedicasConsulta,
+  construirHtmlEvolucionConsulta,
+  construirHtmlEnfermeriaConsulta,
+  construirHtmlControlSignosConsulta,
+  construirHtmlCostoPacienteConsulta,
+} from './consulta-impresiones';
 import { FacturasService, FacturaCompleta } from '../../service/facturas.service';
 import { PermisosMenuService } from '../../service/permisos-menu.service';
 import { OperacionDialog, OperacionDialogResultado } from '../../shared/operacion-dialog/operacion-dialog';
@@ -83,7 +132,7 @@ function ahoraIsoLocal(): string {
 // tabla y un botón "Agregar".
 @Component({
   selector: 'app-consulta-atencion',
-  imports: [DatePipe, RouterLink, MatDialogModule, MatExpansionModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [DatePipe, RouterLink, MatDialogModule, MatMenuModule, MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: './consulta-atencion.html',
   styleUrl: './consulta-atencion.css',
 })
@@ -104,6 +153,11 @@ export class ConsultaAtencion {
   private actaService = inject(ActaService);
   private fichaConsultaExternaAdultoService = inject(FichaConsultaExternaAdultoService);
   private vacunaAplicadaService = inject(VacunaAplicadaService);
+  private ordenMedicaConsultaService = inject(OrdenMedicaConsultaService);
+  private notaEvolucionConsultaService = inject(NotaEvolucionConsultaService);
+  private notaEnfermeriaConsultaService = inject(NotaEnfermeriaConsultaService);
+  private controlSignosConsultaService = inject(ControlSignosConsultaService);
+  private costoPacienteConsultaService = inject(CostoPacienteConsultaService);
   private fichaClinicaGeneralService = inject(FichaClinicaGeneralService);
   private usuariosService = inject(UsuariosService);
   private hospitalizacionesService = inject(HospitalizacionesService);
@@ -133,6 +187,11 @@ export class ConsultaAtencion {
   // marcar para operación) asumen que hay un médico atendiendo.
   esSoloLaboratorio = computed(() => esConsultaDeLaboratorio(this.cita()?.notas ?? null));
 
+  // Navbar de secciones (reemplaza el acordeón largo): solo se muestra el
+  // contenido de la sección seleccionada. 'datos' no existe en una consulta
+  // de solo laboratorio — el effect de abajo cae a 'examen' en ese caso.
+  seccionActiva = signal<string>('datos');
+
   // "Marcar para operación" (SOLICITUD_MOTOR_CONSULTAS.md, sección 5): es
   // decisión del médico durante la atención, no de quien agenda la cita —
   // por eso vive aquí y no en el formulario de la consulta.
@@ -161,6 +220,29 @@ export class ConsultaAtencion {
   private tiposVacunaApi = this.catalogosService.obtener('TIPO_VACUNA');
   tiposVacuna = computed(() => this.tiposVacunaApi().map((v) => ({ id: v.id, label: v.nombre })));
   vacunasAplicadas = signal<VacunaAplicada[]>([]);
+
+  // ==================== Órdenes médicas de esta consulta ====================
+  // Ligadas a la cita (NO a una hospitalización): sirven para dejar
+  // indicaciones a cualquier paciente, no solo a los ingresados. Puede
+  // haber varias por consulta, igual que las vacunas. Reutiliza el
+  // catálogo TIPO_ORDEN_HOSPITALIZACION (MEDICA/ENFERMERIA).
+  private tiposOrdenApi = this.catalogosService.obtener('TIPO_ORDEN_HOSPITALIZACION');
+  tiposOrdenMedica = computed(() => this.tiposOrdenApi().map((t) => ({ id: t.id, label: t.nombre })));
+  ordenesMedicasConsulta = signal<OrdenMedicaConsulta[]>([]);
+
+  // ==================== Hoja de evolución de esta consulta ====================
+  // Misma idea que la de Hospitalización, pero ligada a la cita — para
+  // poder dejar seguimiento aunque el paciente no esté ingresado.
+  notasEvolucionConsulta = signal<NotaEvolucionConsulta[]>([]);
+
+  // ==================== Enfermería (hoja "ENFERMERIA") de esta consulta ====================
+  notasEnfermeriaConsulta = signal<NotaEnfermeriaConsulta[]>([]);
+
+  // ==================== Control de signos de esta consulta ====================
+  controlesSignosConsulta = signal<ControlSignosConsulta[]>([]);
+
+  // ==================== Costo paciente de esta consulta ====================
+  costosPacienteConsulta = signal<CostoPacienteConsulta[]>([]);
 
   private pacienteActual = computed(() => this.pacientes().find((x) => x.idPaciente === this.cita()?.idPaciente) ?? null);
   nombrePaciente = computed(() => {
@@ -386,6 +468,15 @@ export class ConsultaAtencion {
     this.medicamentosService.cargar();
     this.inventarioFarmaciaService.cargar();
 
+    // 'datos' (la sección por defecto) no existe en una consulta de solo
+    // laboratorio — si se detecta esa vez que carga la cita, se cae a
+    // 'examen' en vez de dejar la pantalla sin ninguna sección visible.
+    effect(() => {
+      if (this.esSoloLaboratorio() && this.seccionActiva() === 'datos') {
+        this.seccionActiva.set('examen');
+      }
+    });
+
     forkJoin({
       atencion: this.citaService.RetornarAtencionCita(this.idCita),
       pacientes: this.pacienteService.RetornarPacientes(),
@@ -400,6 +491,11 @@ export class ConsultaAtencion {
       fichaConsultaExternaAdulto: this.fichaConsultaExternaAdultoService.RetornarPorCita(this.idCita),
       fichaClinicaGeneral: this.fichaClinicaGeneralService.RetornarPorCita(this.idCita),
       vacunasAplicadas: this.vacunaAplicadaService.RetornarPorCita(this.idCita),
+      ordenesMedicasConsulta: this.ordenMedicaConsultaService.RetornarPorCita(this.idCita),
+      notasEvolucionConsulta: this.notaEvolucionConsultaService.RetornarPorCita(this.idCita),
+      notasEnfermeriaConsulta: this.notaEnfermeriaConsultaService.RetornarPorCita(this.idCita),
+      controlesSignosConsulta: this.controlSignosConsultaService.RetornarPorCita(this.idCita),
+      costosPacienteConsulta: this.costoPacienteConsultaService.RetornarPorCita(this.idCita),
       camas: this.hospitalizacionesService.RetornarCamas(),
       // Mejor sin factura visible que romper toda la pantalla si este
       // endpoint falla por cualquier motivo — no es información crítica.
@@ -423,6 +519,11 @@ export class ConsultaAtencion {
         this.fichaConsultaExternaAdulto.set(r.fichaConsultaExternaAdulto);
         this.fichaClinicaGeneral.set(r.fichaClinicaGeneral);
         this.vacunasAplicadas.set(r.vacunasAplicadas);
+        this.ordenesMedicasConsulta.set(r.ordenesMedicasConsulta);
+        this.notasEvolucionConsulta.set(r.notasEvolucionConsulta);
+        this.notasEnfermeriaConsulta.set(r.notasEnfermeriaConsulta);
+        this.controlesSignosConsulta.set(r.controlesSignosConsulta);
+        this.costosPacienteConsulta.set(r.costosPacienteConsulta);
         this.cargando.set(false);
 
         // Aparte y sin bloquear la pantalla: solo hace falta para imprimir
@@ -949,6 +1050,320 @@ export class ConsultaAtencion {
     });
   }
 
+  // ==================== Órdenes médicas de esta consulta ====================
+  abrirDialogoOrdenMedicaConsulta(): void {
+    this.dialog
+      .open(OrdenMedicaConsultaDialog, {
+        autoFocus: false,
+        data: { tiposOrden: this.tiposOrdenMedica() },
+      })
+      .afterClosed()
+      .subscribe((resultado: OrdenMedicaConsultaDialogResultado | null) => {
+        if (resultado) this.agregarOrdenMedicaConsulta(resultado);
+      });
+  }
+
+  tipoOrdenLabel(idTipoOrden: number): string {
+    return this.tiposOrdenMedica().find((t) => t.id === idTipoOrden)?.label ?? '—';
+  }
+
+  private agregarOrdenMedicaConsulta(v: OrdenMedicaConsultaDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idMedico: cita.idMedico,
+      idTipoOrden: v.idTipoOrden,
+      fechaOrden: ahoraIsoLocal(),
+      indicaciones: v.indicaciones,
+    };
+
+    this.ordenMedicaConsultaService.crear(request).subscribe({
+      next: (nueva) => {
+        this.notif.exito('Orden médica registrada');
+        this.ordenesMedicasConsulta.update((lista) => [nueva, ...lista]);
+      },
+      error: (err: Error) => this.notif.error('No se pudo registrar la orden: ' + err.message),
+    });
+  }
+
+  async eliminarOrdenMedicaConsulta(o: OrdenMedicaConsulta): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Quitar esta orden médica?'))) {
+      return;
+    }
+    this.ordenMedicaConsultaService.eliminar(o.idOrdenMedicaConsulta).subscribe({
+      next: () => {
+        this.notif.exito('Orden médica eliminada');
+        this.ordenesMedicasConsulta.update((lista) => lista.filter((x) => x.idOrdenMedicaConsulta !== o.idOrdenMedicaConsulta));
+      },
+      error: (err: Error) => this.notif.error('No se pudo eliminar la orden: ' + err.message),
+    });
+  }
+
+  // Reproduce el papel físico "ÓRDENES MÉDICAS" del Sanatorio Medicentro:
+  // logo, nombre del paciente y una tabla Fecha/Hora/Médico — Indicaciones.
+  imprimirOrdenesMedicasConsulta(): void {
+    const paciente = this.pacienteActual();
+    if (!paciente) return;
+
+    const html = construirHtmlOrdenesMedicasConsulta(
+      this.ordenesMedicasConsulta(),
+      nombreCompletoPaciente(paciente),
+      (id) => this.tipoOrdenLabel(id),
+      () => this.nombreMedico(),
+    );
+    this.abrirVentanaImpresion(html);
+  }
+
+  // ==================== Hoja de evolución de esta consulta ====================
+  abrirDialogoNotaEvolucionConsulta(): void {
+    this.dialog
+      .open(NotaEvolucionConsultaDialog, { autoFocus: false, data: {} })
+      .afterClosed()
+      .subscribe((resultado: NotaEvolucionConsultaDialogResultado | null) => {
+        if (resultado) this.agregarNotaEvolucionConsulta(resultado);
+      });
+  }
+
+  private agregarNotaEvolucionConsulta(v: NotaEvolucionConsultaDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idMedico: cita.idMedico,
+      fechaHora: ahoraIsoLocal(),
+      evolucion: v.evolucion,
+    };
+
+    this.notaEvolucionConsultaService.crear(request).subscribe({
+      next: (nueva) => {
+        this.notif.exito('Nota de evolución registrada');
+        this.notasEvolucionConsulta.update((lista) => [nueva, ...lista]);
+      },
+      error: (err: Error) => this.notif.error('No se pudo registrar la nota: ' + err.message),
+    });
+  }
+
+  async eliminarNotaEvolucionConsulta(n: NotaEvolucionConsulta): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Quitar esta nota de evolución?'))) {
+      return;
+    }
+    this.notaEvolucionConsultaService.eliminar(n.idNotaEvolucionConsulta).subscribe({
+      next: () => {
+        this.notif.exito('Nota de evolución eliminada');
+        this.notasEvolucionConsulta.update((lista) => lista.filter((x) => x.idNotaEvolucionConsulta !== n.idNotaEvolucionConsulta));
+      },
+      error: (err: Error) => this.notif.error('No se pudo eliminar la nota: ' + err.message),
+    });
+  }
+
+  // Reproduce el papel físico "HOJA DE EVOLUCIÓN" del Sanatorio Medicentro:
+  // logo, nombre del paciente y una tabla Fecha | Evolución.
+  imprimirNotasEvolucionConsulta(): void {
+    const paciente = this.pacienteActual();
+    const cita = this.cita();
+    if (!paciente || !cita) return;
+
+    const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const html = construirHtmlEvolucionConsulta(
+      this.notasEvolucionConsulta(),
+      nombreCompletoPaciente(paciente),
+      () => this.nombreMedico(),
+      fechaConsulta,
+    );
+    this.abrirVentanaImpresion(html);
+  }
+
+  // ==================== Enfermería (hoja "ENFERMERIA") de esta consulta ====================
+  abrirDialogoNotaEnfermeriaConsulta(): void {
+    this.dialog
+      .open(NotaEnfermeriaConsultaDialog, { autoFocus: false, data: {} })
+      .afterClosed()
+      .subscribe((resultado: NotaEnfermeriaConsultaDialogResultado | null) => {
+        if (resultado) this.agregarNotaEnfermeriaConsulta(resultado);
+      });
+  }
+
+  private agregarNotaEnfermeriaConsulta(v: NotaEnfermeriaConsultaDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idEmpleado: cita.idMedico,
+      fechaHora: ahoraIsoLocal(),
+      nota: v.nota,
+    };
+
+    this.notaEnfermeriaConsultaService.crear(request).subscribe({
+      next: (nueva) => {
+        this.notif.exito('Nota de enfermería registrada');
+        this.notasEnfermeriaConsulta.update((lista) => [nueva, ...lista]);
+      },
+      error: (err: Error) => this.notif.error('No se pudo registrar la nota: ' + err.message),
+    });
+  }
+
+  async eliminarNotaEnfermeriaConsulta(n: NotaEnfermeriaConsulta): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Quitar esta nota de enfermería?'))) {
+      return;
+    }
+    this.notaEnfermeriaConsultaService.eliminar(n.idNotaEnfermeriaConsulta).subscribe({
+      next: () => {
+        this.notif.exito('Nota de enfermería eliminada');
+        this.notasEnfermeriaConsulta.update((lista) => lista.filter((x) => x.idNotaEnfermeriaConsulta !== n.idNotaEnfermeriaConsulta));
+      },
+      error: (err: Error) => this.notif.error('No se pudo eliminar la nota: ' + err.message),
+    });
+  }
+
+  // Reproduce el papel físico "ENFERMERIA" del Sanatorio Medicentro: logo,
+  // nombre del paciente y una tabla Fecha | Evolución.
+  imprimirNotasEnfermeriaConsulta(): void {
+    const paciente = this.pacienteActual();
+    const cita = this.cita();
+    if (!paciente || !cita) return;
+
+    const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const html = construirHtmlEnfermeriaConsulta(
+      this.notasEnfermeriaConsulta(),
+      nombreCompletoPaciente(paciente),
+      () => this.nombreMedico(),
+      fechaConsulta,
+    );
+    this.abrirVentanaImpresion(html);
+  }
+
+  // ==================== Control de signos de esta consulta ====================
+  abrirDialogoControlSignosConsulta(): void {
+    this.dialog
+      .open(ControlSignosConsultaDialog, { autoFocus: false, data: {} })
+      .afterClosed()
+      .subscribe((resultado: ControlSignosConsultaDialogResultado | null) => {
+        if (resultado) this.agregarControlSignosConsulta(resultado);
+      });
+  }
+
+  private agregarControlSignosConsulta(v: ControlSignosConsultaDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      fechaHora: ahoraIsoLocal(),
+      presionArterial: v.presionArterial,
+      temperatura: v.temperatura,
+      frecuenciaRespiratoria: v.frecuenciaRespiratoria,
+      observaciones: v.observaciones,
+    };
+
+    this.controlSignosConsultaService.crear(request).subscribe({
+      next: (nuevo) => {
+        this.notif.exito('Control de signos registrado');
+        this.controlesSignosConsulta.update((lista) => [nuevo, ...lista]);
+      },
+      error: (err: Error) => this.notif.error('No se pudo registrar el control: ' + err.message),
+    });
+  }
+
+  async eliminarControlSignosConsulta(c: ControlSignosConsulta): Promise<void> {
+    if (!(await this.confirmacion.confirmar('¿Quitar este control de signos?'))) {
+      return;
+    }
+    this.controlSignosConsultaService.eliminar(c.idControlSignosConsulta).subscribe({
+      next: () => {
+        this.notif.exito('Control de signos eliminado');
+        this.controlesSignosConsulta.update((lista) => lista.filter((x) => x.idControlSignosConsulta !== c.idControlSignosConsulta));
+      },
+      error: (err: Error) => this.notif.error('No se pudo eliminar el control: ' + err.message),
+    });
+  }
+
+  // Reproduce el papel físico "CONTROL DE SIGNOS" del Sanatorio Medicentro:
+  // logo, datos generales y una tabla Fecha/Hora/P.A./Temperatura/F.R./Observaciones.
+  imprimirControlSignosConsulta(): void {
+    const paciente = this.pacienteActual();
+    if (!paciente) return;
+
+    const html = construirHtmlControlSignosConsulta(
+      this.controlesSignosConsulta(),
+      nombreCompletoPaciente(paciente),
+      edadPaciente(paciente.fechaNacimiento),
+    );
+    this.abrirVentanaImpresion(html);
+  }
+
+  // ==================== Costo paciente de esta consulta ====================
+  abrirDialogoCostoPacienteConsulta(): void {
+    this.dialog
+      .open(CostoPacienteConsultaDialog, { autoFocus: false, data: { medicamentos: this.medicamentos() } })
+      .afterClosed()
+      .subscribe((resultado: CostoPacienteConsultaDialogResultado | null) => {
+        if (resultado) this.agregarCostoPacienteConsulta(resultado);
+      });
+  }
+
+  private agregarCostoPacienteConsulta(v: CostoPacienteConsultaDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idMedicamento: v.idMedicamento,
+      fecha: ahoraIsoLocal().slice(0, 10) + 'T00:00:00',
+      descripcion: v.descripcion,
+      cantidad: v.cantidad,
+      valorUnitario: v.valorUnitario,
+    };
+
+    this.costoPacienteConsultaService.crear(request).subscribe({
+      next: (nuevo) => {
+        this.notif.exito('Costo registrado');
+        this.costosPacienteConsulta.update((lista) => [nuevo, ...lista]);
+      },
+      error: (err: Error) => this.notif.error('No se pudo registrar el costo: ' + err.message),
+    });
+  }
+
+  async eliminarCostoPacienteConsulta(c: CostoPacienteConsulta): Promise<void> {
+    if (!(await this.confirmacion.confirmar(`¿Quitar "${c.descripcion}" de los costos de esta consulta?`))) {
+      return;
+    }
+    this.costoPacienteConsultaService.eliminar(c.idCostoPacienteConsulta).subscribe({
+      next: () => {
+        this.notif.exito('Costo eliminado');
+        this.costosPacienteConsulta.update((lista) => lista.filter((x) => x.idCostoPacienteConsulta !== c.idCostoPacienteConsulta));
+      },
+      error: (err: Error) => this.notif.error('No se pudo eliminar el costo: ' + err.message),
+    });
+  }
+
+  totalCostosPacienteConsulta(costos: CostoPacienteConsulta[]): number {
+    return costos.reduce((acc, c) => acc + c.cantidad * c.valorUnitario, 0);
+  }
+
+  // Reproduce el papel físico "COSTO PACIENTE" del Sanatorio Medicentro:
+  // logo, datos generales y una tabla Fecha/Medicamentos/Cantidad/Valor, con
+  // el total al final.
+  imprimirCostoPacienteConsulta(): void {
+    const paciente = this.pacienteActual();
+    if (!paciente) return;
+
+    const html = construirHtmlCostoPacienteConsulta(
+      this.costosPacienteConsulta(),
+      nombreCompletoPaciente(paciente),
+      edadPaciente(paciente.fechaNacimiento),
+    );
+    this.abrirVentanaImpresion(html);
+  }
+
   // ==================== Ficha clínica (consulta externa adulto) ====================
   abrirDialogoFichaConsultaExternaAdulto(): void {
     const existente = this.fichaConsultaExternaAdulto();
@@ -1040,109 +1455,21 @@ export class ConsultaAtencion {
     const cita = this.cita();
     if (!f || !paciente || !cita) return;
 
-    const esc = (s: string | null | undefined) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const nd = (v: number | string | null | undefined, sufijo = '') => (v === null || v === undefined || v === '' ? '—' : `${esc(String(v))}${sufijo}`);
     const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const fechaNacimiento = new Date(paciente.fechaNacimiento.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-GT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-    const nombrePaciente = [paciente.primerNombre, paciente.segundoNombre, paciente.primerApellido, paciente.segundoApellido]
-      .filter(Boolean)
-      .join(' ');
-
-    const seccion = (titulo: string, contenido: string) => `
-  <div class="seccion-titulo">${esc(titulo)}</div>
-  <div class="seccion-cuerpo">${contenido}</div>`;
-
-    const html = `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8" />
-<title>Ficha clínica consulta externa adulto</title>
-<style>
-  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
-  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1565c0; padding-bottom: 10px; margin-bottom: 4px; }
-  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
-  .encabezado-logo img { height: 68px; width: auto; }
-  .encabezado h1 { font-size: 17px; margin: 0; color: #1565c0; }
-  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
-  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #1565c0; padding: 4px; margin: 6px 0; }
-  table.datos-generales { width: 100%; border-collapse: collapse; border: 1px solid #1565c0; margin-bottom: 4px; }
-  table.datos-generales caption { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border-bottom: 1px solid #1565c0; padding: 3px; }
-  table.datos-generales td { border-top: 1px solid #1565c0; padding: 4px 8px; }
-  table.datos-generales .etiqueta { font-weight: 700; white-space: nowrap; }
-  .seccion-titulo { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border: 1px solid #1565c0; border-bottom: none; padding: 3px; margin-top: 4px; }
-  .seccion-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; min-height: 18px; white-space: pre-line; }
-  .vitales-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
-  .vitales-cuerpo div { margin-bottom: 2px; }
-  .vitales-cuerpo b { display: inline-block; width: 70px; }
-  .antecedentes-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
-  .antecedentes-cuerpo div { margin-bottom: 2px; }
-  .antecedentes-cuerpo b { display: inline-block; width: 90px; }
-  .firma { margin-top: 36px; text-align: center; }
-  .firma-linea { border-top: 1px solid #1a1a1a; width: 280px; margin: 0 auto 4px; }
-  .firma p { margin: 0; font-size: 12px; font-weight: 700; }
-</style>
-</head>
-<body>
-  <div class="encabezado">
-    <div class="encabezado-logo">
-      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
-      <h1>Sanatorio Medicentro</h1>
-    </div>
-    <div class="encabezado-contacto">
-      7ª. Ave. 2-28 Zona 1 Barberena Santa Rosa<br />
-      Tels.: 7887-1348 – 52159179<br />
-      Emergencias las 24 Hrs.
-    </div>
-  </div>
-
-  <div class="titulo-ficha">FICHA CLÍNICA CONSULTA EXTERNA ADULTO</div>
-
-  <table class="datos-generales">
-    <caption>DATOS GENERALES</caption>
-    <tr><td class="etiqueta">Fecha de consulta:</td><td>${nd(fechaConsulta)}</td></tr>
-    <tr><td class="etiqueta">Número de carnet:</td><td>${nd(paciente.codigoExpediente)}</td><td class="etiqueta">DPI:</td><td>${nd(paciente.numeroDocumento)}</td></tr>
-    <tr><td class="etiqueta">Nombres y apellidos:</td><td colspan="3">${nd(nombrePaciente)}</td></tr>
-    <tr><td class="etiqueta">Fecha de nacimiento:</td><td>${nd(fechaNacimiento)}</td><td class="etiqueta">Edad:</td><td>${nd(this.edadPaciente(paciente.fechaNacimiento), ' años')}</td></tr>
-  </table>
-
-  <div class="seccion-titulo">HISTORIA CLÍNICA Y EXPLORACIÓN</div>
-  <div class="seccion-cuerpo">${esc(f.motivoHistoriaActual)}</div>
-
-  <div class="vitales-cuerpo">
-    <div><b>W (peso):</b> ${nd(f.peso, ' kg')}</div>
-    <div><b>T (talla):</b> ${nd(f.talla, ' cm')}</div>
-    <div><b>PA:</b> ${nd(f.presionArterial)}</div>
-    <div><b>FC:</b> ${nd(f.frecuenciaCardiaca, ' lpm')}</div>
-    <div><b>FR:</b> ${nd(f.frecuenciaRespiratoria, ' rpm')}</div>
-    <div><b>T°:</b> ${nd(f.temperatura, ' °C')}</div>
-    <div><b>Examen físico (+):</b> ${f.examenFisico ? esc(f.examenFisico) : '—'}</div>
-  </div>
-
-  <div class="seccion-titulo">ANTECEDENTES DE IMPORTANCIA</div>
-  <div class="antecedentes-cuerpo">
-    <div><b>FAM:</b> ${nd(this.antecedentesPorTipo('FAMILIAR'))}</div>
-    <div><b>MED:</b> ${nd(this.antecedentesPorTipo('PERSONAL'))}</div>
-    <div><b>QX:</b> ${nd(this.antecedentesPorTipo('QUIRURGICO'))}</div>
-    <div><b>TOX:</b> ${nd(this.antecedentesPorTipo('TOXICO'))}</div>
-    <div><b>ALERGIAS:</b> ${nd(this.alergiasPacienteTexto())}</div>
-    <div><b>VACUNAS:</b> ${nd(this.vacunasAplicadasTexto())}</div>
-  </div>
-${seccion('PLAN DIAGNÓSTICO', f.planDiagnostico ? esc(f.planDiagnostico) : '—')}
-${seccion('PLAN TERAPEUTICO/ RP', f.planTerapeutico ? esc(f.planTerapeutico) : '—')}
-${seccion('ESTUDIOS COMPLEMENTARIOS', f.estudiosComplementarios ? esc(f.estudiosComplementarios) : '—')}
-
-  <div class="firma">
-    <div class="firma-linea"></div>
-    <p>${esc(this.nombreMedico())}</p>
-    <p style="font-weight:400;">Médico tratante</p>
-  </div>
-</body>
-</html>`;
-
+    const html = construirHtmlFichaConsultaExternaAdulto(
+      f,
+      paciente,
+      fechaConsulta,
+      this.nombreMedico(),
+      {
+        familiar: this.antecedentesPorTipo('FAMILIAR'),
+        personal: this.antecedentesPorTipo('PERSONAL'),
+        quirurgico: this.antecedentesPorTipo('QUIRURGICO'),
+        toxico: this.antecedentesPorTipo('TOXICO'),
+      },
+      this.alergiasPacienteTexto(),
+      this.vacunasAplicadasTexto(),
+    );
     this.abrirVentanaImpresion(html);
   }
 
@@ -1191,121 +1518,25 @@ ${seccion('ESTUDIOS COMPLEMENTARIOS', f.estudiosComplementarios ? esc(f.estudios
     const cita = this.cita();
     if (!f || !paciente || !cita) return;
 
-    const esc = (s: string | null | undefined) => (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const nd = (v: number | string | null | undefined, sufijo = '') => (v === null || v === undefined || v === '' ? '—' : `${esc(String(v))}${sufijo}`);
     const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const nombrePaciente = [paciente.primerNombre, paciente.segundoNombre, paciente.primerApellido, paciente.segundoApellido]
-      .filter(Boolean)
-      .join(' ');
     const estadoCivil = paciente.idEstadoCivil
       ? this.catalogosService.obtener('ESTADO_CIVIL')().find((e) => e.id === paciente.idEstadoCivil)?.nombre ?? null
       : null;
-    const ultimaRegla = f.ultimaRegla
-      ? new Date(f.ultimaRegla.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      : null;
 
-    const seccion = (titulo: string, contenido: string) => `
-  <div class="seccion-titulo">${esc(titulo)}</div>
-  <div class="seccion-cuerpo">${contenido}</div>`;
-
-    const html = `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8" />
-<title>Ficha clínica</title>
-<style>
-  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
-  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1565c0; padding-bottom: 10px; margin-bottom: 4px; }
-  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
-  .encabezado-logo img { height: 68px; width: auto; }
-  .encabezado h1 { font-size: 17px; margin: 0; color: #1565c0; }
-  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
-  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #1565c0; padding: 4px; margin: 6px 0; }
-  table.datos-generales { width: 100%; border-collapse: collapse; border: 1px solid #1565c0; margin-bottom: 4px; }
-  table.datos-generales caption { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border-bottom: 1px solid #1565c0; padding: 3px; }
-  table.datos-generales td { border-top: 1px solid #1565c0; padding: 4px 8px; }
-  table.datos-generales .etiqueta { font-weight: 700; white-space: nowrap; }
-  .seccion-titulo { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border: 1px solid #1565c0; border-bottom: none; padding: 3px; margin-top: 4px; }
-  .seccion-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; min-height: 18px; white-space: pre-line; }
-  .vitales-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
-  .vitales-cuerpo div { margin-bottom: 2px; }
-  .vitales-cuerpo b { display: inline-block; width: 110px; }
-  .antecedentes-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
-  .antecedentes-cuerpo div { margin-bottom: 2px; }
-  .antecedentes-cuerpo b { display: inline-block; width: 90px; }
-  .firma { margin-top: 36px; text-align: center; }
-  .firma-linea { border-top: 1px solid #1a1a1a; width: 280px; margin: 0 auto 4px; }
-  .firma p { margin: 0; font-size: 12px; font-weight: 700; }
-</style>
-</head>
-<body>
-  <div class="encabezado">
-    <div class="encabezado-logo">
-      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
-      <h1>Sanatorio Medicentro</h1>
-    </div>
-    <div class="encabezado-contacto">
-      7ª. Ave. 2-28 Zona 1 Barberena Santa Rosa<br />
-      Tels.: 7887-1348 – 52159179<br />
-      Emergencias las 24 Hrs.
-    </div>
-  </div>
-
-  <div class="titulo-ficha">FICHA CLÍNICA</div>
-
-  <table class="datos-generales">
-    <caption>DATOS GENERALES</caption>
-    <tr><td class="etiqueta">Fecha:</td><td>${nd(fechaConsulta)}</td></tr>
-    <tr><td class="etiqueta">Nombre:</td><td colspan="3">${nd(nombrePaciente)}</td><td class="etiqueta">Edad:</td><td>${nd(this.edadPaciente(paciente.fechaNacimiento), ' años')}</td></tr>
-    <tr><td class="etiqueta">Dirección:</td><td colspan="3">${nd(paciente.direccion)}</td></tr>
-    <tr><td class="etiqueta">Estado civil:</td><td>${nd(estadoCivil)}</td><td class="etiqueta">Religión:</td><td>${nd(paciente.religion)}</td></tr>
-    <tr><td class="etiqueta">Ocupación:</td><td colspan="3">${nd(paciente.ocupacion)}</td></tr>
-  </table>
-
-  <div class="seccion-titulo">M. DE C.</div>
-  <div class="seccion-cuerpo">${esc(f.motivoConsulta)}</div>
-
-  <div class="seccion-titulo">HX. DE LA ENF.</div>
-  <div class="seccion-cuerpo">${f.historiaEnfermedad ? esc(f.historiaEnfermedad) : '—'}</div>
-
-  <div class="seccion-titulo">ANTECEDENTES</div>
-  <div class="antecedentes-cuerpo">
-    <div><b>Familiares:</b> ${nd(this.antecedentesPorTipo('FAMILIAR'))}</div>
-    <div><b>Médicos:</b> ${nd(this.antecedentesPorTipo('PERSONAL'))}</div>
-    <div><b>Qx y Tx:</b> ${nd(this.antecedentesPorTipo('QUIRURGICO'))}</div>
-    <div><b>Alérgicos:</b> ${nd(this.alergiasPacienteTexto())}</div>
-    <div><b>Hábitos:</b> ${nd(this.antecedentesPorTipo('TOXICO'))}</div>
-    <div><b>Prenatales:</b> ${nd(f.prenatales)}</div>
-    <div><b>Vacunación:</b> ${nd(f.vacunacion)}</div>
-    <div><b>G-O Menarquía:</b> ${nd(f.menarquia)} · <b style="width:auto;">Ciclo:</b> ${nd(f.ciclo)} · <b style="width:auto;">Dolor:</b> ${nd(f.dolor)} · <b style="width:auto;">Última R.:</b> ${nd(ultimaRegla)}</div>
-  </div>
-${seccion('R.X SISTEMAS', f.revisionSistemas ? esc(f.revisionSistemas) : '—')}
-
-  <div class="seccion-titulo">EXAMEN FÍSICO</div>
-  <div class="vitales-cuerpo">
-    <div><b>Estado general:</b> ${nd(f.estadoGeneral)}</div>
-    <div><b>Presión arterial:</b> ${nd(f.presionArterial)}</div>
-    <div><b>Pulso:</b> ${nd(f.pulso, ' lpm')}</div>
-    <div><b>Respiración:</b> ${nd(f.respiracion, ' rpm')}</div>
-    <div><b>Temperatura:</b> ${nd(f.temperatura, ' °C')}</div>
-    <div><b>Piel / Faneras:</b> ${nd(f.pielFaneras)}</div>
-    <div><b>Cabeza / Cuello:</b> ${nd(f.cabezaCuello)}</div>
-    <div><b>Cardio-pulmonar:</b> ${nd(f.cardioPulmonar)}</div>
-    <div><b>Abdomen:</b> ${nd(f.abdomen)}</div>
-    <div><b>Dorso y raquis:</b> ${nd(f.dorsoRaquis)}</div>
-    <div><b>Extremidades:</b> ${nd(f.extremidades)}</div>
-    <div><b>Neurológico:</b> ${nd(f.neurologico)}</div>
-    <div><b>Otros:</b> ${nd(f.otros)}</div>
-  </div>
-
-  <div class="firma">
-    <div class="firma-linea"></div>
-    <p>${esc(this.nombreMedico())}</p>
-    <p style="font-weight:400;">Médico tratante</p>
-  </div>
-</body>
-</html>`;
-
+    const html = construirHtmlFichaClinicaGeneral(
+      f,
+      paciente,
+      fechaConsulta,
+      this.nombreMedico(),
+      estadoCivil,
+      {
+        familiar: this.antecedentesPorTipo('FAMILIAR'),
+        personal: this.antecedentesPorTipo('PERSONAL'),
+        quirurgico: this.antecedentesPorTipo('QUIRURGICO'),
+        toxico: this.antecedentesPorTipo('TOXICO'),
+      },
+      this.alergiasPacienteTexto(),
+    );
     this.abrirVentanaImpresion(html);
   }
 
@@ -1474,6 +1705,93 @@ ${seccion('R.X SISTEMAS', f.revisionSistemas ? esc(f.revisionSistemas) : '—')}
     const camaLabel = this.camas().find((c) => c.id === h.idCama)?.label ?? `#${h.idCama}`;
     return { hospitalizacion: h, camaLabel };
   });
+
+  // ==================== Impresos de Hospitalización (menú "Imprimir") ====================
+  // hospitalizacionIniciada() solo trae el registro base de la
+  // hospitalización (para el resumen en pantalla); estos documentos
+  // necesitan el detalle completo (órdenes, notas, etc.), así que se piden
+  // aparte al momento de imprimir — sin salir de esta pantalla.
+  medicoLabel = (idMedico: number | null): string => {
+    if (idMedico == null) return '—';
+    return this.medicos().find((m) => m.idEmpleado === idMedico)?.nombreCompleto ?? '—';
+  };
+
+  medicamentoLabel = (idMedicamento: number): string => {
+    return this.medicamentos().find((m) => m.idMedicamento === idMedicamento)?.nombre ?? '—';
+  };
+
+  private formatFechaHospitalizacion(o: unknown): string {
+    const valor = (o as any)?.fechaOrden ?? (o as any)?.fecha_orden ?? o;
+    if (!valor) return '—';
+    const fecha = new Date(valor as string);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  private formatHoraHospitalizacion(hora: string): string {
+    return hora ? hora.slice(0, 5) : '—';
+  }
+
+  private conHospitalizacionCompleta(accion: (reg: import('../../service/hospitalizaciones.service').HospitalizacionCompleta) => void): void {
+    const h = this.hospitalizacionIniciada();
+    if (!h) return;
+    this.hospitalizacionesService.obtenerDesdeApi(h.hospitalizacion.idHospitalizacion).subscribe({
+      next: (reg) => accion(reg),
+      error: (err: HttpErrorResponse) => this.notif.error('No se pudo cargar la hospitalización: ' + (err.error?.mensaje ?? err.message)),
+    });
+  }
+
+  imprimirOrdenesHospitalizacion(): void {
+    this.conHospitalizacionCompleta((reg) => {
+      const html = construirHtmlOrdenes(
+        reg,
+        this.nombrePaciente(),
+        this.medicoLabel,
+        (id) => (id == null ? '—' : this.tipoOrdenLabel(id)),
+        (o) => this.formatFechaHospitalizacion(o),
+      );
+      this.abrirVentanaImpresion(html);
+    });
+  }
+
+  imprimirEnfermeriaHospitalizacion(): void {
+    this.conHospitalizacionCompleta((reg) => {
+      const html = construirHtmlEnfermeria(reg, this.nombrePaciente(), this.medicoLabel);
+      this.abrirVentanaImpresion(html);
+    });
+  }
+
+  imprimirEvolucionHospitalizacion(): void {
+    this.conHospitalizacionCompleta((reg) => {
+      const html = construirHtmlEvolucion(reg, this.nombrePaciente(), this.medicoLabel);
+      this.abrirVentanaImpresion(html);
+    });
+  }
+
+  imprimirControlMedicamentosHospitalizacion(): void {
+    this.conHospitalizacionCompleta((reg) => {
+      const html = construirHtmlControlMedicamentos(reg, this.nombrePaciente(), this.medicamentoLabel, (hora) => this.formatHoraHospitalizacion(hora));
+      this.abrirVentanaImpresion(html);
+    });
+  }
+
+  imprimirControlSignosHospitalizacion(): void {
+    this.conHospitalizacionCompleta((reg) => {
+      const paciente = this.pacienteActual();
+      const edad = paciente ? this.edadPaciente(paciente.fechaNacimiento) : null;
+      const html = construirHtmlControlSignos(reg, this.nombrePaciente(), edad);
+      this.abrirVentanaImpresion(html);
+    });
+  }
+
+  imprimirCostoPacienteHospitalizacion(): void {
+    this.conHospitalizacionCompleta((reg) => {
+      const paciente = this.pacienteActual();
+      const edad = paciente ? this.edadPaciente(paciente.fechaNacimiento) : null;
+      const html = construirHtmlCostoPaciente(reg, this.nombrePaciente(), edad);
+      this.abrirVentanaImpresion(html);
+    });
+  }
 
   abrirDialogoHospitalizacion(): void {
     // No se usa RetornarCamasLibres() porque filtra con idPorCodigo() leyendo

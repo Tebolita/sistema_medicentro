@@ -141,6 +141,11 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+.ordenes-header-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .ordenes-header h2 {
   margin: 0;
   font-size: 15px;
@@ -170,9 +175,11 @@
 }
 
 .orden-desc {
-  flex: 1;
+  flex: 1 1 260px;
   color: #333;
   min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .orden-meta {
@@ -199,6 +206,56 @@
   font-size: 13px;
   color: #888;
   font-style: italic;
+}
+
+.costo-total {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1565c0;
+}
+
+/* =========================================================================
+   Hoja de Control de Medicamentos
+   ========================================================================= */
+.medicamento-row {
+  margin-bottom: 4px;
+}
+
+.medicamento-row-header {
+  margin-bottom: 0;
+}
+
+.administraciones-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 12px 8px;
+}
+
+.chip-administracion {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #c8e6c9;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chip-administracion mat-icon {
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+}
+
+.chip-administracion:hover {
+  background: #c8e6c9;
 }
 
 /* =========================================================================

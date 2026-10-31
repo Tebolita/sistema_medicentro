@@ -1,0 +1,83 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">summarize</mat-icon>
+  Resumen del expediente — {{ data.nombrePaciente }}
+</h2>
+
+<mat-dialog-content class="resumen-contenido">
+  @if (cargando()) {
+    <p class="resumen-cargando">Cargando hojas de todas las consultas...</p>
+  } @else {
+    <div class="resumen-columnas">
+      <!-- Columna izquierda: consultas + checklist de 8 hojas -->
+      <div class="columna-citas">
+        <h3>Consultas ({{ citas.length }})</h3>
+        @if (citas.length === 0) {
+          <p class="resumen-vacio">Este paciente todavía no tiene consultas.</p>
+        }
+        <div class="lista-citas">
+          @for (c of citas; track c.idCita) {
+            <label class="fila-cita" [class.fila-cita-activa]="estaSeleccionada(c.idCita)">
+              <input type="checkbox" [checked]="estaSeleccionada(c.idCita)" (change)="toggleCita(c.idCita)" />
+              <div class="fila-cita-info">
+                <span class="fila-cita-fecha">{{ c.fechaHoraInicio | date: 'dd/MM/yyyy HH:mm' }}</span>
+                <span class="fila-cita-motivo">{{ c.motivoConsulta || 'Sin motivo especificado' }}</span>
+              </div>
+              @if (checklistDe(c.idCita); as chk) {
+                <div class="fila-cita-checklist">
+                  @for (t of tiposDocumento; track t.id) {
+                    <mat-icon
+                      class="icono-checklist"
+                      [class.icono-checklist-activo]="chk[t.id]"
+                      [style.color]="chk[t.id] ? t.color : null"
+                      [matTooltip]="t.label + (chk[t.id] ? ' — generada' : ' — no generada')"
+                      matTooltipShowDelay="2000"
+                    >
+                      {{ t.icono }}
+                    </mat-icon>
+                  }
+                </div>
+              }
+            </label>
+          }
+        </div>
+      </div>
+
+      <!-- Columna derecha: tipo de documento + vista previa + imprimir -->
+      <div class="columna-preview">
+        <div class="selector-wrap">
+          <label class="selector-label">Tipo de hoja</label>
+          <select class="selector-tipo" [value]="tipoDocumento()" (change)="tipoDocumento.set($any($event.target).value)">
+            @for (t of tiposDocumento; track t.id) {
+              <option [value]="t.id">{{ t.label }}{{ t.mergeable ? ' (combina varias consultas)' : ' (solo 1 consulta)' }}</option>
+            }
+          </select>
+        </div>
+
+        @if (advertenciaSeleccionMultiple(); as aviso) {
+          <p class="resumen-aviso">
+            <mat-icon>info</mat-icon>
+            {{ aviso }}
+          </p>
+        } @else if (citasSeleccionadas().size === 0) {
+          <p class="resumen-vacio">Selecciona una o varias consultas a la izquierda para ver la hoja aquí.</p>
+        } @else if (htmlPreviewSeguro(); as html) {
+          <div class="preview-wrap">
+            <iframe class="preview-frame" [srcdoc]="html" title="Vista previa del documento"></iframe>
+          </div>
+          <div class="preview-acciones">
+            <button matButton="filled" type="button" (click)="imprimir()">
+              <mat-icon>print</mat-icon>
+              Imprimir
+            </button>
+          </div>
+        } @else {
+          <p class="resumen-vacio">La(s) consulta(s) seleccionada(s) no tienen esta hoja generada todavía.</p>
+        }
+      </div>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button matButton type="button" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

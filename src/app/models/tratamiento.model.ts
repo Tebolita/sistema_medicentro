@@ -7,6 +7,10 @@ export interface Medicamento {
   presentacion: string | null; // tableta, jarabe, inyectable...
   concentracion: string | null;
   idCategoriaMedicamento: number | null; // cat CATEGORIA_MEDICAMENTO
+  // cat DESTINO_MEDICAMENTO (FARMACIA/CLINICA/AMBOS) — distingue si se
+  // vende/factura al paciente o se usa internamente para administrar a
+  // hospitalizados. Solo informativo, no restringe dónde se puede usar.
+  idDestinoMedicamento: number | null;
   requiereReceta: boolean;
   // Precio de venta al público — con esto se calcula sola la línea de
   // factura al agregar el medicamento a una receta (ver

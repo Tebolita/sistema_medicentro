@@ -159,10 +159,16 @@
     <div class="ordenes-panel">
       <div class="ordenes-header">
         <h2>Órdenes médicas registradas</h2>
-        <a matButton="filled" routerLink="/home/hospitalizacion/orden-nueva" [queryParams]="{ hospitalizacion: idHospitalizacion() }">
-          <mat-icon>add</mat-icon>
-          Agregar orden
-        </a>
+        <div class="ordenes-header-acciones">
+          <button matButton type="button" (click)="imprimirOrdenes()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <a matButton="filled" routerLink="/home/hospitalizacion/orden-nueva" [queryParams]="{ hospitalizacion: idHospitalizacion() }">
+            <mat-icon>add</mat-icon>
+            Agregar orden
+          </a>
+        </div>
       </div>
 
       @if (r.ordenes.length === 0) {
@@ -186,6 +192,179 @@
             </div>
           </div>
         }
+      }
+    </div>
+
+    <div class="ordenes-panel">
+      <div class="ordenes-header">
+        <h2>Enfermería</h2>
+        <div class="ordenes-header-acciones">
+          <button matButton type="button" (click)="imprimirEnfermeria()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirAgregarNota()">
+            <mat-icon>add</mat-icon>
+            Agregar nota
+          </button>
+        </div>
+      </div>
+
+      @if (r.notasEnfermeria.length === 0) {
+        <p class="ordenes-empty">Aún no hay notas de enfermería para esta hospitalización.</p>
+      } @else {
+        @for (n of r.notasEnfermeria; track n.idNotaEnfermeria) {
+          <div class="orden-row">
+            <span class="orden-desc">{{ n.nota }}</span>
+            <span class="orden-meta">{{ formatFecha(n.fechaHora) }} · {{ medicoLabel(n.idEmpleado) }}</span>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="ordenes-panel">
+      <div class="ordenes-header">
+        <h2>Hoja de evolución</h2>
+        <div class="ordenes-header-acciones">
+          <button matButton type="button" (click)="imprimirEvolucion()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirAgregarNotaEvolucion()">
+            <mat-icon>add</mat-icon>
+            Agregar nota
+          </button>
+        </div>
+      </div>
+
+      @if (r.notasEvolucion.length === 0) {
+        <p class="ordenes-empty">Aún no hay notas de evolución para esta hospitalización.</p>
+      } @else {
+        @for (n of r.notasEvolucion; track n.idNotaEvolucion) {
+          <div class="orden-row">
+            <span class="orden-desc">{{ n.evolucion }}</span>
+            <span class="orden-meta">{{ formatFecha(n.fechaHora) }} · {{ medicoLabel(n.idMedico) }}</span>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="ordenes-panel">
+      <div class="ordenes-header">
+        <h2>Control de medicamentos</h2>
+        <div class="ordenes-header-acciones">
+          <button matButton type="button" (click)="imprimirControlMedicamentos()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirAgregarMedicamentoProgramado()">
+            <mat-icon>add</mat-icon>
+            Agregar medicamento
+          </button>
+        </div>
+      </div>
+
+      @if (r.medicamentosProgramados.length === 0) {
+        <p class="ordenes-empty">Aún no hay medicamentos programados para esta hospitalización.</p>
+      } @else {
+        @for (p of r.medicamentosProgramados; track p.idMedicamentoProgramado) {
+          <div class="medicamento-row">
+            <div class="orden-row medicamento-row-header">
+              <span class="orden-desc">
+                {{ medicamentoLabel(p.idMedicamento) }} — {{ formatHora(p.hora) }}
+                @if (p.observaciones) { · {{ p.observaciones }} }
+              </span>
+              <span class="orden-meta">Desde {{ formatFecha(p.fechaInicial) }} · {{ p.administraciones.length }} dosis administradas</span>
+              <div class="orden-actions">
+                <button matIconButton type="button" matTooltip="Marcar dosis administrada ahora" (click)="marcarAdministrado(p)">
+                  <mat-icon>check_circle</mat-icon>
+                </button>
+                <button matIconButton type="button" matTooltip="Quitar medicamento" (click)="eliminarMedicamentoProgramado(p)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+            @if (p.administraciones.length > 0) {
+              <div class="administraciones-chips">
+                @for (a of p.administraciones; track a.idAdministracion) {
+                  <button type="button" class="chip-administracion" matTooltip="Quitar esta marca" (click)="eliminarAdministracion(p, a)">
+                    {{ formatFecha(a.fechaHora) }} <mat-icon>close</mat-icon>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <div class="ordenes-panel">
+      <div class="ordenes-header">
+        <h2>Control de signos</h2>
+        <div class="ordenes-header-acciones">
+          <button matButton type="button" (click)="imprimirControlSignos()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirAgregarControlSignos()">
+            <mat-icon>add</mat-icon>
+            Agregar control
+          </button>
+        </div>
+      </div>
+
+      @if (r.controlesSignos.length === 0) {
+        <p class="ordenes-empty">Aún no hay controles de signos para esta hospitalización.</p>
+      } @else {
+        @for (c of r.controlesSignos; track c.idControlSignos) {
+          <div class="orden-row">
+            <span class="orden-desc">
+              @if (c.presionArterial) { P/A: {{ c.presionArterial }} }
+              @if (c.temperatura !== null) { · Temp: {{ c.temperatura }}°C }
+              @if (c.frecuenciaRespiratoria !== null) { · F.R.: {{ c.frecuenciaRespiratoria }} }
+              @if (c.observaciones) { · {{ c.observaciones }} }
+            </span>
+            <span class="orden-meta">{{ formatFecha(c.fechaHora) }}</span>
+            <div class="orden-actions">
+              <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarControlSignos(c)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="ordenes-panel">
+      <div class="ordenes-header">
+        <h2>Costo paciente</h2>
+        <div class="ordenes-header-acciones">
+          <button matButton type="button" (click)="imprimirCostoPaciente()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirAgregarCostoPaciente()">
+            <mat-icon>add</mat-icon>
+            Agregar costo
+          </button>
+        </div>
+      </div>
+
+      @if (r.costosPaciente.length === 0) {
+        <p class="ordenes-empty">Aún no hay costos registrados para esta hospitalización.</p>
+      } @else {
+        @for (c of r.costosPaciente; track c.idCostoPaciente) {
+          <div class="orden-row">
+            <span class="orden-desc">{{ c.descripcion }} — {{ c.cantidad }} × Q{{ c.valorUnitario.toFixed(2) }}</span>
+            <span class="orden-meta">{{ formatFecha(c.fecha) }} · Q{{ (c.cantidad * c.valorUnitario).toFixed(2) }}</span>
+            <div class="orden-actions">
+              <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarCostoPaciente(c)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+        <p class="costo-total">Total: Q{{ totalCostosPaciente(r.costosPaciente).toFixed(2) }}</p>
       }
     </div>
 
@@ -263,6 +442,331 @@
           >
             <mat-icon>save</mat-icon>
             {{ guardandoOrden() ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Agregar nota de enfermería
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (notaNueva(); as nota) {
+    <div class="modal-overlay" (click)="cancelarAgregarNota()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">edit_note</mat-icon>
+            <div>
+              <h2>Agregar nota de enfermería</h2>
+              <p class="modal-subtitle">Se registra con la fecha y hora actual.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cancelarAgregarNota()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Registrado por</mat-label>
+            <mat-select [(value)]="nota.idEmpleado" required>
+              @for (m of medicosSignal(); track m.id + '-' + $index) {
+                <mat-option [value]="m.id">
+                  {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+                </mat-option>
+              }
+              @if (medicosSignal().length === 0) {
+                <mat-option disabled>No hay empleados registrados</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Evolución</mat-label>
+            <textarea
+              matInput
+              [(ngModel)]="nota.evolucion"
+              rows="5"
+              placeholder="Ej. Paciente estable, sin fiebre, tolera vía oral"
+            ></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="modal-actions">
+          <button matButton type="button" (click)="cancelarAgregarNota()">Cancelar</button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="guardandoNota()"
+            (click)="guardarNota(nota)"
+          >
+            <mat-icon>save</mat-icon>
+            {{ guardandoNota() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Agregar nota de evolución (médico)
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (notaEvolucionNueva(); as nota) {
+    <div class="modal-overlay" (click)="cancelarAgregarNotaEvolucion()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">edit_note</mat-icon>
+            <div>
+              <h2>Agregar nota de evolución</h2>
+              <p class="modal-subtitle">Se registra con la fecha y hora actual.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cancelarAgregarNotaEvolucion()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Médico</mat-label>
+            <mat-select [(value)]="nota.idMedico" required>
+              @for (m of medicosSignal(); track m.id + '-' + $index) {
+                <mat-option [value]="m.id">
+                  {{ m.nombre }}@if (m.especialidad) { · {{ m.especialidad }} }
+                </mat-option>
+              }
+              @if (medicosSignal().length === 0) {
+                <mat-option disabled>No hay médicos registrados</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Evolución</mat-label>
+            <textarea
+              matInput
+              [(ngModel)]="nota.evolucion"
+              rows="5"
+              placeholder="Ej. Paciente estable, sin fiebre, tolera vía oral"
+            ></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="modal-actions">
+          <button matButton type="button" (click)="cancelarAgregarNotaEvolucion()">Cancelar</button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="guardandoNotaEvolucion()"
+            (click)="guardarNotaEvolucion(nota)"
+          >
+            <mat-icon>save</mat-icon>
+            {{ guardandoNotaEvolucion() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Agregar medicamento programado (Hoja de Control)
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (medicamentoProgramadoNuevo(); as p) {
+    <div class="modal-overlay" (click)="cancelarAgregarMedicamentoProgramado()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">medication</mat-icon>
+            <div>
+              <h2>Agregar medicamento a la hoja de control</h2>
+              <p class="modal-subtitle">Se registra con su hora, y cada dosis dada se marca aparte.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cancelarAgregarMedicamentoProgramado()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Medicamento</mat-label>
+            <mat-select [(value)]="p.idMedicamento" required>
+              @for (m of medicamentosClinicos(); track m.idMedicamento) {
+                <mat-option [value]="m.idMedicamento">{{ m.nombre }}</mat-option>
+              }
+              @if (medicamentosClinicos().length === 0) {
+                <mat-option disabled>No hay medicamentos marcados como Clínica/Ambos</mat-option>
+              }
+            </mat-select>
+            @if (medicamentosClinicos().length === 0 && medicamentos().length > 0) {
+              <mat-hint>
+                Ningún medicamento tiene destino "Clínica" o "Ambos" todavía — márcalo en
+                Farmacia → Medicamentos.
+              </mat-hint>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Hora</mat-label>
+            <input matInput type="time" [(ngModel)]="p.hora" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha inicial</mat-label>
+            <input matInput [matDatepicker]="pickerFechaInicial" [(ngModel)]="p.fechaInicial" required />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerFechaInicial"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFechaInicial></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Observaciones (opcional)</mat-label>
+            <input matInput [(ngModel)]="p.observaciones" placeholder="Ej. Vía oral, con alimentos" />
+          </mat-form-field>
+        </div>
+
+        <div class="modal-actions">
+          <button matButton type="button" (click)="cancelarAgregarMedicamentoProgramado()">Cancelar</button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="guardandoMedicamentoProgramado()"
+            (click)="guardarMedicamentoProgramado(p)"
+          >
+            <mat-icon>save</mat-icon>
+            {{ guardandoMedicamentoProgramado() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Agregar control de signos
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (controlSignosNuevo(); as c) {
+    <div class="modal-overlay" (click)="cancelarAgregarControlSignos()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">monitor_heart</mat-icon>
+            <div>
+              <h2>Agregar control de signos</h2>
+              <p class="modal-subtitle">Se registra con la fecha y hora actual.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cancelarAgregarControlSignos()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <mat-form-field appearance="outline">
+            <mat-label>P/A (opcional)</mat-label>
+            <input matInput placeholder="Ej. 120/80" [(ngModel)]="c.presionArterial" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Temperatura (opcional)</mat-label>
+            <input matInput type="number" step="0.1" [(ngModel)]="c.temperatura" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>F.R. (opcional)</mat-label>
+            <input matInput type="number" [(ngModel)]="c.frecuenciaRespiratoria" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Observaciones (opcional)</mat-label>
+            <textarea matInput [(ngModel)]="c.observaciones" rows="3"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="modal-actions">
+          <button matButton type="button" (click)="cancelarAgregarControlSignos()">Cancelar</button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="guardandoControlSignos()"
+            (click)="guardarControlSignos(c)"
+          >
+            <mat-icon>save</mat-icon>
+            {{ guardandoControlSignos() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL: Agregar costo paciente
+       ═══════════════════════════════════════════════════════════════ -->
+  @if (costoPacienteNuevo(); as c) {
+    <div class="modal-overlay" (click)="cancelarAgregarCostoPaciente()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <mat-icon class="modal-icon">payments</mat-icon>
+            <div>
+              <h2>Agregar costo del paciente</h2>
+              <p class="modal-subtitle">Selecciona un medicamento para prellenar descripción y valor, o captúralo libre.</p>
+            </div>
+          </div>
+          <button matIconButton type="button" matTooltip="Cerrar" (click)="cancelarAgregarCostoPaciente()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Medicamento (opcional)</mat-label>
+            <mat-select [(value)]="c.idMedicamento" (selectionChange)="onSeleccionarMedicamentoCosto(c)">
+              <mat-option [value]="null">— Sin medicamento (otro costo) —</mat-option>
+              @for (m of medicamentos(); track m.idMedicamento) {
+                <mat-option [value]="m.idMedicamento">{{ m.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha</mat-label>
+            <input matInput [matDatepicker]="pickerFechaCosto" [(ngModel)]="c.fecha" required />
+            <mat-datepicker-toggle matIconSuffix [for]="pickerFechaCosto"></mat-datepicker-toggle>
+            <mat-datepicker #pickerFechaCosto></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Descripción</mat-label>
+            <input matInput [(ngModel)]="c.descripcion" placeholder="Ej. Paracetamol 500mg" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Cantidad</mat-label>
+            <input matInput type="number" step="0.01" min="0" [(ngModel)]="c.cantidad" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Valor unitario (Q)</mat-label>
+            <input matInput type="number" step="0.01" min="0" [(ngModel)]="c.valorUnitario" required />
+          </mat-form-field>
+        </div>
+
+        <div class="modal-actions">
+          <button matButton type="button" (click)="cancelarAgregarCostoPaciente()">Cancelar</button>
+          <button
+            matButton="filled"
+            type="button"
+            [disabled]="guardandoCostoPaciente()"
+            (click)="guardarCostoPaciente(c)"
+          >
+            <mat-icon>save</mat-icon>
+            {{ guardandoCostoPaciente() ? 'Guardando...' : 'Guardar' }}
           </button>
         </div>
       </div>

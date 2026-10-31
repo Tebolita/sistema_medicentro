@@ -2,8 +2,16 @@ import { environment } from '../../environments/environment';
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap, shareReplay, forkJoin } from 'rxjs';
-import { Hospitalizacion, OrdenMedicaHospitalizacion } from '../models';
+import { Observable, map, tap, shareReplay, forkJoin, of } from 'rxjs';
+import {
+  Hospitalizacion,
+  OrdenMedicaHospitalizacion,
+  NotaEnfermeria,
+  NotaEvolucionHospitalizacion,
+  MedicamentoProgramadoHospitalizacion,
+  ControlSignosHospitalizacion,
+  CostoPacienteHospitalizacion,
+} from '../models';
 
 export interface CamaOpcion {
   id: number;
@@ -17,6 +25,11 @@ export interface CamaOpcion {
 export interface HospitalizacionCompleta {
   hospitalizacion: Hospitalizacion;
   ordenes: OrdenMedicaHospitalizacion[];
+  notasEnfermeria: NotaEnfermeria[];
+  notasEvolucion: NotaEvolucionHospitalizacion[];
+  medicamentosProgramados: MedicamentoProgramadoHospitalizacion[];
+  controlesSignos: ControlSignosHospitalizacion[];
+  costosPaciente: CostoPacienteHospitalizacion[];
 }
 
 export interface OpcionCatalogo {
@@ -69,7 +82,13 @@ export class HospitalizacionesService {
   private registros = signal<HospitalizacionCompleta[]>([]);
   private esNavegador: boolean;
 
-  private catalogosCache = new Map<string, OpcionCatalogo[]>();
+  // Signal (no un Map plano): "activas" (computed más abajo) lee
+  // idPorCodigo('ESTADO_HOSPITALIZACION', 'ACTIVA') adentro de un computed,
+  // y un computed solo vuelve a calcular cuando cambia una signal que leyó.
+  // Con un Map plano, si el catálogo llegaba DESPUÉS de que "registros" ya
+  // se hubiera resuelto, el computed se quedaba pegado con el resultado de
+  // la primera lectura (catálogo todavía vacío) para siempre.
+  private catalogosCache = signal(new Map<string, OpcionCatalogo[]>());
 
   constructor(
     private http: HttpClient,
@@ -134,7 +153,7 @@ export class HospitalizacionesService {
   // =============================================================
 
   private retornarCatalogoCacheado(codigoTipo: string): Observable<OpcionCatalogo[]> {
-    const cache = this.catalogosCache.get(codigoTipo);
+    const cache = this.catalogosCache().get(codigoTipo);
     if (cache) {
       return new Observable((obs) => {
         obs.next(cache);
@@ -152,20 +171,20 @@ export class HospitalizacionesService {
           codigo: c.codigo ?? '',
         })),
       ),
-      tap((items) => this.catalogosCache.set(codigoTipo, items)),
+      tap((items) => this.catalogosCache.update((m) => new Map(m).set(codigoTipo, items))),
       shareReplay(1),
     );
   }
 
   idPorCodigo(codigoTipo: string, codigoValor: string): number | null {
-    const items = this.catalogosCache.get(codigoTipo);
+    const items = this.catalogosCache().get(codigoTipo);
     if (!items) return null;
     const item = items.find((x) => x.codigo === codigoValor);
     return item?.id ?? null;
   }
 
   opcionPorCodigo(codigoTipo: string, codigoValor: string): OpcionCatalogo | null {
-    const items = this.catalogosCache.get(codigoTipo);
+    const items = this.catalogosCache().get(codigoTipo);
     if (!items) return null;
     return items.find((x) => x.codigo === codigoValor) ?? null;
   }
@@ -211,12 +230,22 @@ export class HospitalizacionesService {
       return {
         hospitalizacion: item.hospitalizacion as Hospitalizacion,
         ordenes: item.ordenes ?? [],
+        notasEnfermeria: item.notasEnfermeria ?? [],
+        notasEvolucion: item.notasEvolucion ?? [],
+        medicamentosProgramados: item.medicamentosProgramados ?? [],
+        controlesSignos: item.controlesSignos ?? [],
+        costosPaciente: item.costosPaciente ?? [],
       };
     }
-    const { ordenes, ...resto } = item ?? {};
+    const { ordenes, notasEnfermeria, notasEvolucion, medicamentosProgramados, controlesSignos, costosPaciente, ...resto } = item ?? {};
     return {
       hospitalizacion: resto as Hospitalizacion,
       ordenes: ordenes ?? [],
+      notasEnfermeria: notasEnfermeria ?? [],
+      notasEvolucion: notasEvolucion ?? [],
+      medicamentosProgramados: medicamentosProgramados ?? [],
+      controlesSignos: controlesSignos ?? [],
+      costosPaciente: costosPaciente ?? [],
     };
   }
 
@@ -402,6 +431,374 @@ export class HospitalizacionesService {
     );
   }
 
+  // =============================================================
+  // HOJA DE EVOLUCIÓN (notas-enfermeria en el backend: fecha + evolución +
+  // quién la escribió; el nombre del endpoint es histórico, el papel real
+  // ("Hoja de Evolución") no distingue médico/enfermería).
+  // =============================================================
+
+  RetornarNotasEnfermeria(idHospitalizacion: number): Observable<NotaEnfermeria[]> {
+    return this.http.get<ApiResponse<NotaEnfermeria[]>>(
+      `${this.apiUrl}/${idHospitalizacion}/notas-enfermeria`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => resp.datos ?? []),
+      tap((notasEnfermeria) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, notasEnfermeria }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  agregarNotaEnfermeria(
+    idHospitalizacion: number,
+    nota: { idEmpleado: number; fechaHora: string; nota: string; signosVitales?: string | null },
+  ): Observable<ApiResponse<any>> {
+    const body = {
+      idEmpleado: nota.idEmpleado,
+      fechaHora: nota.fechaHora,
+      nota: nota.nota,
+      signosVitales: nota.signosVitales ?? null,
+    };
+
+    return this.http.post<ApiResponse<any>>(
+      `${this.apiUrl}/${idHospitalizacion}/notas-enfermeria`,
+      body,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap((resp) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, notasEnfermeria: [resp.datos, ...r.notasEnfermeria] }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  // =============================================================
+  // HOJA DE EVOLUCIÓN (médico) — distinta de notas-enfermeria (hoja
+  // "ENFERMERIA"): mismo papel físico, pero cada profesión tiene su hoja.
+  // =============================================================
+
+  RetornarNotasEvolucion(idHospitalizacion: number): Observable<NotaEvolucionHospitalizacion[]> {
+    return this.http.get<ApiResponse<NotaEvolucionHospitalizacion[]>>(
+      `${this.apiUrl}/${idHospitalizacion}/notas-evolucion`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => resp.datos ?? []),
+      tap((notasEvolucion) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, notasEvolucion }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  agregarNotaEvolucion(
+    idHospitalizacion: number,
+    nota: { idMedico: number; fechaHora: string; evolucion: string },
+  ): Observable<ApiResponse<any>> {
+    const body = {
+      idMedico: nota.idMedico,
+      fechaHora: nota.fechaHora,
+      evolucion: nota.evolucion,
+    };
+
+    return this.http.post<ApiResponse<any>>(
+      `${this.apiUrl}/${idHospitalizacion}/notas-evolucion`,
+      body,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap((resp) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, notasEvolucion: [resp.datos, ...r.notasEvolucion] }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  // =============================================================
+  // HOJA DE CONTROL DE MEDICAMENTOS
+  // =============================================================
+
+  RetornarMedicamentosProgramados(idHospitalizacion: number): Observable<MedicamentoProgramadoHospitalizacion[]> {
+    return this.http.get<ApiResponse<MedicamentoProgramadoHospitalizacion[]>>(
+      `${this.apiUrl}/${idHospitalizacion}/medicamentos-programados`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => resp.datos ?? []),
+      tap((medicamentosProgramados) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, medicamentosProgramados }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  agregarMedicamentoProgramado(
+    idHospitalizacion: number,
+    programado: { idMedicamento: number; hora: string; fechaInicial: string; observaciones?: string | null },
+  ): Observable<ApiResponse<any>> {
+    const body = {
+      idMedicamento: programado.idMedicamento,
+      hora: programado.hora,
+      fechaInicial: programado.fechaInicial,
+      observaciones: programado.observaciones ?? null,
+    };
+
+    return this.http.post<ApiResponse<any>>(
+      `${this.apiUrl}/${idHospitalizacion}/medicamentos-programados`,
+      body,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap((resp) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, medicamentosProgramados: [...r.medicamentosProgramados, resp.datos] }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  eliminarMedicamentoProgramado(idHospitalizacion: number, idMedicamentoProgramado: number): Observable<ApiResponse<null>> {
+    return this.http.delete<ApiResponse<null>>(
+      `${this.apiUrl}/${idHospitalizacion}/medicamentos-programados/${idMedicamentoProgramado}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, medicamentosProgramados: r.medicamentosProgramados.filter((p) => p.idMedicamentoProgramado !== idMedicamentoProgramado) }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  agregarAdministracion(
+    idHospitalizacion: number,
+    idMedicamentoProgramado: number,
+    administracion: { idEmpleado: number; fechaHora: string },
+  ): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(
+      `${this.apiUrl}/${idHospitalizacion}/medicamentos-programados/${idMedicamentoProgramado}/administraciones`,
+      administracion,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap((resp) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? {
+                  ...r,
+                  medicamentosProgramados: r.medicamentosProgramados.map((p) =>
+                    p.idMedicamentoProgramado === idMedicamentoProgramado
+                      ? { ...p, administraciones: [...p.administraciones, resp.datos] }
+                      : p,
+                  ),
+                }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  eliminarAdministracion(
+    idHospitalizacion: number,
+    idMedicamentoProgramado: number,
+    idAdministracion: number,
+  ): Observable<ApiResponse<null>> {
+    return this.http.delete<ApiResponse<null>>(
+      `${this.apiUrl}/${idHospitalizacion}/medicamentos-programados/${idMedicamentoProgramado}/administraciones/${idAdministracion}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? {
+                  ...r,
+                  medicamentosProgramados: r.medicamentosProgramados.map((p) =>
+                    p.idMedicamentoProgramado === idMedicamentoProgramado
+                      ? { ...p, administraciones: p.administraciones.filter((a) => a.idAdministracion !== idAdministracion) }
+                      : p,
+                  ),
+                }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  // =============================================================
+  // CONTROL DE SIGNOS
+  // =============================================================
+
+  RetornarControlSignos(idHospitalizacion: number): Observable<ControlSignosHospitalizacion[]> {
+    return this.http.get<ApiResponse<ControlSignosHospitalizacion[]>>(
+      `${this.apiUrl}/${idHospitalizacion}/control-signos`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => resp.datos ?? []),
+      tap((controlesSignos) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, controlesSignos }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  agregarControlSignos(
+    idHospitalizacion: number,
+    control: {
+      fechaHora: string;
+      presionArterial?: string | null;
+      temperatura?: number | null;
+      frecuenciaRespiratoria?: number | null;
+      observaciones?: string | null;
+    },
+  ): Observable<ApiResponse<any>> {
+    const body = {
+      fechaHora: control.fechaHora,
+      presionArterial: control.presionArterial ?? null,
+      temperatura: control.temperatura ?? null,
+      frecuenciaRespiratoria: control.frecuenciaRespiratoria ?? null,
+      observaciones: control.observaciones ?? null,
+    };
+
+    return this.http.post<ApiResponse<any>>(
+      `${this.apiUrl}/${idHospitalizacion}/control-signos`,
+      body,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap((resp) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, controlesSignos: [resp.datos, ...r.controlesSignos] }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  eliminarControlSignos(idHospitalizacion: number, idControlSignos: number): Observable<ApiResponse<null>> {
+    return this.http.delete<ApiResponse<null>>(
+      `${this.apiUrl}/${idHospitalizacion}/control-signos/${idControlSignos}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, controlesSignos: r.controlesSignos.filter((c) => c.idControlSignos !== idControlSignos) }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  // =============================================================
+  // COSTO PACIENTE
+  // =============================================================
+
+  RetornarCostosPaciente(idHospitalizacion: number): Observable<CostoPacienteHospitalizacion[]> {
+    return this.http.get<ApiResponse<CostoPacienteHospitalizacion[]>>(
+      `${this.apiUrl}/${idHospitalizacion}/costos-paciente`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      map((resp) => resp.datos ?? []),
+      tap((costosPaciente) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, costosPaciente }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  agregarCostoPaciente(
+    idHospitalizacion: number,
+    costo: { idMedicamento?: number | null; fecha: string; descripcion: string; cantidad: number; valorUnitario: number },
+  ): Observable<ApiResponse<any>> {
+    const body = {
+      idMedicamento: costo.idMedicamento ?? null,
+      fecha: costo.fecha,
+      descripcion: costo.descripcion,
+      cantidad: costo.cantidad,
+      valorUnitario: costo.valorUnitario,
+    };
+
+    return this.http.post<ApiResponse<any>>(
+      `${this.apiUrl}/${idHospitalizacion}/costos-paciente`,
+      body,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap((resp) => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, costosPaciente: [resp.datos, ...r.costosPaciente] }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
+  eliminarCostoPaciente(idHospitalizacion: number, idCostoPaciente: number): Observable<ApiResponse<null>> {
+    return this.http.delete<ApiResponse<null>>(
+      `${this.apiUrl}/${idHospitalizacion}/costos-paciente/${idCostoPaciente}`,
+      { headers: this.getHeaders() },
+    ).pipe(
+      tap(() => {
+        this.registros.update((list) =>
+          list.map((r) =>
+            r.hospitalizacion.idHospitalizacion === idHospitalizacion
+              ? { ...r, costosPaciente: r.costosPaciente.filter((c) => c.idCostoPaciente !== idCostoPaciente) }
+              : r,
+          ),
+        );
+      }),
+    );
+  }
+
   /**
    * ✅ Elimina (baja lógica).
    * Actualiza el signal local con activo=false, fechaModificacion e idUsuarioModificacion.
@@ -523,6 +920,7 @@ export class HospitalizacionesService {
   // =============================================================
 
   RetornarMedicos(): Observable<MedicoOpcion[]> {
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(this.apiUrlMedicos, {
       headers: this.getHeaders(),
     }).pipe(

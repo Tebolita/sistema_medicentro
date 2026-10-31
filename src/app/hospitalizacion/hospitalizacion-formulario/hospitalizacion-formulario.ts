@@ -13,7 +13,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { Hospitalizacion, OrdenMedicaHospitalizacion } from '../../models';
+import {
+  Hospitalizacion,
+  OrdenMedicaHospitalizacion,
+  MedicamentoProgramadoHospitalizacion,
+  AdministracionMedicamento,
+  ControlSignosHospitalizacion,
+  CostoPacienteHospitalizacion,
+} from '../../models';
 import {
   CamaOpcion,
   HospitalizacionCompleta,
@@ -24,8 +31,19 @@ import {
   UsuarioOpcion,
 } from '../../service/hospitalizaciones.service';
 import { PacientesService } from '../../service/pacientes.service';
+import { MedicamentosService } from '../../service/medicamentos.service';
+import { CatalogosService } from '../../service/catalogos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
+import {
+  abrirVentanaImpresion,
+  construirHtmlOrdenes,
+  construirHtmlEnfermeria,
+  construirHtmlEvolucion,
+  construirHtmlControlMedicamentos,
+  construirHtmlControlSignos,
+  construirHtmlCostoPaciente,
+} from '../hospitalizacion-impresiones';
 
 function toIsoDateTime(value: Date | string | null): string | null {
   if (!value) return null;
@@ -71,6 +89,22 @@ export class HospitalizacionFormulario {
   private router = inject(Router);
   private hospitalizacionesService = inject(HospitalizacionesService);
   private pacientesService = inject(PacientesService);
+  private medicamentosService = inject(MedicamentosService);
+  private catalogosService = inject(CatalogosService);
+  medicamentos = this.medicamentosService.listar;
+
+  // Hoja de Control de Medicamentos: solo tiene sentido administrar a un
+  // hospitalizado medicamentos de uso CLINICA o AMBOS (no los que son
+  // exclusivos de Farmacia, que se venden/facturan al paciente).
+  private destinosApi = this.catalogosService.obtener('DESTINO_MEDICAMENTO');
+  medicamentosClinicos = computed(() => {
+    const destinos = this.destinosApi();
+    const idClinica = destinos.find((d) => d.codigo === 'CLINICA')?.id;
+    const idAmbos = destinos.find((d) => d.codigo === 'AMBOS')?.id;
+    return this.medicamentos().filter(
+      (m) => m.idDestinoMedicamento != null && (m.idDestinoMedicamento === idClinica || m.idDestinoMedicamento === idAmbos),
+    );
+  });
   private notif = inject(NotificacionesService);
   private confirmacion = inject(ConfirmacionService);
 
@@ -93,6 +127,32 @@ export class HospitalizacionFormulario {
 
   ordenEditando = signal<OrdenMedicaHospitalizacion | null>(null);
   guardandoOrden = signal(false);
+
+  // Enfermería (hoja "ENFERMERIA", notas-enfermeria en el backend): fecha +
+  // nota + quién la escribió.
+  notaNueva = signal<{ idEmpleado: number | null; evolucion: string } | null>(null);
+  guardandoNota = signal(false);
+
+  // Hoja de Evolución del médico (notas-evolucion en el backend): mismo
+  // papel físico que Enfermería, pero propio de cada profesión.
+  notaEvolucionNueva = signal<{ idMedico: number | null; evolucion: string } | null>(null);
+  guardandoNotaEvolucion = signal(false);
+
+  // Hoja de Control de Medicamentos: medicamento programado (con su hora) +
+  // una marca por cada dosis administrada.
+  medicamentoProgramadoNuevo = signal<{ idMedicamento: number | null; hora: string; fechaInicial: Date | null; observaciones: string } | null>(null);
+  guardandoMedicamentoProgramado = signal(false);
+
+  // Control de Signos: bitácora de signos vitales (fecha+hora, P/A,
+  // temperatura, F.R., observaciones), varias filas a lo largo del tiempo.
+  controlSignosNuevo = signal<{ presionArterial: string; temperatura: number | null; frecuenciaRespiratoria: number | null; observaciones: string } | null>(null);
+  guardandoControlSignos = signal(false);
+
+  // Costo Paciente: bitácora manual de todo lo que genera costo durante la
+  // hospitalización (medicamentos, insumos, procedimientos...).
+  // idMedicamento es opcional, solo para prellenar descripción/valor.
+  costoPacienteNuevo = signal<{ idMedicamento: number | null; fecha: Date | null; descripcion: string; cantidad: number | null; valorUnitario: number | null } | null>(null);
+  guardandoCostoPaciente = signal(false);
 
   historialAbierto = signal(false);
   bitacoraSignal = signal<BitacoraItem[]>([]);
@@ -120,6 +180,10 @@ export class HospitalizacionFormulario {
 
   constructor() {
     this.hospitalizacionesService.precargarCatalogosCamas();
+    // El servicio no se autocarga al inyectarse — si esta pantalla es la
+    // primera en pedir medicamentos en la sesión, el selector de la Hoja de
+    // Control se quedaba vacío hasta que algo más llamaba cargar().
+    this.medicamentosService.cargar();
 
     this.hospitalizacionesService.RetornarCamas().subscribe({
       next: (camas) => {
@@ -199,6 +263,11 @@ export class HospitalizacionFormulario {
       diagnosticoEgreso: '',
     });
     this.ordenEditando.set(null);
+    this.notaNueva.set(null);
+    this.notaEvolucionNueva.set(null);
+    this.medicamentoProgramadoNuevo.set(null);
+    this.controlSignosNuevo.set(null);
+    this.costoPacienteNuevo.set(null);
     this.errorGuardar.set(null);
     this.historialAbierto.set(false);
     this.bitacoraSignal.set([]);
@@ -276,10 +345,390 @@ export class HospitalizacionFormulario {
     if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleString('es-GT', {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
+  }
+
+  // Reproduce el papel físico "ÓRDENES MÉDICAS" del Sanatorio Medicentro:
+  // logo, nombre del paciente y una tabla Fecha/Hora/Médico — Indicaciones
+  // con todas las órdenes activas de esta hospitalización.
+  imprimirOrdenes(): void {
+    const reg = this.registro();
+    if (!reg) return;
+    const html = construirHtmlOrdenes(
+      reg,
+      this.nombrePaciente(reg.hospitalizacion.idPaciente),
+      (id) => this.medicoLabel(id),
+      (id) => this.tipoOrdenLabel(id),
+      (o) => this.formatFecha(o),
+    );
+    abrirVentanaImpresion(html);
+  }
+
+  // ==================== Enfermería (hoja "ENFERMERIA") ====================
+  abrirAgregarNota(): void {
+    const r = this.registro();
+    this.notaNueva.set({ idEmpleado: r?.hospitalizacion.idMedicoResponsable ?? null, evolucion: '' });
+  }
+
+  cancelarAgregarNota(): void {
+    this.notaNueva.set(null);
+  }
+
+  guardarNota(nota: { idEmpleado: number | null; evolucion: string }): void {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!nota.idEmpleado || !nota.evolucion.trim()) {
+      this.notif.error('Completa el empleado y la nota');
+      return;
+    }
+
+    this.guardandoNota.set(true);
+    this.hospitalizacionesService
+      .agregarNotaEnfermeria(idHospitalizacion, {
+        idEmpleado: nota.idEmpleado,
+        fechaHora: toIsoDateTime(new Date())!,
+        nota: nota.evolucion.trim(),
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoNota.set(false);
+          this.notaNueva.set(null);
+          this.cargarDesdeBackend(idHospitalizacion);
+          this.notif.exito('Nota de enfermería agregada correctamente');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.guardandoNota.set(false);
+          console.error('❌ Error al agregar nota de enfermería:', err);
+          this.notif.error('No se pudo agregar la nota');
+        },
+      });
+  }
+
+  // Reproduce el papel físico "ENFERMERIA" del Sanatorio Medicentro: logo,
+  // nombre del paciente, fecha de ingreso y una tabla Fecha | Evolución.
+  imprimirEnfermeria(): void {
+    const reg = this.registro();
+    if (!reg) return;
+    const html = construirHtmlEnfermeria(reg, this.nombrePaciente(reg.hospitalizacion.idPaciente), (id) => this.medicoLabel(id));
+    abrirVentanaImpresion(html);
+  }
+
+  // ==================== Hoja de Evolución (médico) ====================
+  abrirAgregarNotaEvolucion(): void {
+    const r = this.registro();
+    this.notaEvolucionNueva.set({ idMedico: r?.hospitalizacion.idMedicoResponsable ?? null, evolucion: '' });
+  }
+
+  cancelarAgregarNotaEvolucion(): void {
+    this.notaEvolucionNueva.set(null);
+  }
+
+  guardarNotaEvolucion(nota: { idMedico: number | null; evolucion: string }): void {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!nota.idMedico || !nota.evolucion.trim()) {
+      this.notif.error('Completa el médico y la evolución');
+      return;
+    }
+
+    this.guardandoNotaEvolucion.set(true);
+    this.hospitalizacionesService
+      .agregarNotaEvolucion(idHospitalizacion, {
+        idMedico: nota.idMedico,
+        fechaHora: toIsoDateTime(new Date())!,
+        evolucion: nota.evolucion.trim(),
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoNotaEvolucion.set(false);
+          this.notaEvolucionNueva.set(null);
+          this.cargarDesdeBackend(idHospitalizacion);
+          this.notif.exito('Nota de evolución agregada correctamente');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.guardandoNotaEvolucion.set(false);
+          console.error('❌ Error al agregar nota de evolución:', err);
+          this.notif.error('No se pudo agregar la nota');
+        },
+      });
+  }
+
+  // Reproduce el papel físico "HOJA DE EVOLUCIÓN" del Sanatorio Medicentro:
+  // logo, nombre del paciente, fecha de ingreso y una tabla Fecha | Evolución.
+  imprimirEvolucion(): void {
+    const reg = this.registro();
+    if (!reg) return;
+    const html = construirHtmlEvolucion(reg, this.nombrePaciente(reg.hospitalizacion.idPaciente), (id) => this.medicoLabel(id));
+    abrirVentanaImpresion(html);
+  }
+
+  // ==================== Hoja de Control de Medicamentos ====================
+  medicamentoLabel(idMedicamento: number): string {
+    return this.medicamentos().find((m) => m.idMedicamento === idMedicamento)?.nombre ?? '—';
+  }
+
+  formatHora(hora: string): string {
+    return hora ? hora.slice(0, 5) : '—';
+  }
+
+  abrirAgregarMedicamentoProgramado(): void {
+    this.medicamentoProgramadoNuevo.set({ idMedicamento: null, hora: '', fechaInicial: new Date(), observaciones: '' });
+  }
+
+  cancelarAgregarMedicamentoProgramado(): void {
+    this.medicamentoProgramadoNuevo.set(null);
+  }
+
+  guardarMedicamentoProgramado(p: { idMedicamento: number | null; hora: string; fechaInicial: Date | null; observaciones: string }): void {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!p.idMedicamento || !p.hora || !p.fechaInicial) {
+      this.notif.error('Completa el medicamento, la hora y la fecha inicial');
+      return;
+    }
+
+    this.guardandoMedicamentoProgramado.set(true);
+    this.hospitalizacionesService
+      .agregarMedicamentoProgramado(idHospitalizacion, {
+        idMedicamento: p.idMedicamento,
+        hora: `${p.hora}:00`,
+        fechaInicial: toIsoDateTime(p.fechaInicial)!,
+        observaciones: p.observaciones.trim() || null,
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoMedicamentoProgramado.set(false);
+          this.medicamentoProgramadoNuevo.set(null);
+          this.cargarDesdeBackend(idHospitalizacion);
+          this.notif.exito('Medicamento programado correctamente');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.guardandoMedicamentoProgramado.set(false);
+          console.error('❌ Error al programar medicamento:', err);
+          this.notif.error('No se pudo programar el medicamento');
+        },
+      });
+  }
+
+  async eliminarMedicamentoProgramado(p: MedicamentoProgramadoHospitalizacion): Promise<void> {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!(await this.confirmacion.confirmar(`¿Quitar "${this.medicamentoLabel(p.idMedicamento)}" de la hoja de control?`))) return;
+
+    this.hospitalizacionesService.eliminarMedicamentoProgramado(idHospitalizacion, p.idMedicamentoProgramado).subscribe({
+      next: () => this.notif.exito('Medicamento quitado de la hoja de control'),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error al quitar medicamento programado:', err);
+        this.notif.error('No se pudo quitar el medicamento');
+      },
+    });
+  }
+
+  marcarAdministrado(p: MedicamentoProgramadoHospitalizacion): void {
+    const idHospitalizacion = this.idHospitalizacion();
+    const idEmpleado = this.registro()?.hospitalizacion.idMedicoResponsable;
+    if (!idHospitalizacion || !idEmpleado) return;
+
+    this.hospitalizacionesService
+      .agregarAdministracion(idHospitalizacion, p.idMedicamentoProgramado, { idEmpleado, fechaHora: toIsoDateTime(new Date())! })
+      .subscribe({
+        next: () => this.notif.exito('Dosis marcada como administrada'),
+        error: (err: HttpErrorResponse) => {
+          console.error('❌ Error al marcar administración:', err);
+          this.notif.error('No se pudo marcar la dosis');
+        },
+      });
+  }
+
+  async eliminarAdministracion(p: MedicamentoProgramadoHospitalizacion, a: AdministracionMedicamento): Promise<void> {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!(await this.confirmacion.confirmar('¿Quitar esta marca de administración?'))) return;
+
+    this.hospitalizacionesService.eliminarAdministracion(idHospitalizacion, p.idMedicamentoProgramado, a.idAdministracion).subscribe({
+      next: () => this.notif.exito('Marca eliminada'),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error al quitar administración:', err);
+        this.notif.error('No se pudo quitar la marca');
+      },
+    });
+  }
+
+  // Reproduce el papel físico "HOJA DE CONTROL DE MEDICAMENTOS": logo,
+  // nombre del paciente, sala/cama, y una cuadrícula con una fila por
+  // medicamento y una columna por cada día del mes actual, marcando "X"
+  // los días en que se administró.
+  imprimirControlMedicamentos(): void {
+    const reg = this.registro();
+    if (!reg) return;
+    const html = construirHtmlControlMedicamentos(
+      reg,
+      this.nombrePaciente(reg.hospitalizacion.idPaciente),
+      (id) => this.medicamentoLabel(id),
+      (hora) => this.formatHora(hora),
+    );
+    abrirVentanaImpresion(html);
+  }
+
+  // ==================== Control de Signos ====================
+  abrirAgregarControlSignos(): void {
+    this.controlSignosNuevo.set({ presionArterial: '', temperatura: null, frecuenciaRespiratoria: null, observaciones: '' });
+  }
+
+  cancelarAgregarControlSignos(): void {
+    this.controlSignosNuevo.set(null);
+  }
+
+  guardarControlSignos(c: { presionArterial: string; temperatura: number | null; frecuenciaRespiratoria: number | null; observaciones: string }): void {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+
+    this.guardandoControlSignos.set(true);
+    this.hospitalizacionesService
+      .agregarControlSignos(idHospitalizacion, {
+        fechaHora: toIsoDateTime(new Date())!,
+        presionArterial: c.presionArterial.trim() || null,
+        temperatura: c.temperatura,
+        frecuenciaRespiratoria: c.frecuenciaRespiratoria,
+        observaciones: c.observaciones.trim() || null,
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoControlSignos.set(false);
+          this.controlSignosNuevo.set(null);
+          this.cargarDesdeBackend(idHospitalizacion);
+          this.notif.exito('Control de signos registrado correctamente');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.guardandoControlSignos.set(false);
+          console.error('❌ Error al registrar control de signos:', err);
+          this.notif.error('No se pudo registrar el control de signos');
+        },
+      });
+  }
+
+  async eliminarControlSignos(c: ControlSignosHospitalizacion): Promise<void> {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!(await this.confirmacion.confirmar('¿Quitar este control de signos?'))) return;
+
+    this.hospitalizacionesService.eliminarControlSignos(idHospitalizacion, c.idControlSignos).subscribe({
+      next: () => this.notif.exito('Control de signos eliminado'),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error al quitar control de signos:', err);
+        this.notif.error('No se pudo quitar el control de signos');
+      },
+    });
+  }
+
+  // Reproduce el papel físico "CONTROL DE SIGNOS" del Sanatorio Medicentro:
+  // logo, datos generales y una tabla Fecha/Hora/P.A./Temperatura/F.R./Observaciones.
+  // Edad resuelta desde el directorio de pacientes (compartido por los
+  // documentos de impresión que la necesitan: Control de signos, Costo paciente).
+  private edadPaciente(idPaciente: number): number | null {
+    const paciente = this.pacientesService.directorio().find((p) => p.idPaciente === idPaciente);
+    if (!paciente?.fechaNacimiento) return null;
+    return Math.floor(
+      (Date.now() - new Date(paciente.fechaNacimiento.slice(0, 10) + 'T00:00:00').getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+    );
+  }
+
+  imprimirControlSignos(): void {
+    const reg = this.registro();
+    if (!reg) return;
+    const html = construirHtmlControlSignos(
+      reg,
+      this.nombrePaciente(reg.hospitalizacion.idPaciente),
+      this.edadPaciente(reg.hospitalizacion.idPaciente),
+    );
+    abrirVentanaImpresion(html);
+  }
+
+  // ==================== Costo Paciente ====================
+  abrirAgregarCostoPaciente(): void {
+    this.costoPacienteNuevo.set({ idMedicamento: null, fecha: new Date(), descripcion: '', cantidad: 1, valorUnitario: null });
+  }
+
+  cancelarAgregarCostoPaciente(): void {
+    this.costoPacienteNuevo.set(null);
+  }
+
+  // Al elegir un medicamento del catálogo, prellena descripción y valor
+  // unitario (siguen siendo editables, para renglones que no calcen exacto).
+  onSeleccionarMedicamentoCosto(c: { idMedicamento: number | null; descripcion: string; valorUnitario: number | null }): void {
+    const m = c.idMedicamento != null ? this.medicamentos().find((x) => x.idMedicamento === c.idMedicamento) : null;
+    if (m) {
+      c.descripcion = m.nombre;
+      c.valorUnitario = m.precioVentaPublico;
+    }
+  }
+
+  guardarCostoPaciente(c: { idMedicamento: number | null; fecha: Date | null; descripcion: string; cantidad: number | null; valorUnitario: number | null }): void {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!c.fecha || !c.descripcion.trim() || !c.cantidad || c.valorUnitario === null) {
+      this.notif.error('Completa la fecha, descripción, cantidad y valor unitario');
+      return;
+    }
+
+    this.guardandoCostoPaciente.set(true);
+    this.hospitalizacionesService
+      .agregarCostoPaciente(idHospitalizacion, {
+        idMedicamento: c.idMedicamento,
+        fecha: toIsoDateTime(c.fecha)!,
+        descripcion: c.descripcion.trim(),
+        cantidad: c.cantidad,
+        valorUnitario: c.valorUnitario,
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoCostoPaciente.set(false);
+          this.costoPacienteNuevo.set(null);
+          this.cargarDesdeBackend(idHospitalizacion);
+          this.notif.exito('Costo registrado correctamente');
+        },
+        error: (err: HttpErrorResponse) => {
+          this.guardandoCostoPaciente.set(false);
+          console.error('❌ Error al registrar costo:', err);
+          this.notif.error('No se pudo registrar el costo');
+        },
+      });
+  }
+
+  async eliminarCostoPaciente(c: CostoPacienteHospitalizacion): Promise<void> {
+    const idHospitalizacion = this.idHospitalizacion();
+    if (!idHospitalizacion) return;
+    if (!(await this.confirmacion.confirmar(`¿Quitar "${c.descripcion}" de los costos del paciente?`))) return;
+
+    this.hospitalizacionesService.eliminarCostoPaciente(idHospitalizacion, c.idCostoPaciente).subscribe({
+      next: () => this.notif.exito('Costo eliminado'),
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error al quitar costo:', err);
+        this.notif.error('No se pudo quitar el costo');
+      },
+    });
+  }
+
+  totalCostosPaciente(costos: CostoPacienteHospitalizacion[]): number {
+    return costos.reduce((acc, c) => acc + c.cantidad * c.valorUnitario, 0);
+  }
+
+  // Reproduce el papel físico "COSTO PACIENTE" del Sanatorio Medicentro:
+  // logo, datos generales y una tabla Fecha/Medicamentos/Cantidad/Valor, con
+  // el total al final.
+  imprimirCostoPaciente(): void {
+    const reg = this.registro();
+    if (!reg) return;
+    const html = construirHtmlCostoPaciente(
+      reg,
+      this.nombrePaciente(reg.hospitalizacion.idPaciente),
+      this.edadPaciente(reg.hospitalizacion.idPaciente),
+    );
+    abrirVentanaImpresion(html);
   }
 
   abrirEditarOrden(orden: OrdenMedicaHospitalizacion): void {

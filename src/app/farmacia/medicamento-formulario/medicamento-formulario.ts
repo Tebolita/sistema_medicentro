@@ -62,6 +62,12 @@ export class MedicamentoFormulario {
   categorias = computed(() => this.categoriasApi());
   hayCategorias = computed(() => this.categorias().length > 0);
 
+  // Farmacia (se vende/factura al paciente) vs Clínica (uso interno, se
+  // administra a hospitalizados) vs Ambos — solo informativo.
+  private destinosApi = this.catalogos.obtener('DESTINO_MEDICAMENTO');
+  destinos = computed(() => this.destinosApi());
+  hayDestinos = computed(() => this.destinos().length > 0);
+
   form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
     principioActivo: [''],
@@ -69,6 +75,7 @@ export class MedicamentoFormulario {
     concentracion: [''],
     requiereReceta: [false],
     idCategoriaMedicamento: this.fb.control<number | null>(null),
+    idDestinoMedicamento: this.fb.control<number | null>(null),
     precioVentaPublico: this.fb.nonNullable.control<number>(0, [Validators.required, Validators.min(0)]),
   });
 
@@ -93,6 +100,7 @@ export class MedicamentoFormulario {
       concentracion: m.concentracion ?? '',
       requiereReceta: m.requiereReceta,
       idCategoriaMedicamento: m.idCategoriaMedicamento,
+      idDestinoMedicamento: m.idDestinoMedicamento,
       precioVentaPublico: m.precioVentaPublico,
     });
   }
@@ -109,6 +117,7 @@ export class MedicamentoFormulario {
       presentacion: v.presentacion.trim() || null,
       concentracion: v.concentracion.trim() || null,
       idCategoriaMedicamento: v.idCategoriaMedicamento,
+      idDestinoMedicamento: v.idDestinoMedicamento,
       requiereReceta: v.requiereReceta,
       precioVentaPublico: v.precioVentaPublico,
     };

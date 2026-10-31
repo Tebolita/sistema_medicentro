@@ -139,26 +139,14 @@
   color: var(--c-accent);
 }
 
-.atencion-accordion mat-panel-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
 /* Un color suave por sección, para que el médico la identifique de un
    vistazo — mismos colores que ya usa cada módulo en el menú principal
    (Recepción, Farmacia, Laboratorio, Hospitalización), así se reconocen
    igual en las dos pantallas. */
-.atencion-accordion mat-expansion-panel {
-  border-radius: 10px !important;
-  overflow: hidden;
-  margin-bottom: 6px;
-}
-
 .panel-datos { --panel-color: #0d6a8f; }
 .panel-receta { --panel-color: #00838f; }
 .panel-examen { --panel-color: #ef6c00; }
+.panel-vacunas { --panel-color: #5c6bc0; }
 .panel-hosp { --panel-color: #455a64; }
 .panel-constancia { --panel-color: #5c6bc0; }
 .panel-acta { --panel-color: #6d4c41; }
@@ -166,22 +154,71 @@
 /* Rosa: mismo color del papel real de esta ficha (Sanatorio Medicentro
    Barberena), para distinguirla de un vistazo de la ficha de arriba. */
 .panel-ficha-cg { --panel-color: #c2185b; }
+.panel-ordenes-medicas { --panel-color: #2e7d32; }
+.panel-evolucion { --panel-color: #8e24aa; }
+.panel-enfermeria { --panel-color: #ad1457; }
+.panel-control-signos { --panel-color: #00695c; }
+.panel-costo-paciente { --panel-color: #f9a825; }
 
-.atencion-accordion mat-expansion-panel.panel-datos,
-.atencion-accordion mat-expansion-panel.panel-receta,
-.atencion-accordion mat-expansion-panel.panel-examen,
-.atencion-accordion mat-expansion-panel.panel-hosp {
+/* ==================== Navbar de secciones ====================
+   Reemplaza el acordeón largo: una fila de iconos (uno por sección) en vez
+   de todos los encabezados apilados y siempre visibles — solo se muestra
+   el contenido de la sección activa, debajo. */
+.secciones-navbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+}
+
+.nav-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--panel-color, var(--c-text-muted));
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.nav-icono:hover {
+  background: color-mix(in srgb, var(--panel-color, var(--c-accent)) 12%, transparent);
+}
+
+.nav-icono-activo {
+  background: color-mix(in srgb, var(--panel-color, var(--c-accent)) 18%, transparent);
+  border-color: var(--panel-color, var(--c-accent));
+}
+
+.nav-imprimir {
+  margin-left: auto;
+  color: var(--c-text-muted);
+}
+
+/* ==================== Contenido de la sección activa ==================== */
+.tab-contenido {
+  padding: 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-color) 6%, var(--c-surface));
+  border: 1px solid var(--c-border);
   border-left: 4px solid var(--panel-color);
 }
 
-.atencion-accordion mat-expansion-panel.panel-datos mat-expansion-panel-header,
-.atencion-accordion mat-expansion-panel.panel-receta mat-expansion-panel-header,
-.atencion-accordion mat-expansion-panel.panel-examen mat-expansion-panel-header,
-.atencion-accordion mat-expansion-panel.panel-hosp mat-expansion-panel-header {
-  background: color-mix(in srgb, var(--panel-color) 8%, var(--c-surface));
-}
-
-.atencion-accordion mat-panel-title mat-icon {
+.tab-contenido h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--panel-color);
 }
 
@@ -196,6 +233,15 @@
   color: var(--c-text-muted);
   font-size: 13px;
   margin: 8px 0 12px;
+}
+
+.costo-total {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--panel-color);
 }
 
 /* Resumen de solo lectura (datos clínicos / constancia) antes de abrir el

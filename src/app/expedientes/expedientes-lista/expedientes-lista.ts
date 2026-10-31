@@ -7,8 +7,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
 import { listaOpcional } from '../../shared/lista-opcional';
+import { ResumenExpedienteDialog, ResumenExpedienteDialogData } from '../resumen-expediente-dialog/resumen-expediente-dialog';
 
 import { BitacoraItem, CitaService } from '../../service/cita.service';
 import { PacienteService } from '../../service/paciente.service';
@@ -38,7 +40,7 @@ interface PacienteConConsultas {
 // exámenes y el enlace a hospitalización — ya no sueltos aquí.
 @Component({
   selector: 'app-expedientes-lista',
-  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [FormsModule, NgClass, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule, MatDialogModule],
   templateUrl: './expedientes-lista.html',
   styleUrl: './expedientes-lista.css',
 })
@@ -52,6 +54,7 @@ export class ExpedientesLista {
   private notificaciones = inject(NotificacionesService);
   private platformId = inject(PLATFORM_ID);
   private route = inject(ActivatedRoute);
+  private dialog = inject(MatDialog);
 
   searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
@@ -248,6 +251,29 @@ export class ExpedientesLista {
 
   volverAPacientes(): void {
     this.pacienteSeleccionado.set(null);
+  }
+
+  // "Resumen del expediente": para que el médico vea rápido qué hojas tiene
+  // cada consulta (checklist) y genere/imprima una hoja combinando varias
+  // consultas si lo necesita (ver resumen-expediente-dialog.ts).
+  abrirResumenExpediente(): void {
+    const idPaciente = this.pacienteSeleccionado();
+    if (!idPaciente) return;
+
+    const data: ResumenExpedienteDialogData = {
+      citas: this.consultasDelPaciente(),
+      nombrePaciente: this.nombrePacienteActual(),
+      idPaciente,
+    };
+    this.dialog.open(ResumenExpedienteDialog, {
+      autoFocus: false,
+      data,
+      panelClass: 'resumen-expediente-panel',
+      width: '95vw',
+      maxWidth: '1400px',
+      height: '90vh',
+      maxHeight: '900px',
+    });
   }
 
   nombrePaciente(idPaciente: number): string {

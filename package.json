@@ -25,6 +25,7 @@
     "@primeuix/themes": "^3.0.0",
     "@types/multer": "^2.3.0",
     "angular": "^1.8.3",
+    "docx": "^9.15.0",
     "express": "^5.1.0",
     "material": "^1.0.3",
     "multer": "^2.4.0",

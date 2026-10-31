@@ -2,7 +2,7 @@ import { environment } from '../../environments/environment';
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap, shareReplay, forkJoin } from 'rxjs';
+import { Observable, map, tap, shareReplay, forkJoin, of } from 'rxjs';
 
 export interface ConsentimientoInformado {
   idConsentimiento: number;
@@ -150,6 +150,7 @@ export class CompromisosPagoService {
         obs.complete();
       });
     }
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(
       `${this.apiUrlCatalogos}/${codigoTipo}`,
       { headers: this.getHeaders() },
@@ -371,6 +372,7 @@ export class CompromisosPagoService {
   // =============================================================
 
   RetornarMedicos(): Observable<MedicoOpcion[]> {
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(this.apiUrlMedicos, {
       headers: this.getHeaders(),
     }).pipe(
@@ -435,6 +437,7 @@ export class CompromisosPagoService {
   }
 
   RetornarUsuarios(): Observable<UsuarioOpcion[]> {
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios, {
       headers: this.getHeaders(),
     }).pipe(

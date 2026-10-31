@@ -76,6 +76,13 @@ export class OrdenMedicaFormulario {
   });
 
   constructor() {
+    // activas (abajo) depende de que ESTADO_HOSPITALIZACION ya esté en el
+    // caché de catálogos del servicio; si se entra directo a esta pantalla
+    // sin pasar antes por la lista o el formulario completo (que son los
+    // únicos que la precargan), el caché está vacío e "idPorCodigo" devuelve
+    // null, y la hospitalización activa que sí existe no se muestra.
+    this.hospitalizacionesService.precargarCatalogosCamas();
+
     const hospitalizacionParam = this.route.snapshot.queryParamMap.get('hospitalizacion');
     if (hospitalizacionParam) {
       const id = Number(hospitalizacionParam);

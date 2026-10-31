@@ -72,14 +72,73 @@
       }
     </div>
 
-    <mat-accordion class="atencion-accordion" multi>
+    <!-- Navbar de secciones: reemplaza el acordeón largo (ocupaba toda la
+         pantalla con los encabezados de todas las secciones siempre
+         visibles) por iconos — solo se muestra el contenido de la sección
+         seleccionada. Colores y tooltip (2s) ayudan a identificar cada una
+         de un vistazo. -->
+    <nav class="secciones-navbar">
+      @if (!esSoloLaboratorio()) {
+        <button type="button" class="nav-icono panel-datos" [class.nav-icono-activo]="seccionActiva() === 'datos'" (click)="seccionActiva.set('datos')" matTooltip="Datos de la consulta" matTooltipShowDelay="2000">
+          <mat-icon>assignment</mat-icon>
+        </button>
+        <button type="button" class="nav-icono panel-receta" [class.nav-icono-activo]="seccionActiva() === 'receta'" (click)="seccionActiva.set('receta')" matTooltip="Recetario" matTooltipShowDelay="2000">
+          <mat-icon>receipt_long</mat-icon>
+        </button>
+      }
+      <button type="button" class="nav-icono panel-examen" [class.nav-icono-activo]="seccionActiva() === 'examen'" (click)="seccionActiva.set('examen')" matTooltip="Exámenes" matTooltipShowDelay="2000">
+        <mat-icon>science</mat-icon>
+      </button>
+      @if (!esSoloLaboratorio()) {
+        <button type="button" class="nav-icono panel-vacunas" [class.nav-icono-activo]="seccionActiva() === 'vacunas'" (click)="seccionActiva.set('vacunas')" matTooltip="Vacunas aplicadas" matTooltipShowDelay="2000">
+          <mat-icon>vaccines</mat-icon>
+        </button>
+        <button type="button" class="nav-icono panel-hosp" [class.nav-icono-activo]="seccionActiva() === 'hosp'" (click)="seccionActiva.set('hosp')" matTooltip="Hospitalización" matTooltipShowDelay="2000">
+          <mat-icon>bed</mat-icon>
+        </button>
+        <button type="button" class="nav-icono panel-ordenes-medicas" [class.nav-icono-activo]="seccionActiva() === 'ordenes'" (click)="seccionActiva.set('ordenes')" matTooltip="Órdenes médicas" matTooltipShowDelay="2000">
+          <mat-icon>assignment_turned_in</mat-icon>
+        </button>
+        <button type="button" class="nav-icono panel-evolucion" [class.nav-icono-activo]="seccionActiva() === 'evolucion'" (click)="seccionActiva.set('evolucion')" matTooltip="Hoja de evolución" matTooltipShowDelay="2000">
+          <mat-icon>history_edu</mat-icon>
+        </button>
+        <button type="button" class="nav-icono panel-enfermeria" [class.nav-icono-activo]="seccionActiva() === 'enfermeria'" (click)="seccionActiva.set('enfermeria')" matTooltip="Enfermería" matTooltipShowDelay="2000">
+          <mat-icon>local_hospital</mat-icon>
+        </button>
+        <button type="button" class="nav-icono panel-control-signos" [class.nav-icono-activo]="seccionActiva() === 'signos'" (click)="seccionActiva.set('signos')" matTooltip="Control de signos" matTooltipShowDelay="2000">
+          <mat-icon>monitor_heart</mat-icon>
+        </button>
+        <button type="button" class="nav-icono panel-costo-paciente" [class.nav-icono-activo]="seccionActiva() === 'costo'" (click)="seccionActiva.set('costo')" matTooltip="Costo paciente" matTooltipShowDelay="2000">
+          <mat-icon>payments</mat-icon>
+        </button>
+      }
+      <button type="button" class="nav-icono panel-ficha-cea" [class.nav-icono-activo]="seccionActiva() === 'ficha-cea'" (click)="seccionActiva.set('ficha-cea')" matTooltip="Ficha clínica — Consulta externa adulto" matTooltipShowDelay="2000">
+        <mat-icon>description</mat-icon>
+      </button>
+      <button type="button" class="nav-icono panel-ficha-cg" [class.nav-icono-activo]="seccionActiva() === 'ficha-cg'" (click)="seccionActiva.set('ficha-cg')" matTooltip="Ficha clínica general" matTooltipShowDelay="2000">
+        <mat-icon>description</mat-icon>
+      </button>
+
+      @if (hospitalizacionIniciada(); as h) {
+        <button type="button" class="nav-icono nav-imprimir" matTooltip="Imprimir documentos de hospitalización" matTooltipShowDelay="2000" [matMenuTriggerFor]="menuImprimirHosp">
+          <mat-icon>print</mat-icon>
+        </button>
+        <mat-menu #menuImprimirHosp="matMenu">
+          <button mat-menu-item type="button" (click)="imprimirOrdenesHospitalizacion()"><mat-icon>assignment_turned_in</mat-icon><span>Órdenes médicas</span></button>
+          <button mat-menu-item type="button" (click)="imprimirEvolucionHospitalizacion()"><mat-icon>history_edu</mat-icon><span>Hoja de evolución</span></button>
+          <button mat-menu-item type="button" (click)="imprimirEnfermeriaHospitalizacion()"><mat-icon>local_hospital</mat-icon><span>Enfermería</span></button>
+          <button mat-menu-item type="button" (click)="imprimirControlMedicamentosHospitalizacion()"><mat-icon>medication</mat-icon><span>Control de medicamentos</span></button>
+          <button mat-menu-item type="button" (click)="imprimirControlSignosHospitalizacion()"><mat-icon>monitor_heart</mat-icon><span>Control de signos</span></button>
+          <button mat-menu-item type="button" (click)="imprimirCostoPacienteHospitalizacion()"><mat-icon>payments</mat-icon><span>Costo paciente</span></button>
+        </mat-menu>
+      }
+    </nav>
+
       <!-- Datos clínicos: no aplica a una consulta de solo laboratorio (sin
            médico asignado, nada clínico que registrar aquí). -->
-      @if (!esSoloLaboratorio()) {
-      <mat-expansion-panel class="panel-datos">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>assignment</mat-icon> Datos de la consulta</mat-panel-title>
-        </mat-expansion-panel-header>
+      @if (seccionActiva() === 'datos' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-datos">
+        <h2><mat-icon>assignment</mat-icon> Datos de la consulta</h2>
 
         @if (expedientes().length) {
           <div class="resumen-datos">
@@ -96,13 +155,13 @@
             {{ expedientes().length ? 'Editar datos' : 'Agregar datos' }}
           </button>
         </div>
-      </mat-expansion-panel>
+      </div>
+      }
 
       <!-- Recetario: requiere médico asignado, no aplica a solo laboratorio. -->
-      <mat-expansion-panel class="panel-receta">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>receipt_long</mat-icon> Recetario ({{ recetas().length }})</mat-panel-title>
-        </mat-expansion-panel-header>
+      @if (seccionActiva() === 'receta' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-receta">
+        <h2><mat-icon>receipt_long</mat-icon> Recetario ({{ recetas().length }})</h2>
 
         @if (recetas().length) {
           <div class="tabla-toolbar">
@@ -226,14 +285,13 @@
             Agregar receta
           </button>
         </div>
-      </mat-expansion-panel>
+      </div>
       }
 
       <!-- Exámenes -->
-      <mat-expansion-panel class="panel-examen">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>science</mat-icon> Exámenes ({{ ordenesLaboratorio().length }})</mat-panel-title>
-        </mat-expansion-panel-header>
+      @if (seccionActiva() === 'examen') {
+      <div class="tab-contenido panel-examen">
+        <h2><mat-icon>science</mat-icon> Exámenes ({{ ordenesLaboratorio().length }})</h2>
 
         @if (ordenesLaboratorio().length) {
           <div class="tabla-toolbar">
@@ -324,15 +382,14 @@
             Solicitar examen
           </button>
         </div>
-      </mat-expansion-panel>
+      </div>
+      }
 
       <!-- Vacunas aplicadas: por consulta, no es historial reutilizable del
            paciente (eso vive en Pacientes -> Alergias/Antecedentes). -->
-      @if (!esSoloLaboratorio()) {
-      <mat-expansion-panel class="panel-vacunas">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>vaccines</mat-icon> Vacunas aplicadas ({{ vacunasAplicadas().length }})</mat-panel-title>
-        </mat-expansion-panel-header>
+      @if (seccionActiva() === 'vacunas' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-vacunas">
+        <h2><mat-icon>vaccines</mat-icon> Vacunas aplicadas ({{ vacunasAplicadas().length }})</h2>
 
         @if (vacunasAplicadas().length) {
           <div class="tabla-wrap">
@@ -374,15 +431,13 @@
             Registrar vacuna
           </button>
         </div>
-      </mat-expansion-panel>
+      </div>
       }
 
       <!-- Hospitalización: requiere médico asignado, no aplica a solo laboratorio. -->
-      @if (!esSoloLaboratorio()) {
-      <mat-expansion-panel class="panel-hosp">
-        <mat-expansion-panel-header>
-          <mat-panel-title><mat-icon>bed</mat-icon> Hospitalización</mat-panel-title>
-        </mat-expansion-panel-header>
+      @if (seccionActiva() === 'hosp' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-hosp">
+        <h2><mat-icon>bed</mat-icon> Hospitalización</h2>
 
         @if (hospitalizacionIniciada(); as h) {
           <div class="resumen-datos">
@@ -405,14 +460,266 @@
             </button>
           </div>
         }
-      </mat-expansion-panel>
+      </div>
       }
-    </mat-accordion>
+
+      <!-- Órdenes médicas de esta consulta: ligadas a la cita, no a una
+           hospitalización — para poder dejar indicaciones a cualquier
+           paciente, no solo a los ingresados. -->
+      @if (seccionActiva() === 'ordenes' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-ordenes-medicas">
+        <h2><mat-icon>assignment_turned_in</mat-icon> Órdenes médicas ({{ ordenesMedicasConsulta().length }})</h2>
+
+        @if (ordenesMedicasConsulta().length) {
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Indicaciones</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (o of ordenesMedicasConsulta(); track o.idOrdenMedicaConsulta) {
+                  <tr>
+                    <td>{{ o.fechaOrden | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ tipoOrdenLabel(o.idTipoOrden) }} - {{ o.indicaciones }}</td>
+                    <td class="celda-acciones">
+                      <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarOrdenMedicaConsulta(o)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="panel-nota">Todavía no se ha registrado ninguna orden médica en esta consulta.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton type="button" (click)="imprimirOrdenesMedicasConsulta()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirDialogoOrdenMedicaConsulta()">
+            <mat-icon>add</mat-icon>
+            Registrar orden
+          </button>
+        </div>
+      </div>
+      }
+
+      <!-- Hoja de evolución de esta consulta: misma idea que la de
+           Hospitalización, pero ligada a la cita. -->
+      @if (seccionActiva() === 'evolucion' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-evolucion">
+        <h2><mat-icon>history_edu</mat-icon> Hoja de evolución ({{ notasEvolucionConsulta().length }})</h2>
+
+        @if (notasEvolucionConsulta().length) {
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Evolución</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of notasEvolucionConsulta(); track n.idNotaEvolucionConsulta) {
+                  <tr>
+                    <td>{{ n.fechaHora | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ n.evolucion }}</td>
+                    <td class="celda-acciones">
+                      <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarNotaEvolucionConsulta(n)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="panel-nota">Todavía no se ha registrado ninguna nota de evolución en esta consulta.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton type="button" (click)="imprimirNotasEvolucionConsulta()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirDialogoNotaEvolucionConsulta()">
+            <mat-icon>add</mat-icon>
+            Agregar nota
+          </button>
+        </div>
+      </div>
+      }
+
+      <!-- Enfermería (hoja "ENFERMERIA") de esta consulta: misma idea que la
+           de Hospitalización, pero ligada a la cita. -->
+      @if (seccionActiva() === 'enfermeria' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-enfermeria">
+        <h2><mat-icon>local_hospital</mat-icon> Enfermería ({{ notasEnfermeriaConsulta().length }})</h2>
+
+        @if (notasEnfermeriaConsulta().length) {
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Nota</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of notasEnfermeriaConsulta(); track n.idNotaEnfermeriaConsulta) {
+                  <tr>
+                    <td>{{ n.fechaHora | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ n.nota }}</td>
+                    <td class="celda-acciones">
+                      <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarNotaEnfermeriaConsulta(n)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="panel-nota">Todavía no se ha registrado ninguna nota de enfermería en esta consulta.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton type="button" (click)="imprimirNotasEnfermeriaConsulta()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirDialogoNotaEnfermeriaConsulta()">
+            <mat-icon>add</mat-icon>
+            Agregar nota
+          </button>
+        </div>
+      </div>
+      }
+
+      <!-- Control de signos de esta consulta: misma idea que la de
+           Hospitalización, pero ligada a la cita. -->
+      @if (seccionActiva() === 'signos' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-control-signos">
+        <h2><mat-icon>monitor_heart</mat-icon> Control de signos ({{ controlesSignosConsulta().length }})</h2>
+
+        @if (controlesSignosConsulta().length) {
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>P/A</th>
+                  <th>Temperatura</th>
+                  <th>F.R.</th>
+                  <th>Observaciones</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of controlesSignosConsulta(); track c.idControlSignosConsulta) {
+                  <tr>
+                    <td>{{ c.fechaHora | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ c.presionArterial || '—' }}</td>
+                    <td>{{ c.temperatura !== null ? c.temperatura + '°C' : '—' }}</td>
+                    <td>{{ c.frecuenciaRespiratoria ?? '—' }}</td>
+                    <td>{{ c.observaciones || '—' }}</td>
+                    <td class="celda-acciones">
+                      <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarControlSignosConsulta(c)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="panel-nota">Todavía no se ha registrado ningún control de signos en esta consulta.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton type="button" (click)="imprimirControlSignosConsulta()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirDialogoControlSignosConsulta()">
+            <mat-icon>add</mat-icon>
+            Agregar control
+          </button>
+        </div>
+      </div>
+      }
+
+      <!-- Costo paciente de esta consulta: misma idea que la de
+           Hospitalización, pero ligada a la cita. -->
+      @if (seccionActiva() === 'costo' && !esSoloLaboratorio()) {
+      <div class="tab-contenido panel-costo-paciente">
+        <h2><mat-icon>payments</mat-icon> Costo paciente ({{ costosPacienteConsulta().length }})</h2>
+
+        @if (costosPacienteConsulta().length) {
+          <div class="tabla-wrap">
+            <table class="tabla-atencion">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Descripción</th>
+                  <th>Cantidad</th>
+                  <th>Valor</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of costosPacienteConsulta(); track c.idCostoPacienteConsulta) {
+                  <tr>
+                    <td>{{ c.fecha | date: 'dd/MM/yyyy' }}</td>
+                    <td>{{ c.descripcion }}</td>
+                    <td>{{ c.cantidad }}</td>
+                    <td>Q{{ (c.cantidad * c.valorUnitario).toFixed(2) }}</td>
+                    <td class="celda-acciones">
+                      <button matIconButton type="button" matTooltip="Quitar" (click)="eliminarCostoPacienteConsulta(c)">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="costo-total">Total: Q{{ totalCostosPacienteConsulta(costosPacienteConsulta()).toFixed(2) }}</p>
+        } @else {
+          <p class="panel-nota">Todavía no se ha registrado ningún costo en esta consulta.</p>
+        }
+
+        <div class="panel-actions">
+          <button matButton type="button" (click)="imprimirCostoPacienteConsulta()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+          <button matButton="filled" type="button" (click)="abrirDialogoCostoPacienteConsulta()">
+            <mat-icon>add</mat-icon>
+            Agregar costo
+          </button>
+        </div>
+      </div>
+      }
 
     <!-- Ficha clínica (consulta externa adulto): digitalización del
          formulario de papel del Sanatorio Medicentro. -->
-    <div class="constancia-panel panel-ficha-cea">
-      <h2><mat-icon>assignment</mat-icon> Ficha clínica — Consulta externa adulto</h2>
+    @if (seccionActiva() === 'ficha-cea') {
+    <div class="tab-contenido constancia-panel panel-ficha-cea">
+      <h2><mat-icon>description</mat-icon> Ficha clínica — Consulta externa adulto</h2>
 
       @if (fichaConsultaExternaAdulto(); as fcea) {
         <div class="resumen-datos">
@@ -438,11 +745,13 @@
         }
       </div>
     </div>
+    }
 
     <!-- Ficha clínica general (papel rosa, Sanatorio Medicentro Barberena):
          DISTINTA de la ficha de consulta externa adulto de arriba. -->
-    <div class="constancia-panel panel-ficha-cg">
-      <h2><mat-icon>assignment</mat-icon> Ficha clínica general</h2>
+    @if (seccionActiva() === 'ficha-cg') {
+    <div class="tab-contenido constancia-panel panel-ficha-cg">
+      <h2><mat-icon>description</mat-icon> Ficha clínica general</h2>
 
       @if (fichaClinicaGeneral(); as fcg) {
         <div class="resumen-datos">
@@ -468,6 +777,7 @@
         }
       </div>
     </div>
+    }
 
     <!-- Constancia médica y Acta de cierre: quitadas de la vista por ahora
          (ver consulta-atencion.ts — el código y los datos siguen intactos,

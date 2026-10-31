@@ -2,7 +2,7 @@ import { environment } from '../../environments/environment';
 import { Injectable, computed, signal, PLATFORM_ID, Inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Observable, map, tap, forkJoin } from 'rxjs';
+import { Observable, map, tap, forkJoin, of } from 'rxjs';
 
 export interface CasoEmergencia {
   idCaso: number;
@@ -281,6 +281,11 @@ export class CasosEmergenciaService {
   // =============================================================
 
   RetornarMedicos(): Observable<MedicoOpcion[]> {
+    // En SSR no hay token todavía (ver obtenerToken): pedir esto sin
+    // Authorization solo saca un 401 del backend y dispara el toast de
+    // error en el HTML prerenderizado. Se omite y el cliente, ya
+    // hidratado con el token real, lo vuelve a pedir solo.
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(this.apiUrlMedicos, {
       headers: this.getHeaders(),
     }).pipe(
@@ -304,6 +309,7 @@ export class CasosEmergenciaService {
   // =============================================================
 
   private retornarCatalogo(codigoTipo: string): Observable<OpcionCatalogo[]> {
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(
       `${this.apiUrlCatalogos}/${codigoTipo}`,
       { headers: this.getHeaders() },
@@ -355,6 +361,7 @@ export class CasosEmergenciaService {
   }
 
   RetornarUsuarios(): Observable<UsuarioOpcion[]> {
+    if (!this.esNavegador) return of([]);
     return this.http.get<ApiResponse<any[]>>(this.apiUrlUsuarios, {
       headers: this.getHeaders(),
     }).pipe(

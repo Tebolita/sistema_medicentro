@@ -103,6 +103,52 @@
 --              ficha_consulta_externa), con antecedentes gineco-obstétricos,
 --              prenatales, revisión por sistemas y examen físico por
 --              aparatos.
+--   PARTE 21 — Tabla orden_medica_consulta: órdenes médicas ligadas a la
+--              cita (consulta externa), igual patrón que vacuna_aplicada
+--              (varias por consulta) — distinta de orden_medica_hospitalizacion
+--              (ligada a id_hospitalizacion), para poder dejar indicaciones a
+--              cualquier paciente, no solo a los ingresados. Reutiliza el
+--              catálogo TIPO_ORDEN_HOSPITALIZACION (MEDICA/ENFERMERIA) para
+--              poder imprimir "Médica - <indicación>", igual que el papel.
+--   PARTE 22 — Tabla notas_enfermeria: el backend (entidad/servicio/
+--              controlador) ya existía para esto, pero nunca se había creado
+--              la tabla ni se había conectado al frontend. Es la "Hoja de
+--              Evolución" (fecha + evolución) de una hospitalización.
+--   PARTE 23 — Tabla nota_evolucion_consulta: igual que la anterior, pero
+--              ligada a la cita (consulta externa) en vez de a una
+--              hospitalización — misma idea que orden_medica_consulta.
+--   PARTE 24 — Tabla nota_evolucion_hospitalizacion: "Hoja de Evolución" del
+--              MÉDICO durante una hospitalización — distinta de
+--              notas_enfermeria (hoja "ENFERMERIA"): mismo papel físico
+--              (fecha + evolución), pero cada profesión tiene su propia hoja.
+--   PARTE 25 — Tabla nota_enfermeria_consulta: hoja "ENFERMERIA" ligada a la
+--              cita (consulta externa) en vez de a una hospitalización.
+--   PARTE 26 — Catálogo DESTINO_MEDICAMENTO (FARMACIA/CLINICA/AMBOS) +
+--              columna medicamentos.id_destino_medicamento: distingue
+--              medicamentos que se venden/facturan al paciente (Farmacia)
+--              de los que se usan internamente para administrar a
+--              hospitalizados (Clínica). Solo informativo, no restringe.
+--   PARTE 27 — Tabla medicamento_programado_hospitalizacion: "Hoja de
+--              Control de Medicamentos" — cada fila es un medicamento
+--              programado (con su hora) para una hospitalización.
+--   PARTE 28 — Tabla administracion_medicamento: cada vez que se administra
+--              una dosis de un medicamento programado se agrega un
+--              registro aquí (equivale a tachar un día en la cuadrícula
+--              del papel físico).
+--   PARTE 29 — Tabla control_signos_hospitalizacion: "CONTROL DE SIGNOS"
+--              — bitácora de signos vitales (fecha+hora, P/A, temperatura,
+--              F.R., observaciones) durante una hospitalización.
+--   PARTE 30 — Tabla control_signos_consulta: igual que la anterior, pero
+--              ligada a la cita (consulta externa) en vez de a una
+--              hospitalización.
+--   PARTE 31 — Tabla costo_paciente_hospitalizacion: "COSTO PACIENTE" —
+--              bitácora manual de todo lo que genera costo durante una
+--              hospitalización (medicamentos administrados, insumos,
+--              procedimientos...). id_medicamento es opcional, solo para
+--              prellenar descripción/valor desde el catálogo.
+--   PARTE 32 — Tabla costo_paciente_consulta: igual que la anterior, pero
+--              ligada a la cita (consulta externa) en vez de a una
+--              hospitalización.
 --
 -- QUÉ NO HACE (adrede, hay que hacerlo aparte, a mano):
 --   - Crear OTROS usuarios además del admin de la PARTE 13 (recepcionistas,
@@ -1428,3 +1474,350 @@ END
 -- Verificación.
 SELECT c.name FROM sys.columns c WHERE c.object_id = OBJECT_ID('dbo.pacientes') AND c.name IN ('religion', 'ocupacion');
 SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'ficha_clinica_general';
+
+-- =============================================================================
+-- PARTE 21: tabla orden_medica_consulta — órdenes médicas de consulta
+-- externa, ligadas a id_cita (no a id_hospitalizacion). Puede haber varias
+-- órdenes por consulta, igual que vacuna_aplicada (PARTE 19): no lleva
+-- UNIQUE sobre id_cita.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'orden_medica_consulta' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.orden_medica_consulta (
+        id_orden_medica_consulta BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                  BIGINT NOT NULL,
+        id_paciente               BIGINT NOT NULL,
+        id_medico                 BIGINT NOT NULL,
+        id_tipo_orden             BIGINT NOT NULL,
+        fecha_orden               DATETIME2 NOT NULL,
+        indicaciones              NVARCHAR(MAX) NOT NULL,
+        activo                    BIT NOT NULL DEFAULT 1,
+        fecha_creacion            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion        DATETIME2 NULL,
+        id_usuario_creacion       BIGINT NULL,
+        id_usuario_modificacion   BIGINT NULL,
+        CONSTRAINT fk_orden_medica_consulta_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_orden_medica_consulta_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_orden_medica_consulta_medico FOREIGN KEY (id_medico) REFERENCES dbo.empleados (id_empleado),
+        CONSTRAINT fk_orden_medica_consulta_tipo FOREIGN KEY (id_tipo_orden) REFERENCES dbo.cat_valor_catalogo (id_valor_catalogo)
+    );
+END
+-- Defensivo: si la tabla ya se había creado con una versión anterior de esta
+-- PARTE (sin id_tipo_orden), se agrega la columna aparte.
+IF EXISTS (SELECT 1 FROM sys.tables WHERE name = 'orden_medica_consulta' AND schema_id = SCHEMA_ID('dbo'))
+   AND NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.orden_medica_consulta') AND name = 'id_tipo_orden')
+BEGIN
+    ALTER TABLE dbo.orden_medica_consulta ADD id_tipo_orden BIGINT NULL;
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'orden_medica_consulta';
+
+-- =============================================================================
+-- PARTE 22: tabla notas_enfermeria — "Hoja de Evolución" de una
+-- hospitalización (fecha + evolución + quién la escribió). El backend ya
+-- tenía entidad/servicio/controlador para esto (api/Hospitalizaciones/
+-- {id}/notas-enfermeria), pero la tabla nunca se había creado. signos_vitales
+-- es JSON libre opcional, el backend no lo valida, solo lo guarda.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'notas_enfermeria' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.notas_enfermeria (
+        id_nota_enfermeria BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_hospitalizacion BIGINT NOT NULL,
+        id_empleado        BIGINT NOT NULL,
+        fecha_hora         DATETIME2 NOT NULL,
+        nota               NVARCHAR(MAX) NOT NULL,
+        signos_vitales     NVARCHAR(MAX) NULL,
+        activo             BIT NOT NULL DEFAULT 1,
+        fecha_creacion     DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT fk_notas_enfermeria_hospitalizacion FOREIGN KEY (id_hospitalizacion) REFERENCES dbo.hospitalizaciones (id_hospitalizacion),
+        CONSTRAINT fk_notas_enfermeria_empleado FOREIGN KEY (id_empleado) REFERENCES dbo.empleados (id_empleado)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'notas_enfermeria';
+
+-- =============================================================================
+-- PARTE 23: tabla nota_evolucion_consulta — misma "Hoja de Evolución", pero
+-- ligada a la cita (consulta externa) en vez de a una hospitalización, igual
+-- patrón que orden_medica_consulta: varias notas por consulta, sin UNIQUE
+-- sobre id_cita.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'nota_evolucion_consulta' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.nota_evolucion_consulta (
+        id_nota_evolucion_consulta BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                    BIGINT NOT NULL,
+        id_paciente                 BIGINT NOT NULL,
+        id_medico                   BIGINT NOT NULL,
+        fecha_hora                  DATETIME2 NOT NULL,
+        evolucion                   NVARCHAR(MAX) NOT NULL,
+        activo                      BIT NOT NULL DEFAULT 1,
+        fecha_creacion              DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion          DATETIME2 NULL,
+        id_usuario_creacion         BIGINT NULL,
+        id_usuario_modificacion     BIGINT NULL,
+        CONSTRAINT fk_nota_evolucion_consulta_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_nota_evolucion_consulta_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_nota_evolucion_consulta_medico FOREIGN KEY (id_medico) REFERENCES dbo.empleados (id_empleado)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'nota_evolucion_consulta';
+
+-- =============================================================================
+-- PARTE 24: tabla nota_evolucion_hospitalizacion — "Hoja de Evolución" del
+-- MÉDICO durante una hospitalización, distinta de notas_enfermeria (hoja
+-- "ENFERMERIA", PARTE 22): mismo papel físico (fecha + evolución), pero
+-- cada profesión tiene su propia hoja en el expediente.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'nota_evolucion_hospitalizacion' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.nota_evolucion_hospitalizacion (
+        id_nota_evolucion  BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_hospitalizacion BIGINT NOT NULL,
+        id_medico          BIGINT NOT NULL,
+        fecha_hora         DATETIME2 NOT NULL,
+        evolucion          NVARCHAR(MAX) NOT NULL,
+        activo             BIT NOT NULL DEFAULT 1,
+        fecha_creacion     DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion DATETIME2 NULL,
+        CONSTRAINT fk_nota_evolucion_hosp_hospitalizacion FOREIGN KEY (id_hospitalizacion) REFERENCES dbo.hospitalizaciones (id_hospitalizacion),
+        CONSTRAINT fk_nota_evolucion_hosp_medico FOREIGN KEY (id_medico) REFERENCES dbo.empleados (id_empleado)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'nota_evolucion_hospitalizacion';
+
+-- =============================================================================
+-- PARTE 25: tabla nota_enfermeria_consulta — hoja "ENFERMERIA" ligada a la
+-- cita (consulta externa) en vez de a una hospitalización, igual patrón que
+-- nota_evolucion_consulta: varias notas por consulta, sin UNIQUE sobre id_cita.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'nota_enfermeria_consulta' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.nota_enfermeria_consulta (
+        id_nota_enfermeria_consulta BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                     BIGINT NOT NULL,
+        id_paciente                  BIGINT NOT NULL,
+        id_empleado                  BIGINT NOT NULL,
+        fecha_hora                   DATETIME2 NOT NULL,
+        nota                         NVARCHAR(MAX) NOT NULL,
+        activo                       BIT NOT NULL DEFAULT 1,
+        fecha_creacion               DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion           DATETIME2 NULL,
+        id_usuario_creacion          BIGINT NULL,
+        id_usuario_modificacion      BIGINT NULL,
+        CONSTRAINT fk_nota_enfermeria_consulta_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_nota_enfermeria_consulta_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_nota_enfermeria_consulta_empleado FOREIGN KEY (id_empleado) REFERENCES dbo.empleados (id_empleado)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'nota_enfermeria_consulta';
+
+-- =============================================================================
+-- PARTE 26: catálogo DESTINO_MEDICAMENTO (FARMACIA/CLINICA/AMBOS) +
+-- columna medicamentos.id_destino_medicamento — distingue medicamentos que
+-- se venden/facturan al paciente (Farmacia) de los que se usan internamente
+-- para administrar a hospitalizados (Clínica). Solo informativo: no
+-- restringe en qué pantalla se puede usar cada medicamento.
+-- =============================================================================
+BEGIN TRANSACTION;
+BEGIN TRY
+
+IF NOT EXISTS (SELECT 1 FROM dbo.cat_tipo_catalogo WHERE codigo = 'DESTINO_MEDICAMENTO')
+    INSERT INTO dbo.cat_tipo_catalogo (codigo, nombre, codigo_modulo, activo, fecha_creacion)
+    VALUES ('DESTINO_MEDICAMENTO', N'Destino del medicamento', 'FARMACIA', 1, SYSUTCDATETIME());
+
+DECLARE @IdDestinoMedicamento BIGINT = (SELECT id_tipo_catalogo FROM dbo.cat_tipo_catalogo WHERE codigo = 'DESTINO_MEDICAMENTO');
+
+IF NOT EXISTS (SELECT 1 FROM dbo.cat_valor_catalogo WHERE id_tipo_catalogo = @IdDestinoMedicamento AND codigo = 'FARMACIA')
+    INSERT INTO dbo.cat_valor_catalogo (id_tipo_catalogo, codigo, nombre, orden, activo, fecha_creacion)
+    VALUES (@IdDestinoMedicamento, 'FARMACIA', N'Farmacia', 1, 1, SYSUTCDATETIME());
+
+IF NOT EXISTS (SELECT 1 FROM dbo.cat_valor_catalogo WHERE id_tipo_catalogo = @IdDestinoMedicamento AND codigo = 'CLINICA')
+    INSERT INTO dbo.cat_valor_catalogo (id_tipo_catalogo, codigo, nombre, orden, activo, fecha_creacion)
+    VALUES (@IdDestinoMedicamento, 'CLINICA', N'Clínica', 2, 1, SYSUTCDATETIME());
+
+IF NOT EXISTS (SELECT 1 FROM dbo.cat_valor_catalogo WHERE id_tipo_catalogo = @IdDestinoMedicamento AND codigo = 'AMBOS')
+    INSERT INTO dbo.cat_valor_catalogo (id_tipo_catalogo, codigo, nombre, orden, activo, fecha_creacion)
+    VALUES (@IdDestinoMedicamento, 'AMBOS', N'Ambos', 3, 1, SYSUTCDATETIME());
+
+COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.medicamentos') AND name = 'id_destino_medicamento')
+    ALTER TABLE dbo.medicamentos ADD id_destino_medicamento BIGINT NULL;
+
+-- =============================================================================
+-- PARTE 27: tabla medicamento_programado_hospitalizacion — "Hoja de Control
+-- de Medicamentos": cada fila es un medicamento programado (con su hora)
+-- para una hospitalización. Las marcas de administración van en la tabla
+-- de PARTE 28, no aquí (puede haber varias por fila).
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'medicamento_programado_hospitalizacion' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.medicamento_programado_hospitalizacion (
+        id_medicamento_programado BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_hospitalizacion        BIGINT NOT NULL,
+        id_medicamento            BIGINT NOT NULL,
+        hora                      TIME NOT NULL,
+        fecha_inicial             DATETIME2 NOT NULL,
+        observaciones             NVARCHAR(255) NULL,
+        activo                    BIT NOT NULL DEFAULT 1,
+        fecha_creacion            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion        DATETIME2 NULL,
+        id_usuario_creacion       BIGINT NULL,
+        id_usuario_modificacion   BIGINT NULL,
+        CONSTRAINT fk_medicamento_programado_hosp FOREIGN KEY (id_hospitalizacion) REFERENCES dbo.hospitalizaciones (id_hospitalizacion),
+        CONSTRAINT fk_medicamento_programado_medicamento FOREIGN KEY (id_medicamento) REFERENCES dbo.medicamentos (id_medicamento)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'medicamento_programado_hospitalizacion';
+
+-- =============================================================================
+-- PARTE 28: tabla administracion_medicamento — cada vez que se administra
+-- una dosis de un medicamento programado se agrega un registro aquí
+-- (equivale a tachar un día en la cuadrícula del papel físico).
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'administracion_medicamento' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.administracion_medicamento (
+        id_administracion         BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_medicamento_programado BIGINT NOT NULL,
+        id_empleado               BIGINT NOT NULL,
+        fecha_hora                DATETIME2 NOT NULL,
+        activo                    BIT NOT NULL DEFAULT 1,
+        fecha_creacion            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT fk_administracion_medicamento_programado FOREIGN KEY (id_medicamento_programado) REFERENCES dbo.medicamento_programado_hospitalizacion (id_medicamento_programado),
+        CONSTRAINT fk_administracion_medicamento_empleado FOREIGN KEY (id_empleado) REFERENCES dbo.empleados (id_empleado)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'administracion_medicamento';
+
+-- =============================================================================
+-- PARTE 29: tabla control_signos_hospitalizacion — "CONTROL DE SIGNOS":
+-- bitácora de signos vitales (fecha+hora, P/A, temperatura, F.R.,
+-- observaciones) durante una hospitalización, varias filas a lo largo del
+-- tiempo (no es un solo snapshot como en la ficha clínica).
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'control_signos_hospitalizacion' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.control_signos_hospitalizacion (
+        id_control_signos       BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_hospitalizacion      BIGINT NOT NULL,
+        fecha_hora              DATETIME2 NOT NULL,
+        presion_arterial        NVARCHAR(20) NULL,
+        temperatura             NUMERIC(5,2) NULL,
+        frecuencia_respiratoria INT NULL,
+        observaciones           NVARCHAR(255) NULL,
+        activo                  BIT NOT NULL DEFAULT 1,
+        fecha_creacion          DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion      DATETIME2 NULL,
+        CONSTRAINT fk_control_signos_hosp FOREIGN KEY (id_hospitalizacion) REFERENCES dbo.hospitalizaciones (id_hospitalizacion)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'control_signos_hospitalizacion';
+
+-- =============================================================================
+-- PARTE 30: tabla control_signos_consulta — igual que la anterior, pero
+-- ligada a la cita (consulta externa) en vez de a una hospitalización.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'control_signos_consulta' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.control_signos_consulta (
+        id_control_signos_consulta BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                    BIGINT NOT NULL,
+        id_paciente                 BIGINT NOT NULL,
+        fecha_hora                  DATETIME2 NOT NULL,
+        presion_arterial             NVARCHAR(20) NULL,
+        temperatura                  NUMERIC(5,2) NULL,
+        frecuencia_respiratoria      INT NULL,
+        observaciones                NVARCHAR(255) NULL,
+        activo                       BIT NOT NULL DEFAULT 1,
+        fecha_creacion               DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion           DATETIME2 NULL,
+        id_usuario_creacion          BIGINT NULL,
+        id_usuario_modificacion      BIGINT NULL,
+        CONSTRAINT fk_control_signos_consulta_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_control_signos_consulta_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'control_signos_consulta';
+
+-- =============================================================================
+-- PARTE 31: tabla costo_paciente_hospitalizacion — "COSTO PACIENTE":
+-- bitácora manual de todo lo que genera costo durante una hospitalización
+-- (medicamentos administrados, insumos, procedimientos...). id_medicamento
+-- es opcional, solo para prellenar descripción/valor desde el catálogo —
+-- el renglón se puede capturar libre para cosas que no son medicamentos.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'costo_paciente_hospitalizacion' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.costo_paciente_hospitalizacion (
+        id_costo_paciente       BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_hospitalizacion      BIGINT NOT NULL,
+        id_medicamento          BIGINT NULL,
+        fecha                   DATETIME2 NOT NULL,
+        descripcion              NVARCHAR(255) NOT NULL,
+        cantidad                 NUMERIC(10,2) NOT NULL,
+        valor_unitario           NUMERIC(12,2) NOT NULL,
+        activo                   BIT NOT NULL DEFAULT 1,
+        fecha_creacion           DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion       DATETIME2 NULL,
+        id_usuario_creacion      BIGINT NULL,
+        id_usuario_modificacion  BIGINT NULL,
+        CONSTRAINT fk_costo_paciente_hosp FOREIGN KEY (id_hospitalizacion) REFERENCES dbo.hospitalizaciones (id_hospitalizacion),
+        CONSTRAINT fk_costo_paciente_medicamento FOREIGN KEY (id_medicamento) REFERENCES dbo.medicamentos (id_medicamento)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'costo_paciente_hospitalizacion';
+
+-- =============================================================================
+-- PARTE 32: tabla costo_paciente_consulta — igual que la anterior, pero
+-- ligada a la cita (consulta externa) en vez de a una hospitalización.
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'costo_paciente_consulta' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.costo_paciente_consulta (
+        id_costo_paciente_consulta BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                    BIGINT NOT NULL,
+        id_paciente                 BIGINT NOT NULL,
+        id_medicamento               BIGINT NULL,
+        fecha                        DATETIME2 NOT NULL,
+        descripcion                  NVARCHAR(255) NOT NULL,
+        cantidad                     NUMERIC(10,2) NOT NULL,
+        valor_unitario               NUMERIC(12,2) NOT NULL,
+        activo                       BIT NOT NULL DEFAULT 1,
+        fecha_creacion               DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion           DATETIME2 NULL,
+        id_usuario_creacion          BIGINT NULL,
+        id_usuario_modificacion      BIGINT NULL,
+        CONSTRAINT fk_costo_paciente_consulta_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_costo_paciente_consulta_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_costo_paciente_consulta_medicamento FOREIGN KEY (id_medicamento) REFERENCES dbo.medicamentos (id_medicamento)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'costo_paciente_consulta';

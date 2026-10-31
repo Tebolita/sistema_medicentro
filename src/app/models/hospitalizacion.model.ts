@@ -63,3 +63,74 @@ export interface NotaEnfermeria {
   activo: boolean;
   fechaCreacion: string;
 }
+
+// "Hoja de Evolución" del MÉDICO durante una hospitalización — distinta de
+// NotaEnfermeria (hoja "ENFERMERIA"): mismo papel físico, pero cada
+// profesión tiene su propia hoja.
+export interface NotaEvolucionHospitalizacion {
+  idNotaEvolucion: number;
+  idHospitalizacion: number;
+  idMedico: number;
+  fechaHora: string;
+  evolucion: string;
+  activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+}
+
+// "Hoja de Control de Medicamentos": cada fila es un medicamento programado
+// (con su hora) para una hospitalización. Las marcas de administración
+// viven aparte (AdministracionMedicamento), una por cada dosis dada —
+// equivale a tachar un día en la cuadrícula del papel físico.
+export interface MedicamentoProgramadoHospitalizacion {
+  idMedicamentoProgramado: number;
+  idHospitalizacion: number;
+  idMedicamento: number;
+  hora: string; // "HH:mm:ss"
+  fechaInicial: string;
+  observaciones: string | null;
+  activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+  administraciones: AdministracionMedicamento[];
+}
+
+export interface AdministracionMedicamento {
+  idAdministracion: number;
+  idMedicamentoProgramado: number;
+  idEmpleado: number;
+  fechaHora: string;
+  fechaCreacion: string;
+}
+
+// "CONTROL DE SIGNOS": bitácora de signos vitales durante una
+// hospitalización — varias filas a lo largo del tiempo.
+export interface ControlSignosHospitalizacion {
+  idControlSignos: number;
+  idHospitalizacion: number;
+  fechaHora: string;
+  presionArterial: string | null; // "P/A"
+  temperatura: number | null;
+  frecuenciaRespiratoria: number | null; // "F.R."
+  observaciones: string | null;
+  activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+}
+
+// "COSTO PACIENTE": bitácora manual de todo lo que genera costo durante una
+// hospitalización (medicamentos administrados, insumos, procedimientos...).
+// idMedicamento es opcional, solo para prellenar descripción/valor desde
+// el catálogo.
+export interface CostoPacienteHospitalizacion {
+  idCostoPaciente: number;
+  idHospitalizacion: number;
+  idMedicamento: number | null;
+  fecha: string;
+  descripcion: string;
+  cantidad: number;
+  valorUnitario: number;
+  activo: boolean;
+  fechaCreacion: string;
+  fechaModificacion: string | null;
+}

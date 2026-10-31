@@ -1,0 +1,36 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">assignment</mat-icon>
+  Registrar orden médica
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Tipo de orden</mat-label>
+      <mat-select formControlName="idTipoOrden">
+        @for (t of data.tiposOrden; track t.id) {
+          <mat-option [value]="t.id">{{ t.label }}</mat-option>
+        }
+      </mat-select>
+      @if (form.controls.idTipoOrden.invalid && form.controls.idTipoOrden.touched) {
+        <mat-error>Selecciona el tipo de orden</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Indicaciones</mat-label>
+      <textarea matInput formControlName="indicaciones" rows="4" placeholder="Ej. Ampicilina 1g IV cada 8 horas"></textarea>
+      @if (form.controls.indicaciones.invalid && form.controls.indicaciones.touched) {
+        <mat-error>Este campo es obligatorio</mat-error>
+      }
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>add</mat-icon>
+      Registrar
+    </button>
+  </mat-dialog-actions>
+</form>

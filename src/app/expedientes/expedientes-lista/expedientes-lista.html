@@ -71,10 +71,16 @@
         <h1>{{ nombrePacienteActual() }}</h1>
         <p>{{ consultasDelPaciente().length }} consulta{{ consultasDelPaciente().length === 1 ? '' : 's' }} registrada{{ consultasDelPaciente().length === 1 ? '' : 's' }}.</p>
       </div>
-      <button matButton type="button" (click)="toggleVistazo()">
-        <mat-icon>{{ vistazoAbierto() ? 'visibility_off' : 'visibility' }}</mat-icon>
-        {{ vistazoAbierto() ? 'Ocultar vistazo rápido' : 'Vistazo rápido del paciente' }}
-      </button>
+      <div class="header-actions">
+        <button matButton type="button" (click)="abrirResumenExpediente()">
+          <mat-icon>summarize</mat-icon>
+          Resumen de hojas
+        </button>
+        <button matButton type="button" (click)="toggleVistazo()">
+          <mat-icon>{{ vistazoAbierto() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          {{ vistazoAbierto() ? 'Ocultar vistazo rápido' : 'Vistazo rápido del paciente' }}
+        </button>
+      </div>
     </div>
 
     <!-- Datos útiles ANTES de entrar a una consulta en particular (ver

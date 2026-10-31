@@ -195,6 +195,7 @@ export class MedicamentosLista {
         presentacion: (fila['presentacion'] ?? '').trim() || null,
         concentracion: (fila['concentracion'] ?? '').trim() || null,
         idCategoriaMedicamento,
+        idDestinoMedicamento: null,
         requiereReceta,
         precioVentaPublico: precio,
       },
