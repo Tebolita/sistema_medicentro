@@ -13,3 +13,4 @@ export * from './reporte.model';
 export * from './hospitalizacion.model';
 export * from './consentimiento.model';
 export * from './seguro.model';
+export * from './servicio.model';

@@ -121,6 +121,17 @@ export const MENU_SECTIONS: MenuSection[] = [
         // ese es distinto en cada base de datos porque se genera con IDENTITY).
         queryParams: { tipo: 'MEDICA' },
       },
+      {
+        icon: 'assignment_turned_in',
+        label: 'Pacientes dados de alta',
+        route: '/home/hospitalizacion',
+        queryParams: { vista: 'alta' },
+      },
+      {
+        icon: 'king_bed',
+        label: 'Disponibilidad de camas',
+        route: '/home/hospitalizacion/camas',
+      },
     ],
   },
   {
@@ -207,6 +218,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'handshake',
         label: 'Convenios',
         route: '/home/mantenimiento/convenios',
+        grupo: 'facturacion-cobros',
+      },
+      {
+        icon: 'design_services',
+        label: 'Servicios',
+        route: '/home/mantenimiento/servicios',
         grupo: 'facturacion-cobros',
       },
       { icon: 'person', label: 'Usuarios', route: '/home/mantenimiento/usuarios', grupo: 'Seguridad' },

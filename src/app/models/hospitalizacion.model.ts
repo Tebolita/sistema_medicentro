@@ -126,6 +126,7 @@ export interface CostoPacienteHospitalizacion {
   idCostoPaciente: number;
   idHospitalizacion: number;
   idMedicamento: number | null;
+  idServicio: number | null;
   fecha: string;
   descripcion: string;
   cantidad: number;

@@ -1,0 +1,82 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a routerLink="/home/hospitalizacion" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Hospitalización
+      </a>
+      <h1>Disponibilidad de camas</h1>
+      <p>Camas de cada habitación, su estado y, si está ocupada, el paciente internado.</p>
+    </div>
+  </div>
+
+  <div class="resumen-row">
+    <div class="resumen-chip">
+      <span class="punto cama-libre"></span>
+      {{ totales().libres }} libres
+    </div>
+    <div class="resumen-chip">
+      <span class="punto cama-ocupada"></span>
+      {{ totales().ocupadas }} ocupadas
+    </div>
+    @if (totales().otras > 0) {
+      <div class="resumen-chip">
+        <span class="punto cama-otro"></span>
+        {{ totales().otras }} en mantenimiento / otro
+      </div>
+    }
+    <div class="resumen-chip resumen-total">Total: {{ totales().total }} camas</div>
+  </div>
+
+  @if (errorCarga()) {
+    <p class="carga-error">{{ errorCarga() }}</p>
+  }
+
+  <div class="habitaciones-grid">
+    @for (h of habitaciones(); track h.idHabitacion) {
+      <div class="habitacion-card">
+        <div class="habitacion-header">
+          <mat-icon>meeting_room</mat-icon>
+          <h2>Habitación {{ h.numero }}</h2>
+          @if (h.piso != null) {
+            <span class="habitacion-piso">Piso {{ h.piso }}</span>
+          }
+        </div>
+
+        <div class="camas-row">
+          @for (c of h.camas; track c.idCama) {
+            @if (c.idHospitalizacion) {
+              <a
+                class="cama-box"
+                [ngClass]="claseCama(c)"
+                [routerLink]="['/home/hospitalizacion', c.idHospitalizacion]"
+                [matTooltip]="c.nombrePaciente + ' — ' + c.estadoLabel"
+              >
+                <mat-icon>bed</mat-icon>
+                <span class="cama-numero">Cama {{ c.numeroCama }}</span>
+                <span class="cama-ocupante">{{ c.nombrePaciente }}</span>
+              </a>
+            } @else {
+              <div class="cama-box" [ngClass]="claseCama(c)" [matTooltip]="c.estadoLabel">
+                <mat-icon>bed</mat-icon>
+                <span class="cama-numero">Cama {{ c.numeroCama }}</span>
+                <span class="cama-ocupante">{{ c.estadoLabel }}</span>
+              </div>
+            }
+          }
+
+          @if (h.camas.length === 0) {
+            <p class="sin-camas">Esta habitación no tiene camas registradas.</p>
+          }
+        </div>
+      </div>
+    }
+
+    @if (habitaciones().length === 0 && !cargando() && !errorCarga()) {
+      <div class="empty-state">
+        <mat-icon>meeting_room</mat-icon>
+        <p>No hay habitaciones registradas.</p>
+      </div>
+    }
+  </div>
+</div>

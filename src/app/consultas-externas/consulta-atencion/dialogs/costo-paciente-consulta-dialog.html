@@ -5,12 +5,22 @@
 
 <form [formGroup]="form" (ngSubmit)="guardar()">
   <mat-dialog-content class="dialog-form-grid">
-    <mat-form-field appearance="outline" class="full-width">
+    <mat-form-field appearance="outline">
       <mat-label>Medicamento (opcional)</mat-label>
       <mat-select formControlName="idMedicamento" (selectionChange)="onSeleccionarMedicamento($event.value)">
-        <mat-option [value]="null">— Sin medicamento (otro costo) —</mat-option>
+        <mat-option [value]="null">— Sin medicamento —</mat-option>
         @for (m of data.medicamentos; track m.idMedicamento) {
           <mat-option [value]="m.idMedicamento">{{ m.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Servicio (opcional)</mat-label>
+      <mat-select formControlName="idServicio" (selectionChange)="onSeleccionarServicio($event.value)">
+        <mat-option [value]="null">— Sin servicio —</mat-option>
+        @for (s of data.servicios; track s.idServicio) {
+          <mat-option [value]="s.idServicio">{{ s.nombre }}</mat-option>
         }
       </mat-select>
     </mat-form-field>

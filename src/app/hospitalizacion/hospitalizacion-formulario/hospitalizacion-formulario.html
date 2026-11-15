@@ -724,12 +724,22 @@
         </div>
 
         <div class="modal-body">
-          <mat-form-field appearance="outline" class="full-width">
+          <mat-form-field appearance="outline">
             <mat-label>Medicamento (opcional)</mat-label>
             <mat-select [(value)]="c.idMedicamento" (selectionChange)="onSeleccionarMedicamentoCosto(c)">
-              <mat-option [value]="null">— Sin medicamento (otro costo) —</mat-option>
+              <mat-option [value]="null">— Sin medicamento —</mat-option>
               @for (m of medicamentos(); track m.idMedicamento) {
                 <mat-option [value]="m.idMedicamento">{{ m.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Servicio (opcional)</mat-label>
+            <mat-select [(value)]="c.idServicio" (selectionChange)="onSeleccionarServicioCosto(c)">
+              <mat-option [value]="null">— Sin servicio —</mat-option>
+              @for (s of servicios(); track s.idServicio) {
+                <mat-option [value]="s.idServicio">{{ s.nombre }}</mat-option>
               }
             </mat-select>
           </mat-form-field>

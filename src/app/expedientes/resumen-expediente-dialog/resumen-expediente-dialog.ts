@@ -17,6 +17,8 @@ import { HospitalizacionesService } from '../../service/hospitalizaciones.servic
 
 import { FichaConsultaExternaAdultoService } from '../../service/ficha-consulta-externa-adulto.service';
 import { FichaConsultaExternaAdulto } from '../../models/ficha-consulta-externa-adulto.model';
+import { FichaConsultaExternaPediatricaService } from '../../service/ficha-consulta-externa-pediatrica.service';
+import { FichaConsultaExternaPediatrica } from '../../models/ficha-consulta-externa-pediatrica.model';
 import { FichaClinicaGeneralService } from '../../service/ficha-clinica-general.service';
 import { FichaClinicaGeneral } from '../../models/ficha-clinica-general.model';
 import { OrdenMedicaConsultaService } from '../../service/orden-medica-consulta.service';
@@ -29,6 +31,7 @@ import { ControlSignosConsultaService } from '../../service/control-signos-consu
 import { ControlSignosConsulta } from '../../models/control-signos-consulta.model';
 import { CostoPacienteConsultaService } from '../../service/costo-paciente-consulta.service';
 import { CostoPacienteConsulta } from '../../models/costo-paciente-consulta.model';
+import { LaboratorioService, OrdenCompleta } from '../../service/laboratorio.service';
 
 import {
   edadPaciente,
@@ -36,14 +39,21 @@ import {
   textoAlergiasPaciente,
   textoVacunasAplicadas,
   construirHtmlFichaConsultaExternaAdulto,
+  construirHtmlFichaConsultaExternaPediatrica,
   construirHtmlFichaClinicaGeneral,
   construirHtmlOrdenesMedicasConsulta,
   construirHtmlEvolucionConsulta,
   construirHtmlEnfermeriaConsulta,
   construirHtmlControlSignosConsulta,
   construirHtmlCostoPacienteConsulta,
+  construirHtmlVacunasAplicadas,
+  construirHtmlOrdenesLaboratorio,
 } from '../../consultas-externas/consulta-atencion/consulta-impresiones';
-import { construirHtmlControlMedicamentos, abrirVentanaImpresion } from '../../hospitalizacion/hospitalizacion-impresiones';
+import {
+  construirHtmlControlMedicamentos,
+  construirHtmlIngresoHospitalario,
+  abrirVentanaImpresion,
+} from '../../hospitalizacion/hospitalizacion-impresiones';
 import { VacunaAplicadaService } from '../../service/vacuna-aplicada.service';
 import { VacunaAplicada } from '../../models/vacuna-aplicada.model';
 
@@ -55,16 +65,21 @@ export interface ResumenExpedienteDialogData {
 
 export type TipoDocumentoResumen =
   | 'fichaCea'
+  | 'fichaCep'
   | 'fichaCg'
   | 'ordenes'
   | 'evolucion'
   | 'enfermeria'
   | 'signos'
   | 'costo'
-  | 'controlMedicamentos';
+  | 'controlMedicamentos'
+  | 'vacunas'
+  | 'laboratorio'
+  | 'hospitalizacion';
 
 interface ChecklistCita {
   fichaCea: boolean;
+  fichaCep: boolean;
   fichaCg: boolean;
   ordenes: boolean;
   evolucion: boolean;
@@ -72,10 +87,14 @@ interface ChecklistCita {
   signos: boolean;
   costo: boolean;
   controlMedicamentos: boolean;
+  vacunas: boolean;
+  laboratorio: boolean;
+  hospitalizacion: boolean;
 }
 
 interface DatosCita {
   fichaCea: FichaConsultaExternaAdulto | null;
+  fichaCep: FichaConsultaExternaPediatrica | null;
   fichaCg: FichaClinicaGeneral | null;
   ordenes: OrdenMedicaConsulta[];
   evolucion: NotaEvolucionConsulta[];
@@ -83,6 +102,7 @@ interface DatosCita {
   signos: ControlSignosConsulta[];
   costo: CostoPacienteConsulta[];
   vacunas: VacunaAplicada[];
+  laboratorio: OrdenCompleta[];
 }
 
 // "Resumen del expediente": el médico selecciona una o varias consultas y un
@@ -108,6 +128,7 @@ export class ResumenExpedienteDialog {
   private hospitalizacionesService = inject(HospitalizacionesService);
 
   private fichaCeaService = inject(FichaConsultaExternaAdultoService);
+  private fichaCepService = inject(FichaConsultaExternaPediatricaService);
   private fichaCgService = inject(FichaClinicaGeneralService);
   private ordenesService = inject(OrdenMedicaConsultaService);
   private evolucionService = inject(NotaEvolucionConsultaService);
@@ -115,6 +136,7 @@ export class ResumenExpedienteDialog {
   private signosService = inject(ControlSignosConsultaService);
   private costoService = inject(CostoPacienteConsultaService);
   private vacunaService = inject(VacunaAplicadaService);
+  private laboratorioService = inject(LaboratorioService);
 
   citas = [...this.data.citas].sort((a, b) => b.fechaHoraInicio.localeCompare(a.fechaHoraInicio));
 
@@ -134,6 +156,14 @@ export class ResumenExpedienteDialog {
   private tiposVacunaApi = this.catalogosService.obtener('TIPO_VACUNA');
   medicamentos = this.medicamentosService.listar;
 
+  // Para la hoja "Ingreso hospitalario" (cama/estado) y "Laboratorio"
+  // (nombre de examen/estado de orden) — se piden una sola vez, igual que
+  // médicos/paciente más abajo.
+  private camasHosp = signal<{ id: number; label: string }[]>([]);
+  private estadosHospApi = signal<{ id: number; label: string }[]>([]);
+  private tiposExamenLab = signal<{ idTipoExamen: number; nombre: string }[]>([]);
+  private estadosOrdenLab = signal<{ id: number; label: string }[]>([]);
+
   private antecedentesPaciente = signal<PacienteAntecedente[]>([]);
   private alergiasPaciente = signal<PacienteAlergia[]>([]);
   private pacienteCompleto = signal<Paciente | null>(null);
@@ -142,6 +172,7 @@ export class ResumenExpedienteDialog {
   // (--panel-color), para reconocer de un vistazo qué hoja es cuál.
   readonly tiposDocumento: { id: TipoDocumentoResumen; label: string; icono: string; mergeable: boolean; color: string }[] = [
     { id: 'fichaCea', label: 'Ficha clínica — Consulta externa adulto', icono: 'description', mergeable: false, color: '#1565c0' },
+    { id: 'fichaCep', label: 'Ficha clínica — Consulta externa pediátrica', icono: 'child_care', mergeable: false, color: '#ef6c00' },
     { id: 'fichaCg', label: 'Ficha clínica general', icono: 'description', mergeable: false, color: '#c2185b' },
     { id: 'ordenes', label: 'Órdenes médicas', icono: 'assignment_turned_in', mergeable: true, color: '#2e7d32' },
     { id: 'evolucion', label: 'Hoja de evolución', icono: 'history_edu', mergeable: true, color: '#8e24aa' },
@@ -149,6 +180,9 @@ export class ResumenExpedienteDialog {
     { id: 'signos', label: 'Control de signos', icono: 'monitor_heart', mergeable: true, color: '#00695c' },
     { id: 'costo', label: 'Costo paciente', icono: 'payments', mergeable: true, color: '#f9a825' },
     { id: 'controlMedicamentos', label: 'Hoja de control de medicamentos', icono: 'medication', mergeable: false, color: '#455a64' },
+    { id: 'vacunas', label: 'Vacunas aplicadas', icono: 'vaccines', mergeable: true, color: '#00838f' },
+    { id: 'laboratorio', label: 'Órdenes de laboratorio', icono: 'biotech', mergeable: true, color: '#4527a0' },
+    { id: 'hospitalizacion', label: 'Ingreso hospitalario', icono: 'bed', mergeable: false, color: '#5d4037' },
   ];
 
   constructor() {
@@ -157,12 +191,20 @@ export class ResumenExpedienteDialog {
     forkJoin({
       medicos: this.empleadoService.RetornarMedicos(),
       paciente: this.pacienteService.RetornarPaciente(this.data.idPaciente),
+      camas: this.hospitalizacionesService.RetornarCamas(),
+      estadosHosp: this.hospitalizacionesService.RetornarEstadosHospitalizacion(),
+      tiposExamen: this.laboratorioService.RetornarTiposExamen(),
+      estadosOrden: this.laboratorioService.RetornarEstadosOrden(),
     }).subscribe({
-      next: ({ medicos, paciente }) => {
+      next: ({ medicos, paciente, camas, estadosHosp, tiposExamen, estadosOrden }) => {
         this.medicos.set(medicos.datos ?? []);
         this.pacienteCompleto.set(paciente.datos?.paciente ?? null);
         this.antecedentesPaciente.set((paciente.datos?.antecedentes ?? []).filter((a) => a.activo));
         this.alergiasPaciente.set((paciente.datos?.alergias ?? []).filter((a) => a.activo));
+        this.camasHosp.set(camas);
+        this.estadosHospApi.set(estadosHosp);
+        this.tiposExamenLab.set(tiposExamen);
+        this.estadosOrdenLab.set(estadosOrden);
         this.cargarChecklist();
       },
       error: () => this.cargarChecklist(),
@@ -178,6 +220,7 @@ export class ResumenExpedienteDialog {
     const porCita = this.citas.map((c) =>
       forkJoin({
         fichaCea: this.fichaCeaService.RetornarPorCita(c.idCita),
+        fichaCep: this.fichaCepService.RetornarPorCita(c.idCita),
         fichaCg: this.fichaCgService.RetornarPorCita(c.idCita),
         ordenes: this.ordenesService.RetornarPorCita(c.idCita),
         evolucion: this.evolucionService.RetornarPorCita(c.idCita),
@@ -193,12 +236,15 @@ export class ResumenExpedienteDialog {
         const checklist: Record<number, ChecklistCita> = {};
         const datos: Record<number, DatosCita> = {};
         const hospitalizaciones = this.hospitalizacionesService.listar();
+        const ordenesLaboratorio = this.laboratorioService.listar();
 
         this.citas.forEach((c, i) => {
           const r = resultados[i];
           const hospDeEstaCita = hospitalizaciones.find((h) => h.hospitalizacion.idCita === c.idCita);
+          const laboratorioDeEstaCita = ordenesLaboratorio.filter((o) => o.orden.idCita === c.idCita);
           checklist[c.idCita] = {
             fichaCea: !!r.fichaCea,
+            fichaCep: !!r.fichaCep,
             fichaCg: !!r.fichaCg,
             ordenes: r.ordenes.length > 0,
             evolucion: r.evolucion.length > 0,
@@ -206,8 +252,11 @@ export class ResumenExpedienteDialog {
             signos: r.signos.length > 0,
             costo: r.costo.length > 0,
             controlMedicamentos: !!hospDeEstaCita && hospDeEstaCita.medicamentosProgramados.length > 0,
+            vacunas: r.vacunas.length > 0,
+            laboratorio: laboratorioDeEstaCita.length > 0,
+            hospitalizacion: !!hospDeEstaCita,
           };
-          datos[c.idCita] = r;
+          datos[c.idCita] = { ...r, laboratorio: laboratorioDeEstaCita };
         });
 
         this.checklistPorCita.set(checklist);
@@ -259,6 +308,26 @@ export class ResumenExpedienteDialog {
     return this.medicamentos().find((m) => m.idMedicamento === idMedicamento)?.nombre ?? '—';
   };
 
+  private tipoVacunaLabel = (idTipoVacuna: number): string => {
+    return this.tiposVacunaApi().find((t) => t.id === idTipoVacuna)?.nombre ?? '—';
+  };
+
+  private tipoExamenLabel = (idTipoExamen: number): string => {
+    return this.tiposExamenLab().find((t) => t.idTipoExamen === idTipoExamen)?.nombre ?? '—';
+  };
+
+  private estadoOrdenLabel = (idEstadoOrden: number): string => {
+    return this.estadosOrdenLab().find((e) => e.id === idEstadoOrden)?.label ?? '—';
+  };
+
+  private camaLabel = (idCama: number): string => {
+    return this.camasHosp().find((c) => c.id === idCama)?.label ?? '—';
+  };
+
+  private estadoHospLabel = (idEstadoHospitalizacion: number): string => {
+    return this.estadosHospApi().find((e) => e.id === idEstadoHospitalizacion)?.label ?? '—';
+  };
+
   private citasSeleccionadasOrdenadas = computed(() =>
     this.citas.filter((c) => this.citasSeleccionadas().has(c.idCita)).sort((a, b) => a.fechaHoraInicio.localeCompare(b.fechaHoraInicio)),
   );
@@ -275,7 +344,7 @@ export class ResumenExpedienteDialog {
     const nombrePaciente = this.data.nombrePaciente;
     const tipo = this.tipoDocumento();
 
-    if (tipo === 'fichaCea' || tipo === 'fichaCg' || tipo === 'controlMedicamentos') {
+    if (tipo === 'fichaCea' || tipo === 'fichaCep' || tipo === 'fichaCg' || tipo === 'controlMedicamentos' || tipo === 'hospitalizacion') {
       const cita = seleccionadas[0];
       const d = datos[cita.idCita];
       const paciente = this.pacienteCompleto();
@@ -286,6 +355,20 @@ export class ResumenExpedienteDialog {
         const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         return construirHtmlFichaConsultaExternaAdulto(
           d.fichaCea,
+          paciente,
+          fechaConsulta,
+          this.medicoLabel(cita.idMedico),
+          textoAntecedentes(this.antecedentesPaciente(), this.tiposAntecedenteApi()),
+          textoAlergiasPaciente(this.alergiasPaciente(), this.tiposAlergiaApi(), this.severidadApi()),
+          textoVacunasAplicadas(d.vacunas, this.tiposVacunaApi()),
+        );
+      }
+
+      if (tipo === 'fichaCep') {
+        if (!d?.fichaCep) return null;
+        const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return construirHtmlFichaConsultaExternaPediatrica(
+          d.fichaCep,
           paciente,
           fechaConsulta,
           this.medicoLabel(cita.idMedico),
@@ -312,9 +395,20 @@ export class ResumenExpedienteDialog {
         );
       }
 
-      // controlMedicamentos
       const hosp = this.hospitalizacionesService.listar().find((h) => h.hospitalizacion.idCita === cita.idCita);
       if (!hosp) return null;
+
+      if (tipo === 'hospitalizacion') {
+        return construirHtmlIngresoHospitalario(
+          hosp,
+          nombrePaciente,
+          this.camaLabel(hosp.hospitalizacion.idCama),
+          this.medicoLabel(hosp.hospitalizacion.idMedicoResponsable),
+          this.estadoHospLabel(hosp.hospitalizacion.idEstadoHospitalizacion),
+        );
+      }
+
+      // controlMedicamentos
       return construirHtmlControlMedicamentos(hosp, nombrePaciente, this.medicamentoLabel, (hora) => (hora ? hora.slice(0, 5) : '—'));
     }
 
@@ -348,6 +442,20 @@ export class ResumenExpedienteDialog {
       const paciente = this.pacienteCompleto();
       const edad = paciente ? edadPaciente(paciente.fechaNacimiento) : null;
       return construirHtmlCostoPacienteConsulta(costos, nombrePaciente, edad);
+    }
+    if (tipo === 'vacunas') {
+      const vacunas = seleccionadas.flatMap((c) => datos[c.idCita]?.vacunas ?? []);
+      if (vacunas.length === 0) return null;
+      const paciente = this.pacienteCompleto();
+      const edad = paciente ? edadPaciente(paciente.fechaNacimiento) : null;
+      return construirHtmlVacunasAplicadas(vacunas, nombrePaciente, edad, this.tipoVacunaLabel);
+    }
+    if (tipo === 'laboratorio') {
+      const ordenes = seleccionadas.flatMap((c) => datos[c.idCita]?.laboratorio ?? []);
+      if (ordenes.length === 0) return null;
+      const paciente = this.pacienteCompleto();
+      const edad = paciente ? edadPaciente(paciente.fechaNacimiento) : null;
+      return construirHtmlOrdenesLaboratorio(ordenes, nombrePaciente, edad, this.tipoExamenLabel, this.estadoOrdenLabel);
     }
 
     return null;

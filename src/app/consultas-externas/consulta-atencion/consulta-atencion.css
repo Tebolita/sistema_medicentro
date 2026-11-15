@@ -492,3 +492,65 @@
   cursor: pointer;
   accent-color: var(--panel-color);
 }
+
+/* ==================== Estado de la cita (DDL) ==================== */
+.estado-cita-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.estado-cita-control .selector-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #607d8b;
+}
+
+.estado-cita-control .selector-tipo {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #cfd8dc;
+  font-size: 13.5px;
+  background: #fff;
+}
+
+.estado-cita-control .selector-tipo:disabled {
+  background: #eceff1;
+  color: #78909c;
+  cursor: not-allowed;
+}
+
+.estado-cita-aviso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: #ef6c00;
+}
+
+.estado-cita-aviso mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+/* ==================== Bloqueo por estado (ATENDIDA/CANCELADA) ====================
+   "Deshabilita todos los campos": en vez de agregar [disabled] a cada uno de
+   los ~50 botones/controles de los 12 paneles, se bloquea el panel completo
+   a nivel visual/interacción. Los botones "Imprimir" (.btn-imprimir) quedan
+   exentos a propósito: imprimir no modifica nada, y Angular Material monta
+   sus menús (mat-menu) fuera de este contenedor, así que no les afecta. */
+.panel-bloqueado {
+  pointer-events: none;
+  opacity: 0.6;
+  position: relative;
+}
+
+.panel-bloqueado .btn-imprimir {
+  pointer-events: auto;
+  opacity: 1;
+}

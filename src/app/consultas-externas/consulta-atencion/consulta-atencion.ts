@@ -17,6 +17,7 @@ import { ExpedienteService } from '../../service/expediente.service';
 import { RecetasService, RecetaInput, RecetaCompleta } from '../../service/recetas.service';
 import { LaboratorioService, OrdenCompleta } from '../../service/laboratorio.service';
 import { MedicamentosService } from '../../service/medicamentos.service';
+import { ServiciosService } from '../../service/servicios.service';
 import { InventarioFarmaciaService } from '../../service/inventario-farmacia.service';
 import { CatalogoService } from '../../service/catalogo.service';
 import { CatalogosService } from '../../service/catalogos.service';
@@ -30,6 +31,12 @@ import {
   FichaConsultaExternaAdultoDialog,
   FichaConsultaExternaAdultoDialogResultado,
 } from './dialogs/ficha-consulta-externa-adulto-dialog';
+import { FichaConsultaExternaPediatricaService } from '../../service/ficha-consulta-externa-pediatrica.service';
+import { FichaConsultaExternaPediatrica } from '../../models/ficha-consulta-externa-pediatrica.model';
+import {
+  FichaConsultaExternaPediatricaDialog,
+  FichaConsultaExternaPediatricaDialogResultado,
+} from './dialogs/ficha-consulta-externa-pediatrica-dialog';
 import { VacunaAplicadaService } from '../../service/vacuna-aplicada.service';
 import { VacunaAplicada } from '../../models/vacuna-aplicada.model';
 import { VacunaDialog, VacunaDialogResultado } from './dialogs/vacuna-dialog';
@@ -75,7 +82,7 @@ import { NotificacionesService } from '../../shared/notificaciones/notificacione
 import { AtencionCita, CitaRequest } from '../../models/cita.model';
 import { PacienteListado, PacienteAlergia, PacienteAntecedente } from '../../models/paciente.model';
 import { Medico } from '../../models/medico.model';
-import { CODIGOS_CATALOGO } from '../../models/catalogo.model';
+import { CODIGOS_CATALOGO, CatalogoOpcion } from '../../models/catalogo.model';
 import { ConstanciaMedica } from '../../models/constancia.model';
 import { DatosConsultaDialog, DatosConsultaDialogResultado } from './dialogs/datos-consulta-dialog';
 import { RecetaDialog, RecetaDialogResultado } from './dialogs/receta-dialog';
@@ -96,6 +103,7 @@ import {
   nombreCompletoPaciente,
   edadPaciente,
   construirHtmlFichaConsultaExternaAdulto,
+  construirHtmlFichaConsultaExternaPediatrica,
   construirHtmlFichaClinicaGeneral,
   construirHtmlOrdenesMedicasConsulta,
   construirHtmlEvolucionConsulta,
@@ -146,12 +154,14 @@ export class ConsultaAtencion {
   private recetasService = inject(RecetasService);
   private laboratorioService = inject(LaboratorioService);
   private medicamentosService = inject(MedicamentosService);
+  private serviciosService = inject(ServiciosService);
   private inventarioFarmaciaService = inject(InventarioFarmaciaService);
   private catalogoService = inject(CatalogoService);
   private catalogosService = inject(CatalogosService);
   private constanciaService = inject(ConstanciaService);
   private actaService = inject(ActaService);
   private fichaConsultaExternaAdultoService = inject(FichaConsultaExternaAdultoService);
+  private fichaConsultaExternaPediatricaService = inject(FichaConsultaExternaPediatricaService);
   private vacunaAplicadaService = inject(VacunaAplicadaService);
   private ordenMedicaConsultaService = inject(OrdenMedicaConsultaService);
   private notaEvolucionConsultaService = inject(NotaEvolucionConsultaService);
@@ -180,6 +190,27 @@ export class ConsultaAtencion {
   atencion = signal<AtencionCita | null>(null);
   cita = computed(() => this.atencion()?.cita.cita ?? null);
 
+  // Código (no el id, que cambia de una base a otra) del estado actual de
+  // la cita — ver ESTADO_CITA en sembrar_catalogos.sql: PROGRAMADA,
+  // CONFIRMADA, EN_ATENCION, ATENDIDA, CANCELADA.
+  estadoCitaActualCodigo = computed(() => {
+    const cita = this.cita();
+    if (!cita) return null;
+    return this.estadosCita().find((e) => e.id === cita.idEstadoCita)?.codigo ?? null;
+  });
+
+  esConsultaCancelada = computed(() => this.estadoCitaActualCodigo() === 'CANCELADA');
+
+  // Una vez ATENDIDA (o CANCELADA), toda la pantalla queda de solo lectura
+  // (ver [class.panel-bloqueado] en el html) — vuelve a habilitarse solo si
+  // se regresa el estado a uno anterior (PROGRAMADA/CONFIRMADA/EN_ATENCION).
+  // CANCELADA es un punto sin retorno: ni el selector de estado queda
+  // habilitado (ver cambiarEstadoCita).
+  soloLectura = computed(() => {
+    const codigo = this.estadoCitaActualCodigo();
+    return codigo === 'ATENDIDA' || codigo === 'CANCELADA';
+  });
+
   // Consulta "Laboratorios" (ver consulta-formulario.ts): el paciente solo
   // viene a hacerse exámenes, sin médico asignado — por eso aquí solo tiene
   // sentido dejar habilitados Exámenes, Constancia médica y Acta de cierre;
@@ -203,6 +234,10 @@ export class ConsultaAtencion {
 
   private pacientes = signal<PacienteListado[]>([]);
   private medicos = signal<Medico[]>([]);
+  // ESTADO_CITA: para el DDL de estado y para bloquear la pantalla cuando ya
+  // está ATENDIDA/CANCELADA (ver soloLectura más abajo).
+  private estadosCitaApi = signal<CatalogoOpcion[]>([]);
+  estadosCita = computed(() => [...this.estadosCitaApi()].sort((a, b) => a.orden - b.orden));
 
   // Alergias y antecedentes del paciente (ya estructurados en su
   // expediente — ver paciente-formulario): se cargan aparte al resolver la
@@ -252,6 +287,12 @@ export class ConsultaAtencion {
   nombreMedico = computed(() => {
     const m = this.medicos().find((x) => x.idEmpleado === this.cita()?.idMedico);
     return m?.nombreCompleto ?? '—';
+  });
+  // Decide qué ficha de consulta externa mostrar/generar: pediátrica para
+  // menores de 12 años, de adulto para el resto (ver pedido del usuario).
+  esPacientePediatrico = computed(() => {
+    const p = this.pacienteActual();
+    return p ? this.edadPaciente(p.fechaNacimiento) < 12 : false;
   });
 
   expedientes = computed(() => this.atencion()?.expedientes ?? []);
@@ -403,6 +444,7 @@ export class ConsultaAtencion {
 
   // ==================== Recetario ====================
   medicamentos = this.medicamentosService.listar;
+  servicios = this.serviciosService.listar;
   itemsInventario = this.inventarioFarmaciaService.listar;
   unidadesMedida = signal<{ id: number; label: string }[]>([]);
 
@@ -438,6 +480,7 @@ export class ConsultaAtencion {
   // Adulto" del Sanatorio Medicentro — 1:1 con la cita, igual patrón que la
   // constancia médica.
   fichaConsultaExternaAdulto = signal<FichaConsultaExternaAdulto | null>(null);
+  fichaConsultaExternaPediatrica = signal<FichaConsultaExternaPediatrica | null>(null);
 
   // ==================== Ficha clínica general ====================
   // Digitalización del formulario de papel "Ficha Clínica" del Sanatorio
@@ -466,6 +509,7 @@ export class ConsultaAtencion {
     }
 
     this.medicamentosService.cargar();
+    this.serviciosService.cargar();
     this.inventarioFarmaciaService.cargar();
 
     // 'datos' (la sección por defecto) no existe en una consulta de solo
@@ -482,6 +526,7 @@ export class ConsultaAtencion {
       pacientes: this.pacienteService.RetornarPacientes(),
       medicos: this.empleadoService.RetornarMedicos(),
       tiposRegistro: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.TIPO_REGISTRO_CLINICO),
+      estadosCita: this.catalogoService.RetornarCatalogo(CODIGOS_CATALOGO.ESTADO_CITA),
       unidadesMedida: this.catalogoService.RetornarCatalogo(CODIGO_UNIDAD_MEDIDA),
       tiposExamen: this.laboratorioService.RetornarTiposExamen(),
       prioridades: this.laboratorioService.RetornarPrioridades(),
@@ -489,6 +534,7 @@ export class ConsultaAtencion {
       constancia: this.constanciaService.RetornarPorCita(this.idCita),
       acta: this.actaService.RetornarPorCita(this.idCita),
       fichaConsultaExternaAdulto: this.fichaConsultaExternaAdultoService.RetornarPorCita(this.idCita),
+      fichaConsultaExternaPediatrica: this.fichaConsultaExternaPediatricaService.RetornarPorCita(this.idCita),
       fichaClinicaGeneral: this.fichaClinicaGeneralService.RetornarPorCita(this.idCita),
       vacunasAplicadas: this.vacunaAplicadaService.RetornarPorCita(this.idCita),
       ordenesMedicasConsulta: this.ordenMedicaConsultaService.RetornarPorCita(this.idCita),
@@ -505,6 +551,7 @@ export class ConsultaAtencion {
         this.atencion.set(r.atencion.datos ?? null);
         this.pacientes.set(r.pacientes.datos ?? []);
         this.medicos.set(r.medicos.datos ?? []);
+        this.estadosCitaApi.set(r.estadosCita.datos ?? []);
         this.camas.set(r.camas);
         this.factura.set(r.factura);
         const tiposRegistro = r.tiposRegistro.datos ?? [];
@@ -517,6 +564,7 @@ export class ConsultaAtencion {
         this.constancia.set(r.constancia);
         this.acta.set(r.acta);
         this.fichaConsultaExternaAdulto.set(r.fichaConsultaExternaAdulto);
+        this.fichaConsultaExternaPediatrica.set(r.fichaConsultaExternaPediatrica);
         this.fichaClinicaGeneral.set(r.fichaClinicaGeneral);
         this.vacunasAplicadas.set(r.vacunasAplicadas);
         this.ordenesMedicasConsulta.set(r.ordenesMedicasConsulta);
@@ -654,6 +702,48 @@ export class ConsultaAtencion {
       },
       error: (err: HttpErrorResponse) =>
         this.notif.error('No se pudo actualizar la marca de operación: ' + (err.error?.mensaje ?? err.message)),
+    });
+  }
+
+  // ==================== Estado de la cita ====================
+  // DDL de estado (ver consulta-atencion.html, cabecera): permite avanzar o
+  // regresar el estado de la consulta. Regresar a un estado anterior a
+  // ATENDIDA vuelve a habilitar toda la pantalla (ver soloLectura). Una vez
+  // en CANCELADA no se deja cambiar más (ver guard abajo y [disabled] del
+  // propio selector en el html).
+  cambiarEstadoCita(idNuevoEstado: number): void {
+    const cita = this.cita();
+    if (!cita || this.esConsultaCancelada()) return;
+    if (idNuevoEstado === cita.idEstadoCita) return;
+
+    const request: CitaRequest = {
+      idPaciente: cita.idPaciente,
+      idMedico: cita.idMedico,
+      idEspecialidad: cita.idEspecialidad,
+      idSala: cita.idSala,
+      fechaHoraInicio: cita.fechaHoraInicio,
+      fechaHoraFin: cita.fechaHoraFin,
+      idEstadoCita: idNuevoEstado,
+      idMotivoCancelacion: cita.idMotivoCancelacion,
+      motivoConsulta: cita.motivoConsulta,
+      notas: cita.notas,
+      idPoliza: cita.idPoliza,
+      requiereOperacion: cita.requiereOperacion,
+      idTipoOperacion: cita.idTipoOperacion,
+      notasOperacion: cita.notasOperacion,
+      motivoCambio: 'Cambio de estado desde la atención de la consulta',
+    };
+
+    this.citaService.ActualizarCita(cita.idCita, request).subscribe({
+      next: (resp) => {
+        this.notif.exito('Estado de la consulta actualizado');
+        const citaActualizada = resp.datos?.cita;
+        if (citaActualizada) {
+          this.atencion.update((a) => (a ? { ...a, cita: { ...a.cita, cita: citaActualizada } } : a));
+        }
+      },
+      error: (err: HttpErrorResponse) =>
+        this.notif.error('No se pudo cambiar el estado: ' + (err.error?.mensaje ?? err.message)),
     });
   }
 
@@ -1302,7 +1392,7 @@ export class ConsultaAtencion {
   // ==================== Costo paciente de esta consulta ====================
   abrirDialogoCostoPacienteConsulta(): void {
     this.dialog
-      .open(CostoPacienteConsultaDialog, { autoFocus: false, data: { medicamentos: this.medicamentos() } })
+      .open(CostoPacienteConsultaDialog, { autoFocus: false, data: { medicamentos: this.medicamentos(), servicios: this.servicios() } })
       .afterClosed()
       .subscribe((resultado: CostoPacienteConsultaDialogResultado | null) => {
         if (resultado) this.agregarCostoPacienteConsulta(resultado);
@@ -1317,6 +1407,7 @@ export class ConsultaAtencion {
       idCita: cita.idCita,
       idPaciente: cita.idPaciente,
       idMedicamento: v.idMedicamento,
+      idServicio: v.idServicio,
       fecha: ahoraIsoLocal().slice(0, 10) + 'T00:00:00',
       descripcion: v.descripcion,
       cantidad: v.cantidad,
@@ -1401,6 +1492,68 @@ export class ConsultaAtencion {
       },
       error: (err: Error) => this.notif.error('No se pudo guardar la ficha clínica: ' + err.message),
     });
+  }
+
+  abrirDialogoFichaConsultaExternaPediatrica(): void {
+    const existente = this.fichaConsultaExternaPediatrica();
+    this.dialog
+      .open(FichaConsultaExternaPediatricaDialog, {
+        autoFocus: false,
+        data: { valorInicial: existente },
+      })
+      .afterClosed()
+      .subscribe((resultado: FichaConsultaExternaPediatricaDialogResultado | null) => {
+        if (resultado) this.guardarFichaConsultaExternaPediatrica(resultado);
+      });
+  }
+
+  private guardarFichaConsultaExternaPediatrica(v: FichaConsultaExternaPediatricaDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idMedico: cita.idMedico,
+      ...v,
+    };
+
+    const existente = this.fichaConsultaExternaPediatrica();
+    const peticion = existente
+      ? this.fichaConsultaExternaPediatricaService.actualizar(existente.idFicha, request)
+      : this.fichaConsultaExternaPediatricaService.crear(request);
+
+    peticion.subscribe({
+      next: (nueva) => {
+        this.notif.exito('Ficha clínica guardada');
+        this.fichaConsultaExternaPediatrica.set(nueva);
+      },
+      error: (err: Error) => this.notif.error('No se pudo guardar la ficha clínica: ' + err.message),
+    });
+  }
+
+  imprimirFichaConsultaExternaPediatrica(): void {
+    const f = this.fichaConsultaExternaPediatrica();
+    const paciente = this.pacienteActual();
+    const cita = this.cita();
+    if (!f || !paciente || !cita) return;
+
+    const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const html = construirHtmlFichaConsultaExternaPediatrica(
+      f,
+      paciente,
+      fechaConsulta,
+      this.nombreMedico(),
+      {
+        familiar: this.antecedentesPorTipo('FAMILIAR'),
+        personal: this.antecedentesPorTipo('PERSONAL'),
+        quirurgico: this.antecedentesPorTipo('QUIRURGICO'),
+        toxico: this.antecedentesPorTipo('TOXICO'),
+      },
+      this.alergiasPacienteTexto(),
+      this.vacunasAplicadasTexto(),
+    );
+    this.abrirVentanaImpresion(html);
   }
 
   private edadPaciente(fechaNacimiento: string): number {

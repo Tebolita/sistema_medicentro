@@ -1,4 +1,5 @@
 import { FichaConsultaExternaAdulto } from '../../models/ficha-consulta-externa-adulto.model';
+import { FichaConsultaExternaPediatrica } from '../../models/ficha-consulta-externa-pediatrica.model';
 import { FichaClinicaGeneral } from '../../models/ficha-clinica-general.model';
 import { OrdenMedicaConsulta } from '../../models/orden-medica-consulta.model';
 import { NotaEvolucionConsulta } from '../../models/nota-evolucion-consulta.model';
@@ -7,6 +8,7 @@ import { ControlSignosConsulta } from '../../models/control-signos-consulta.mode
 import { CostoPacienteConsulta } from '../../models/costo-paciente-consulta.model';
 import { Paciente, PacienteAlergia, PacienteAntecedente } from '../../models/paciente.model';
 import { VacunaAplicada } from '../../models/vacuna-aplicada.model';
+import { OrdenCompleta } from '../../service/laboratorio.service';
 import { CatalogoValor } from '../../service/catalogos.service';
 
 // Builders puros del HTML de cada documento imprimible ligado a una cita
@@ -197,6 +199,148 @@ export function construirHtmlFichaConsultaExternaAdulto(
 ${seccion('PLAN DIAGNÓSTICO', f.planDiagnostico ? esc(f.planDiagnostico) : '—')}
 ${seccion('PLAN TERAPEUTICO/ RP', f.planTerapeutico ? esc(f.planTerapeutico) : '—')}
 ${seccion('ESTUDIOS COMPLEMENTARIOS', f.estudiosComplementarios ? esc(f.estudiosComplementarios) : '—')}
+
+  <div class="firma">
+    <div class="firma-linea"></div>
+    <p>${esc(nombreMedico)}</p>
+    <p style="font-weight:400;">Médico tratante</p>
+  </div>
+</body>
+</html>`;
+}
+
+// ==================== Ficha clínica — Consulta externa pediátrica ====================
+export function construirHtmlFichaConsultaExternaPediatrica(
+  f: FichaConsultaExternaPediatrica,
+  paciente: Paciente,
+  fechaConsulta: string,
+  nombreMedico: string,
+  antecedentes: AntecedentesTexto,
+  alergiasTexto: string | null,
+  vacunasTexto: string | null,
+): string {
+  const nombrePaciente = nombreCompletoPaciente(paciente);
+  const fechaNacimiento = new Date(paciente.fechaNacimiento.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-GT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+  const seccion = (titulo: string, contenido: string) => `
+  <div class="seccion-titulo">${esc(titulo)}</div>
+  <div class="seccion-cuerpo">${contenido}</div>`;
+
+  const siNo = (v: boolean | null) => (v === null ? '—' : v ? 'Sí' : 'No');
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Ficha clínica consulta externa pediátrica</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1565c0; padding-bottom: 10px; margin-bottom: 4px; }
+  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
+  .encabezado-logo img { height: 68px; width: auto; }
+  .encabezado h1 { font-size: 17px; margin: 0; color: #1565c0; }
+  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
+  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #1565c0; padding: 4px; margin: 6px 0; }
+  table.datos-generales { width: 100%; border-collapse: collapse; border: 1px solid #1565c0; margin-bottom: 4px; }
+  table.datos-generales caption { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border-bottom: 1px solid #1565c0; padding: 3px; }
+  table.datos-generales td { border-top: 1px solid #1565c0; padding: 4px 8px; }
+  table.datos-generales .etiqueta { font-weight: 700; white-space: nowrap; }
+  .seccion-titulo { text-align: center; font-weight: 700; background: rgba(21, 101, 192, 0.08); border: 1px solid #1565c0; border-bottom: none; padding: 3px; margin-top: 4px; }
+  .seccion-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; min-height: 18px; white-space: pre-line; }
+  .vitales-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; display: flex; flex-wrap: wrap; gap: 2px 18px; }
+  .vitales-cuerpo div { margin-bottom: 2px; }
+  .vitales-cuerpo b { display: inline-block; min-width: 60px; }
+  .antecedentes-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
+  .antecedentes-cuerpo div { margin-bottom: 2px; }
+  .antecedentes-cuerpo b { display: inline-block; width: 90px; }
+  .perinatales-cuerpo { border: 1px solid #1565c0; padding: 6px 8px; }
+  .perinatales-cuerpo div { margin-bottom: 2px; }
+  .perinatales-cuerpo b { display: inline-block; width: 160px; }
+  .firma { margin-top: 36px; text-align: center; }
+  .firma-linea { border-top: 1px solid #1a1a1a; width: 280px; margin: 0 auto 4px; }
+  .firma p { margin: 0; font-size: 12px; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <div class="encabezado-logo">
+      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
+      <h1>Sanatorio Medicentro</h1>
+    </div>
+    <div class="encabezado-contacto">
+      7a. Avenida 2-28 Zona 1 Barberena, Santa Rosa<br />
+      Teléfono: 5215 9179 / 7887 1348
+    </div>
+  </div>
+
+  <div class="titulo-ficha">EXPEDIENTE CLÍNICO PEDIÁTRICO</div>
+
+  <table class="datos-generales">
+    <caption>DATOS GENERALES</caption>
+    <tr><td class="etiqueta">Fecha de consulta:</td><td>${nd(fechaConsulta)}</td></tr>
+    <tr><td class="etiqueta">Nombre:</td><td colspan="3">${nd(nombrePaciente)}</td></tr>
+    <tr><td class="etiqueta">Fecha de nacimiento:</td><td>${nd(fechaNacimiento)}</td><td class="etiqueta">Edad:</td><td>${nd(edadPaciente(paciente.fechaNacimiento), ' años')}</td></tr>
+  </table>
+
+  <div class="seccion-titulo">MOTIVO DE LA CONSULTA</div>
+  <div class="seccion-cuerpo">${esc(f.motivoConsulta)}</div>
+${f.historiaClinica ? seccion('HISTORIA CLÍNICA', esc(f.historiaClinica)) : ''}
+
+  <div class="seccion-titulo">ANTECEDENTES PERINATALES</div>
+  <div class="perinatales-cuerpo">
+    <div><b>Lugar de nacimiento:</b> ${nd(f.lugarNacimiento)}</div>
+    <div><b>Tipo de parto:</b> ${nd(f.tipoParto)}</div>
+    <div><b>PAN:</b> ${nd(f.pan)}</div>
+    <div><b>Llanto al nacer:</b> ${nd(f.llantoAlNacer)}</div>
+    <div><b>Complicaciones:</b> ${nd(f.complicaciones)}</div>
+    <div><b>Alimentación (LM):</b> ${siNo(f.alimentacionLm)}${f.alimentacionTiempo ? ' — ' + esc(f.alimentacionTiempo) : ''}</div>
+    <div><b>Fórmula:</b> ${nd(f.formula)}</div>
+    <div><b>Inmunizaciones completas:</b> ${siNo(f.inmunizacionesCompletas)}${f.inmunizacionesEn ? ' — ' + esc(f.inmunizacionesEn) : ''}</div>
+  </div>
+
+  <div class="seccion-titulo">ANTECEDENTES DE IMPORTANCIA</div>
+  <div class="antecedentes-cuerpo">
+    <div><b>FAM:</b> ${nd(antecedentes.familiar)}</div>
+    <div><b>MÉDICOS:</b> ${nd(antecedentes.personal)}</div>
+    <div><b>QX:</b> ${nd(antecedentes.quirurgico)}</div>
+    <div><b>TOX:</b> ${nd(antecedentes.toxico)}</div>
+    <div><b>ALERGIAS:</b> ${nd(alergiasTexto)}</div>
+    <div><b>VACUNAS:</b> ${nd(vacunasTexto)}</div>
+  </div>
+
+  <div class="seccion-titulo">CRECIMIENTO Y DESARROLLO</div>
+  <div class="vitales-cuerpo">
+    <div><b>Sonrisa social:</b> ${nd(f.sonrisaSocial)}</div>
+    <div><b>Se sentó:</b> ${nd(f.seSento)}</div>
+    <div><b>Caminó:</b> ${nd(f.camino)}</div>
+    <div><b>Habló:</b> ${nd(f.hablo)}</div>
+  </div>
+${f.revisionPorSistemas ? seccion('REVISIÓN POR SISTEMAS', esc(f.revisionPorSistemas)) : ''}
+
+  <div class="seccion-titulo">EXAMEN FÍSICO (DATOS POSITIVOS)</div>
+  <div class="vitales-cuerpo">
+    <div><b>Peso:</b> ${nd(f.peso, ' kg')}</div>
+    <div><b>Talla:</b> ${nd(f.talla, ' cm')}</div>
+    <div><b>CC:</b> ${nd(f.cc)}</div>
+    <div><b>PE:</b> ${nd(f.pe)}</div>
+    <div><b>TE:</b> ${nd(f.te)}</div>
+    <div><b>PT:</b> ${nd(f.pt)}</div>
+    <div><b>IMC:</b> ${nd(f.imc)}</div>
+    <div><b>FR:</b> ${nd(f.fr, ' rpm')}</div>
+    <div><b>FC:</b> ${nd(f.fc, ' lpm')}</div>
+    <div><b>Temp:</b> ${nd(f.temperatura, ' °C')}</div>
+    <div><b>PA:</b> ${nd(f.pa)}</div>
+    <div><b>Downes:</b> ${nd(f.downes)}</div>
+    <div><b>FR, EA, C, R:</b> ${nd(f.frEaCr)}</div>
+  </div>
+  <div class="seccion-cuerpo">${f.examenFisico ? esc(f.examenFisico) : '—'}</div>
+${seccion('PLAN DIAGNÓSTICO', f.planDiagnostico ? esc(f.planDiagnostico) : '—')}
+${seccion('PLAN TERAPÉUTICO', f.planTerapeutico ? esc(f.planTerapeutico) : '—')}
+${seccion('PLAN EDUCACIONAL', f.planEducacional ? esc(f.planEducacional) : '—')}
 
   <div class="firma">
     <div class="firma-linea"></div>
@@ -735,6 +879,180 @@ export function construirHtmlCostoPacienteConsulta(
         <td>${q(total)}</td>
       </tr>
     </tfoot>
+  </table>
+</body>
+</html>`;
+}
+
+// ==================== Vacunas aplicadas ====================
+export function construirHtmlVacunasAplicadas(
+  vacunas: VacunaAplicada[],
+  nombrePaciente: string,
+  edad: number | null,
+  tipoVacunaLabel: (idTipoVacuna: number) => string,
+): string {
+  const ordenadas = [...vacunas].sort((a, b) => a.fechaAplicacion.localeCompare(b.fechaAplicacion));
+
+  const filas = ordenadas
+    .map((v) => {
+      const fecha = new Date(v.fechaAplicacion).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return `
+      <tr>
+        <td>${esc(fecha)}</td>
+        <td class="col-desc">${esc(tipoVacunaLabel(v.idTipoVacuna))}</td>
+        <td>${nd(v.dosis)}</td>
+        <td class="col-desc">${v.observaciones ? esc(v.observaciones) : '—'}</td>
+      </tr>`;
+    })
+    .join('');
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Vacunas aplicadas</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00838f; padding-bottom: 10px; margin-bottom: 4px; }
+  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
+  .encabezado-logo img { height: 68px; width: auto; }
+  .encabezado h1 { font-size: 17px; margin: 0; color: #00838f; }
+  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
+  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #00838f; padding: 4px; margin: 6px 0; }
+  .datos-paciente { padding: 6px 0 10px; font-size: 13px; }
+  .datos-paciente div { margin-bottom: 2px; }
+  .datos-paciente b { display: inline-block; width: 90px; }
+  table.vacunas { width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #00838f; }
+  table.vacunas th, table.vacunas td { border: 1px solid #00838f; padding: 5px 6px; text-align: center; font-size: 11px; overflow: hidden; overflow-wrap: anywhere; }
+  table.vacunas th { background: rgba(0, 131, 143, 0.08); text-transform: uppercase; font-size: 10.5px; }
+  .col-desc { text-align: left; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <div class="encabezado-logo">
+      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
+      <h1>Sanatorio Medicentro</h1>
+    </div>
+    <div class="encabezado-contacto">
+      7a. Avenida 2-28 Zona 1 Barberena, Santa Rosa<br />
+      Teléfono: 5215 9179 / 7887 1348
+    </div>
+  </div>
+
+  <div class="titulo-ficha">VACUNAS APLICADAS</div>
+
+  <div class="datos-paciente">
+    <div><b>Nombre:</b> ${esc(nombrePaciente)}</div>
+    <div><b>Edad:</b> ${edad !== null ? esc(`${edad} años`) : '—'}</div>
+  </div>
+
+  <table class="vacunas">
+    <colgroup>
+      <col style="width:80px" />
+      <col />
+      <col style="width:70px" />
+      <col />
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Vacuna</th>
+        <th>Dosis</th>
+        <th>Observaciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filas || '<tr><td colspan="4" style="text-align:center;color:#666;">Sin vacunas registradas</td></tr>'}
+    </tbody>
+  </table>
+</body>
+</html>`;
+}
+
+// ==================== Órdenes de laboratorio / imágenes ====================
+export function construirHtmlOrdenesLaboratorio(
+  ordenes: OrdenCompleta[],
+  nombrePaciente: string,
+  edad: number | null,
+  tipoExamenLabel: (idTipoExamen: number) => string,
+  estadoOrdenLabel: (idEstadoOrden: number) => string,
+): string {
+  const ordenadas = [...ordenes].sort((a, b) => a.orden.fechaOrden.localeCompare(b.orden.fechaOrden));
+
+  const filas = ordenadas
+    .map((o) => {
+      const fecha = new Date(o.orden.fechaOrden).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const examenes = o.detalles.map((d) => esc(tipoExamenLabel(d.idTipoExamen))).join(', ') || '—';
+      return `
+      <tr>
+        <td>${esc(fecha)}</td>
+        <td class="col-desc">${examenes}</td>
+        <td>${esc(estadoOrdenLabel(o.orden.idEstadoOrden))}</td>
+        <td class="col-desc">${o.orden.notas ? esc(o.orden.notas) : '—'}</td>
+      </tr>`;
+    })
+    .join('');
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Órdenes de laboratorio</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4527a0; padding-bottom: 10px; margin-bottom: 4px; }
+  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
+  .encabezado-logo img { height: 68px; width: auto; }
+  .encabezado h1 { font-size: 17px; margin: 0; color: #4527a0; }
+  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
+  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #4527a0; padding: 4px; margin: 6px 0; }
+  .datos-paciente { padding: 6px 0 10px; font-size: 13px; }
+  .datos-paciente div { margin-bottom: 2px; }
+  .datos-paciente b { display: inline-block; width: 90px; }
+  table.ordenes { width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #4527a0; }
+  table.ordenes th, table.ordenes td { border: 1px solid #4527a0; padding: 5px 6px; text-align: center; font-size: 11px; overflow: hidden; overflow-wrap: anywhere; }
+  table.ordenes th { background: rgba(69, 39, 160, 0.08); text-transform: uppercase; font-size: 10.5px; }
+  .col-desc { text-align: left; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <div class="encabezado-logo">
+      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
+      <h1>Sanatorio Medicentro</h1>
+    </div>
+    <div class="encabezado-contacto">
+      7a. Avenida 2-28 Zona 1 Barberena, Santa Rosa<br />
+      Teléfono: 5215 9179 / 7887 1348
+    </div>
+  </div>
+
+  <div class="titulo-ficha">ÓRDENES DE LABORATORIO Y DIAGNÓSTICO</div>
+
+  <div class="datos-paciente">
+    <div><b>Nombre:</b> ${esc(nombrePaciente)}</div>
+    <div><b>Edad:</b> ${edad !== null ? esc(`${edad} años`) : '—'}</div>
+  </div>
+
+  <table class="ordenes">
+    <colgroup>
+      <col style="width:80px" />
+      <col />
+      <col style="width:100px" />
+      <col />
+    </colgroup>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Exámenes</th>
+        <th>Estado</th>
+        <th>Notas</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filas || '<tr><td colspan="4" style="text-align:center;color:#666;">Sin órdenes registradas</td></tr>'}
+    </tbody>
   </table>
 </body>
 </html>`;

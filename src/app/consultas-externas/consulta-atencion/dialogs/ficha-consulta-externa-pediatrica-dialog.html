@@ -1,0 +1,198 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">child_care</mat-icon>
+  {{ esNueva ? 'Generar ficha pediátrica' : 'Editar ficha pediátrica' }}
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid ficha-cea-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Motivo de la consulta</mat-label>
+      <textarea matInput formControlName="motivoConsulta" rows="2"></textarea>
+      @if (form.controls.motivoConsulta.invalid && form.controls.motivoConsulta.touched) {
+        <mat-error>Este campo es obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Historia clínica</mat-label>
+      <textarea matInput formControlName="historiaClinica" rows="3"></textarea>
+    </mat-form-field>
+
+    <h3 class="ficha-cea-seccion full-width">Antecedentes perinatales</h3>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Lugar de nacimiento</mat-label>
+      <input matInput formControlName="lugarNacimiento" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tipo de parto</mat-label>
+      <input matInput formControlName="tipoParto" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>PAN</mat-label>
+      <input matInput formControlName="pan" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Llanto al nacer</mat-label>
+      <input matInput formControlName="llantoAlNacer" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Complicaciones</mat-label>
+      <input matInput formControlName="complicaciones" />
+    </mat-form-field>
+
+    <mat-checkbox formControlName="alimentacionLm">Lactancia materna (LM)</mat-checkbox>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tiempo de alimentación</mat-label>
+      <input matInput formControlName="alimentacionTiempo" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fórmula</mat-label>
+      <input matInput formControlName="formula" />
+    </mat-form-field>
+
+    <mat-checkbox formControlName="inmunizacionesCompletas">Inmunizaciones completas</mat-checkbox>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Inmunizaciones en (CS / IGSS / P)</mat-label>
+      <input matInput formControlName="inmunizacionesEn" />
+    </mat-form-field>
+
+    <p class="ficha-cea-nota full-width">
+      Los antecedentes familiares, médicos, quirúrgicos y tóxicos, los médicos de cabecera y las alergias ya se
+      registran en el expediente del paciente (Pacientes → Alergias / Antecedentes) y se traen solos al imprimir.
+      Las vacunas aplicadas en esta consulta se registran aparte, en el panel "Vacunas aplicadas" de esta misma
+      pantalla.
+    </p>
+
+    <h3 class="ficha-cea-seccion full-width">Crecimiento y desarrollo</h3>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Sonrisa social</mat-label>
+      <input matInput formControlName="sonrisaSocial" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Se sentó</mat-label>
+      <input matInput formControlName="seSento" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Caminó</mat-label>
+      <input matInput formControlName="camino" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Habló</mat-label>
+      <input matInput formControlName="hablo" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Revisión por sistemas</mat-label>
+      <textarea matInput formControlName="revisionPorSistemas" rows="2"></textarea>
+    </mat-form-field>
+
+    <h3 class="ficha-cea-seccion full-width">Examen físico (datos positivos)</h3>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Peso</mat-label>
+      <input matInput type="number" step="0.1" formControlName="peso" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Talla</mat-label>
+      <input matInput type="number" step="0.1" formControlName="talla" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>CC</mat-label>
+      <input matInput type="number" step="0.1" formControlName="cc" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>PE</mat-label>
+      <input matInput type="number" step="0.1" formControlName="pe" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>TE</mat-label>
+      <input matInput type="number" step="0.1" formControlName="te" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>PT</mat-label>
+      <input matInput type="number" step="0.1" formControlName="pt" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>IMC</mat-label>
+      <input matInput type="number" step="0.1" formControlName="imc" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>FR</mat-label>
+      <input matInput type="number" formControlName="fr" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>FC</mat-label>
+      <input matInput type="number" formControlName="fc" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Temperatura</mat-label>
+      <input matInput type="number" step="0.1" formControlName="temperatura" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>PA</mat-label>
+      <input matInput placeholder="Ej. 100/60" formControlName="pa" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Downes</mat-label>
+      <input matInput formControlName="downes" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>FR, EA, C, R</mat-label>
+      <input matInput formControlName="frEaCr" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Hallazgos del examen físico</mat-label>
+      <textarea matInput formControlName="examenFisico" rows="3"></textarea>
+    </mat-form-field>
+
+    <h3 class="ficha-cea-seccion full-width">Plan</h3>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Plan diagnóstico</mat-label>
+      <textarea matInput formControlName="planDiagnostico" rows="2"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Plan terapéutico</mat-label>
+      <textarea matInput formControlName="planTerapeutico" rows="2"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Plan educacional</mat-label>
+      <textarea matInput formControlName="planEducacional" rows="2"></textarea>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>save</mat-icon>
+      {{ esNueva ? 'Generar' : 'Guardar cambios' }}
+    </button>
+  </mat-dialog-actions>
+</form>

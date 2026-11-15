@@ -271,6 +271,14 @@ export class HospitalizacionesService {
     return this.listar().filter((r) => r.hospitalizacion.idEstadoHospitalizacion === idActiva);
   });
 
+  // Pacientes dados de alta: activo sigue en true (no es baja lógica), solo
+  // cambió el estado — distinto de listarInactivas (que es el soft-delete).
+  dadasDeAlta = computed(() => {
+    const idAlta = this.idPorCodigo('ESTADO_HOSPITALIZACION', 'ALTA');
+    if (idAlta == null) return [];
+    return this.listar().filter((r) => r.hospitalizacion.idEstadoHospitalizacion === idAlta);
+  });
+
   obtener(id: number): HospitalizacionCompleta | undefined {
     return this.registros().find((r) => r.hospitalizacion.idHospitalizacion === id);
   }
@@ -755,10 +763,11 @@ export class HospitalizacionesService {
 
   agregarCostoPaciente(
     idHospitalizacion: number,
-    costo: { idMedicamento?: number | null; fecha: string; descripcion: string; cantidad: number; valorUnitario: number },
+    costo: { idMedicamento?: number | null; idServicio?: number | null; fecha: string; descripcion: string; cantidad: number; valorUnitario: number },
   ): Observable<ApiResponse<any>> {
     const body = {
       idMedicamento: costo.idMedicamento ?? null,
+      idServicio: costo.idServicio ?? null,
       fecha: costo.fecha,
       descripcion: costo.descripcion,
       cantidad: costo.cantidad,

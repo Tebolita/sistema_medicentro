@@ -66,6 +66,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client
   },
   {
+    path: 'home/mantenimiento/servicios/:id',
+    renderMode: RenderMode.Client
+  },
+  {
     path: 'home/mantenimiento/usuarios/:id',
     renderMode: RenderMode.Client
   },

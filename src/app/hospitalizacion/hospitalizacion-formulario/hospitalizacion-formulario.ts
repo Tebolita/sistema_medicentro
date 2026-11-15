@@ -32,6 +32,7 @@ import {
 } from '../../service/hospitalizaciones.service';
 import { PacientesService } from '../../service/pacientes.service';
 import { MedicamentosService } from '../../service/medicamentos.service';
+import { ServiciosService } from '../../service/servicios.service';
 import { CatalogosService } from '../../service/catalogos.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
@@ -90,8 +91,10 @@ export class HospitalizacionFormulario {
   private hospitalizacionesService = inject(HospitalizacionesService);
   private pacientesService = inject(PacientesService);
   private medicamentosService = inject(MedicamentosService);
+  private serviciosService = inject(ServiciosService);
   private catalogosService = inject(CatalogosService);
   medicamentos = this.medicamentosService.listar;
+  servicios = this.serviciosService.listar;
 
   // Hoja de Control de Medicamentos: solo tiene sentido administrar a un
   // hospitalizado medicamentos de uso CLINICA o AMBOS (no los que son
@@ -150,8 +153,8 @@ export class HospitalizacionFormulario {
 
   // Costo Paciente: bitácora manual de todo lo que genera costo durante la
   // hospitalización (medicamentos, insumos, procedimientos...).
-  // idMedicamento es opcional, solo para prellenar descripción/valor.
-  costoPacienteNuevo = signal<{ idMedicamento: number | null; fecha: Date | null; descripcion: string; cantidad: number | null; valorUnitario: number | null } | null>(null);
+  // idMedicamento/idServicio son opcionales, solo para prellenar descripción/valor.
+  costoPacienteNuevo = signal<{ idMedicamento: number | null; idServicio: number | null; fecha: Date | null; descripcion: string; cantidad: number | null; valorUnitario: number | null } | null>(null);
   guardandoCostoPaciente = signal(false);
 
   historialAbierto = signal(false);
@@ -184,6 +187,7 @@ export class HospitalizacionFormulario {
     // primera en pedir medicamentos en la sesión, el selector de la Hoja de
     // Control se quedaba vacío hasta que algo más llamaba cargar().
     this.medicamentosService.cargar();
+    this.serviciosService.cargar();
 
     this.hospitalizacionesService.RetornarCamas().subscribe({
       next: (camas) => {
@@ -650,7 +654,7 @@ export class HospitalizacionFormulario {
 
   // ==================== Costo Paciente ====================
   abrirAgregarCostoPaciente(): void {
-    this.costoPacienteNuevo.set({ idMedicamento: null, fecha: new Date(), descripcion: '', cantidad: 1, valorUnitario: null });
+    this.costoPacienteNuevo.set({ idMedicamento: null, idServicio: null, fecha: new Date(), descripcion: '', cantidad: 1, valorUnitario: null });
   }
 
   cancelarAgregarCostoPaciente(): void {
@@ -659,15 +663,26 @@ export class HospitalizacionFormulario {
 
   // Al elegir un medicamento del catálogo, prellena descripción y valor
   // unitario (siguen siendo editables, para renglones que no calcen exacto).
-  onSeleccionarMedicamentoCosto(c: { idMedicamento: number | null; descripcion: string; valorUnitario: number | null }): void {
+  onSeleccionarMedicamentoCosto(c: { idMedicamento: number | null; idServicio: number | null; descripcion: string; valorUnitario: number | null }): void {
     const m = c.idMedicamento != null ? this.medicamentos().find((x) => x.idMedicamento === c.idMedicamento) : null;
     if (m) {
+      c.idServicio = null;
       c.descripcion = m.nombre;
       c.valorUnitario = m.precioVentaPublico;
     }
   }
 
-  guardarCostoPaciente(c: { idMedicamento: number | null; fecha: Date | null; descripcion: string; cantidad: number | null; valorUnitario: number | null }): void {
+  // Igual que onSeleccionarMedicamentoCosto, pero contra el catálogo de Servicio.
+  onSeleccionarServicioCosto(c: { idMedicamento: number | null; idServicio: number | null; descripcion: string; valorUnitario: number | null }): void {
+    const s = c.idServicio != null ? this.servicios().find((x) => x.idServicio === c.idServicio) : null;
+    if (s) {
+      c.idMedicamento = null;
+      c.descripcion = s.nombre;
+      c.valorUnitario = s.precio;
+    }
+  }
+
+  guardarCostoPaciente(c: { idMedicamento: number | null; idServicio: number | null; fecha: Date | null; descripcion: string; cantidad: number | null; valorUnitario: number | null }): void {
     const idHospitalizacion = this.idHospitalizacion();
     if (!idHospitalizacion) return;
     if (!c.fecha || !c.descripcion.trim() || !c.cantidad || c.valorUnitario === null) {
@@ -679,6 +694,7 @@ export class HospitalizacionFormulario {
     this.hospitalizacionesService
       .agregarCostoPaciente(idHospitalizacion, {
         idMedicamento: c.idMedicamento,
+        idServicio: c.idServicio,
         fecha: toIsoDateTime(c.fecha)!,
         descripcion: c.descripcion.trim(),
         cantidad: c.cantidad,

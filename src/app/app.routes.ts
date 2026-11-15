@@ -22,6 +22,7 @@ import { CompromisoFormulario } from './emergencias/compromiso-formulario/compro
 import { HospitalizacionesLista } from './hospitalizacion/hospitalizaciones-lista/hospitalizaciones-lista';
 import { HospitalizacionFormulario } from './hospitalizacion/hospitalizacion-formulario/hospitalizacion-formulario';
 import { OrdenMedicaFormulario } from './hospitalizacion/orden-medica-formulario/orden-medica-formulario';
+import { CamasMapa } from './hospitalizacion/camas-mapa/camas-mapa';
 import { InventarioLista } from './farmacia/inventario-lista/inventario-lista';
 import { ItemFormulario } from './farmacia/item-formulario/item-formulario';
 import { MovimientoFormulario } from './farmacia/movimiento-formulario/movimiento-formulario';
@@ -39,6 +40,8 @@ import { ProveedoresLista } from './mantenimiento/proveedores-lista/proveedores-
 import { ProveedorFormulario } from './mantenimiento/proveedor-formulario/proveedor-formulario';
 import { ConveniosLista } from './mantenimiento/convenios-lista/convenios-lista';
 import { ConvenioFormulario } from './mantenimiento/convenio-formulario/convenio-formulario';
+import { ServiciosLista } from './mantenimiento/servicios-lista/servicios-lista';
+import { ServicioFormulario } from './mantenimiento/servicio-formulario/servicio-formulario';
 import { UsuariosLista } from './mantenimiento/usuarios-lista/usuarios-lista';
 import { UsuarioFormulario } from './mantenimiento/usuario-formulario/usuario-formulario';
 import { RolesLista } from './mantenimiento/roles-lista/roles-lista';
@@ -123,6 +126,7 @@ export const routes: Routes = [
             {path: 'hospitalizacion',component: HospitalizacionesLista,},
             {path: 'hospitalizacion/nuevo',component: HospitalizacionFormulario,},
             {path: 'hospitalizacion/orden-nueva',component: OrdenMedicaFormulario,},
+            {path: 'hospitalizacion/camas',component: CamasMapa,},
             {path: 'hospitalizacion/:id',component: HospitalizacionFormulario,},
             {path: 'farmacia',component: InventarioLista,},
             {path: 'farmacia/item-nuevo',component: ItemFormulario,},
@@ -149,6 +153,9 @@ export const routes: Routes = [
             {path: 'mantenimiento/convenios',component: ConveniosLista,},
             {path: 'mantenimiento/convenios/nuevo',component: ConvenioFormulario,},
             {path: 'mantenimiento/convenios/:id',component: ConvenioFormulario,},
+            {path: 'mantenimiento/servicios',component: ServiciosLista,},
+            {path: 'mantenimiento/servicios/nuevo',component: ServicioFormulario,},
+            {path: 'mantenimiento/servicios/:id',component: ServicioFormulario,},
             {path: 'mantenimiento/usuarios',component: UsuariosLista,},
             {path: 'mantenimiento/usuarios/nuevo',component: UsuarioFormulario,},
             {path: 'mantenimiento/usuarios/:id',component: UsuarioFormulario,},

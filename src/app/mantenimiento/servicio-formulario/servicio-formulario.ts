@@ -1,0 +1,245 @@
+import { AuditoriaAccionService } from '../../shared/auditoria-accion.service';
+import { Component, computed, inject, signal } from '@angular/core';
+import { NgClass } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Servicio, ServicioInput } from '../../models';
+import { BitacoraItem } from '../../service/medicamentos.service';
+import { ServiciosService } from '../../service/servicios.service';
+import { UsuariosService } from '../../service/usuarios.service';
+import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
+
+@Component({
+  selector: 'app-servicio-formulario',
+  imports: [
+    NgClass,
+    ReactiveFormsModule,
+    RouterLink,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+  ],
+  templateUrl: './servicio-formulario.html',
+  styleUrl: './servicio-formulario.css',
+})
+export class ServicioFormulario {
+  private fb = inject(FormBuilder);
+  private accionAuditoria = inject(AuditoriaAccionService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private serviciosService = inject(ServiciosService);
+  private usuariosService = inject(UsuariosService);
+  private notificaciones = inject(NotificacionesService);
+
+  idServicio = signal(0);
+  esNuevo = computed(() => this.idServicio() === 0);
+  guardando = signal(false);
+  errorMsg = signal('');
+  registro = signal<Servicio | undefined>(undefined);
+
+  historialAbierto = signal(false);
+  bitacoraSignal = signal<BitacoraItem[]>([]);
+  cargandoHistorial = signal(false);
+
+  form = this.fb.nonNullable.group({
+    nombre: ['', Validators.required],
+    descripcion: [''],
+    precio: this.fb.nonNullable.control<number>(0, [Validators.required, Validators.min(0)]),
+  });
+
+  constructor() {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam && idParam !== 'nuevo') {
+      this.serviciosService.obtenerPorId(Number(idParam)).subscribe({
+        next: (s) => this.cargar(s),
+        error: (err: Error) => this.errorMsg.set(err.message),
+      });
+    }
+  }
+
+  private cargar(s: Servicio): void {
+    this.idServicio.set(s.idServicio);
+    this.registro.set(s);
+    this.form.patchValue({
+      nombre: s.nombre,
+      descripcion: s.descripcion ?? '',
+      precio: s.precio,
+    });
+  }
+
+  guardar(): void {
+    this.form.markAllAsTouched();
+    if (this.form.invalid) {
+      return;
+    }
+    const v = this.form.getRawValue();
+    const input: ServicioInput = {
+      nombre: v.nombre.trim(),
+      descripcion: v.descripcion.trim() || null,
+      precio: v.precio,
+    };
+
+    this.guardando.set(true);
+    this.errorMsg.set('');
+    const peticion = this.esNuevo()
+      ? this.serviciosService.crear(input)
+      : this.serviciosService.actualizar(this.idServicio(), input);
+    peticion.subscribe({
+      next: () => {
+        this.notificaciones.exito(this.esNuevo() ? 'Creado correctamente' : 'Actualizado correctamente');
+        this.router.navigate(['/home/mantenimiento/servicios']);
+      },
+      error: (err: Error) => {
+        this.errorMsg.set(err.message);
+        this.guardando.set(false);
+      },
+    });
+  }
+
+  usuarioLabel(id: number | null): string {
+    if (!id) {
+      return '—';
+    }
+    return this.usuariosService.obtener(id)?.nombreUsuario ?? `Usuario #${id}`;
+  }
+
+  // ============================================================
+  // HISTORIAL DE AUDITORÍA
+  // ============================================================
+
+  abrirHistorial(): void {
+    const id = this.idServicio();
+    if (id === 0) return;
+
+    this.historialAbierto.set(true);
+    this.cargandoHistorial.set(true);
+    this.bitacoraSignal.set([]);
+
+    this.serviciosService.RetornarBitacoraPorRegistro('servicios', id).subscribe({
+      next: (items) => {
+        this.bitacoraSignal.set(items);
+        this.cargandoHistorial.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        console.error('❌ Error al cargar bitácora:', err.status);
+        this.cargandoHistorial.set(false);
+        this.notificaciones.error('No se pudo cargar la bitácora');
+      },
+    });
+  }
+
+  cerrarHistorial(): void {
+    this.historialAbierto.set(false);
+    this.bitacoraSignal.set([]);
+  }
+
+  accionLabel(idTipoAccion: number): string {
+    return this.accionAuditoria.label(idTipoAccion);
+  }
+
+  accionClase(idTipoAccion: number): string {
+    return this.accionAuditoria.clase(idTipoAccion);
+  }
+
+  accionIcono(idTipoAccion: number): string {
+    return this.accionAuditoria.icono(idTipoAccion);
+  }
+
+  formatFechaHora(iso: string): string {
+    if (!iso) return '—';
+    const isoConZona = iso.endsWith('Z') ? iso : iso + 'Z';
+    const fecha = new Date(isoConZona);
+    if (isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleString('es-GT', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  camposCambiados(item: BitacoraItem): Array<{ campo: string; antes: string; despues: string }> {
+    try {
+      const antes = item.valoresAnteriores ? JSON.parse(item.valoresAnteriores) : {};
+      const despues = item.valoresNuevos ? JSON.parse(item.valoresNuevos) : {};
+
+      const camposIgnorados = new Set(['IdUsuarioModificacion', 'FechaModificacion', 'IdUsuarioCreacion']);
+
+      const idRegistroReal = this.idServicio();
+
+      const cambios: Array<{ campo: string; antes: string; despues: string }> = [];
+      const claves = new Set([...Object.keys(antes), ...Object.keys(despues)]);
+
+      for (const k of claves) {
+        if (camposIgnorados.has(k)) continue;
+
+        let a = antes[k];
+        let d = despues[k];
+
+        if (k === 'IdServicio' && idRegistroReal != null) {
+          a = idRegistroReal;
+          d = idRegistroReal;
+        }
+
+        if (JSON.stringify(a) === JSON.stringify(d)) continue;
+
+        cambios.push({
+          campo: this.formatearNombreCampo(k),
+          antes: this.formatearValor(a, k),
+          despues: this.formatearValor(d, k),
+        });
+      }
+
+      cambios.sort((x, y) => {
+        if (x.campo.toLowerCase().includes('id servicio')) return -1;
+        if (y.campo.toLowerCase().includes('id servicio')) return 1;
+        return x.campo.localeCompare(y.campo);
+      });
+
+      return cambios;
+    } catch {
+      return [];
+    }
+  }
+
+  private formatearNombreCampo(campo: string): string {
+    return campo
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (c) => c.toUpperCase())
+      .trim();
+  }
+
+  private formatearValor(valor: any, nombreCampo: string = ''): string {
+    if (valor === null || valor === undefined) return '—';
+
+    if (this.esCampoFecha(nombreCampo) && typeof valor === 'string') {
+      const fecha = new Date(valor);
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toLocaleString('es-GT', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+    }
+
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (typeof valor === 'object') return JSON.stringify(valor);
+    return String(valor);
+  }
+
+  private esCampoFecha(nombreCampo: string): boolean {
+    return /fecha|fechahora|creacion|modificacion/i.test(nombreCampo);
+  }
+}

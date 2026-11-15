@@ -1,0 +1,184 @@
+.page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #546e7a;
+  text-decoration: none;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.back-link mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.page-header p {
+  margin: 0;
+  color: #607d8b;
+}
+
+.resumen-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.resumen-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #37474f;
+}
+
+.resumen-total {
+  background: #455a64;
+  color: #fff;
+  border-color: #455a64;
+}
+
+.punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.carga-error {
+  color: #c62828;
+}
+
+.habitaciones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.habitacion-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.habitacion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.habitacion-header h2 {
+  margin: 0;
+  font-size: 16px;
+  flex: 1;
+}
+
+.habitacion-piso {
+  font-size: 12px;
+  color: #90a4ae;
+}
+
+.camas-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cama-box {
+  flex: 1 1 110px;
+  min-width: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: default;
+  border: 2px solid transparent;
+  transition: transform 0.1s ease;
+}
+
+a.cama-box {
+  cursor: pointer;
+}
+
+a.cama-box:hover {
+  transform: translateY(-2px);
+}
+
+.cama-numero {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cama-ocupante {
+  font-size: 11px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.cama-libre {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+  color: #2e7d32;
+}
+
+.cama-ocupada {
+  background: #ffebee;
+  border-color: #ef5350;
+  color: #c62828;
+}
+
+.cama-otro {
+  background: #eceff1;
+  border-color: #b0bec5;
+  color: #546e7a;
+}
+
+.sin-camas {
+  font-size: 13px;
+  color: #90a4ae;
+  margin: 0;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px;
+  color: #90a4ae;
+}

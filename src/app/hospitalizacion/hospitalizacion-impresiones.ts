@@ -549,3 +549,71 @@ export function construirHtmlCostoPaciente(reg: HospitalizacionCompleta, nombreP
 </body>
 </html>`;
 }
+
+// Resumen del ingreso hospitalario en sí (no una hoja de seguimiento como
+// las de arriba): de qué cita viene, cama, médico responsable, fechas de
+// ingreso/egreso, motivo y diagnóstico de egreso. Es 1:1 por hospitalización
+// (una cita genera como máximo una), igual patrón que las fichas de
+// consulta externa — ver resumen-expediente-dialog.ts.
+export function construirHtmlIngresoHospitalario(
+  reg: HospitalizacionCompleta,
+  nombrePaciente: string,
+  camaLabel: string,
+  medicoLabel: string,
+  estadoLabel: string,
+): string {
+  const h = reg.hospitalizacion;
+  const fecha = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Ingreso hospitalario</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #455a64; padding-bottom: 10px; margin-bottom: 4px; }
+  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
+  .encabezado-logo img { height: 68px; width: auto; }
+  .encabezado h1 { font-size: 17px; margin: 0; color: #455a64; }
+  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
+  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #455a64; padding: 4px; margin: 6px 0; }
+  .datos-cuerpo { border: 1px solid #455a64; padding: 8px 10px; }
+  .datos-cuerpo div { margin-bottom: 4px; }
+  .datos-cuerpo b { display: inline-block; width: 160px; }
+  .seccion-titulo { text-align: center; font-weight: 700; background: rgba(69, 90, 100, 0.08); border: 1px solid #455a64; border-bottom: none; padding: 3px; margin-top: 10px; }
+  .seccion-cuerpo { border: 1px solid #455a64; padding: 6px 8px; min-height: 18px; white-space: pre-line; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <div class="encabezado-logo">
+      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
+      <h1>Sanatorio Medicentro</h1>
+    </div>
+    <div class="encabezado-contacto">
+      7a. Avenida 2-28 Zona 1 Barberena, Santa Rosa<br />
+      Teléfono: 5215 9179 / 7887 1348
+    </div>
+  </div>
+
+  <div class="titulo-ficha">INGRESO HOSPITALARIO</div>
+
+  <div class="datos-cuerpo">
+    <div><b>Paciente:</b> ${esc(nombrePaciente)}</div>
+    <div><b>Cama:</b> ${nd(camaLabel)}</div>
+    <div><b>Médico responsable:</b> ${nd(medicoLabel)}</div>
+    <div><b>Fecha de ingreso:</b> ${fecha(h.fechaIngreso)}</div>
+    <div><b>Fecha de egreso:</b> ${fecha(h.fechaEgreso)}</div>
+    <div><b>Estado:</b> ${nd(estadoLabel)}</div>
+  </div>
+
+  <div class="seccion-titulo">MOTIVO DE INGRESO</div>
+  <div class="seccion-cuerpo">${esc(h.motivoIngreso) || '—'}</div>
+
+  <div class="seccion-titulo">DIAGNÓSTICO DE EGRESO</div>
+  <div class="seccion-cuerpo">${h.diagnosticoEgreso ? esc(h.diagnosticoEgreso) : '—'}</div>
+</body>
+</html>`;
+}

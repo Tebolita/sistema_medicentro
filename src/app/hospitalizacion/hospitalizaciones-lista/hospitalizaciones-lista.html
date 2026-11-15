@@ -29,6 +29,15 @@
     <button
       type="button"
       class="tab-btn"
+      [class.tab-activo]="filtro() === 'alta'"
+      (click)="filtro.set('alta')"
+    >
+      <mat-icon>assignment_turned_in</mat-icon>
+      Dadas de alta
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
       [class.tab-activo]="filtro() === 'eliminadas'"
       (click)="filtro.set('eliminadas')"
     >
@@ -73,7 +82,15 @@
   </div>
 
   <h2 class="section-title">
-    {{ buscando() ? 'Resultados de búsqueda (' + hospitalizaciones().length + ')' : (filtro() === 'eliminadas' ? 'Hospitalizaciones eliminadas' : 'Hospitalizaciones registradas') }}
+    {{
+      buscando()
+        ? 'Resultados de búsqueda (' + hospitalizaciones().length + ')'
+        : filtro() === 'eliminadas'
+          ? 'Hospitalizaciones eliminadas'
+          : filtro() === 'alta'
+            ? 'Pacientes dados de alta'
+            : 'Hospitalizaciones activas'
+    }}
   </h2>
 
   <div class="hosp-grid">
@@ -81,7 +98,7 @@
       <a
         class="hosp-card"
         [class.card-eliminada]="filtro() === 'eliminadas'"
-        [routerLink]="filtro() === 'activas' ? ['/home/hospitalizacion', r.hospitalizacion.idHospitalizacion] : null"
+        [routerLink]="filtro() !== 'eliminadas' ? ['/home/hospitalizacion', r.hospitalizacion.idHospitalizacion] : null"
       >
         <div class="patient-avatar">{{ iniciales(r.hospitalizacion.idPaciente) }}</div>
         <div class="hosp-info">
@@ -96,8 +113,8 @@
           </span>
           <span class="hosp-meta motivo">{{ r.hospitalizacion.motivoIngreso }}</span>
 
-          <!-- ✅ Auditoría en tab Activas (formato compacto + tooltip) -->
-          @if (filtro() === 'activas') {
+          <!-- ✅ Auditoría en tabs Activas y Dadas de alta (formato compacto + tooltip) -->
+          @if (filtro() !== 'eliminadas') {
             <span
               class="hosp-meta meta-auditoria"
               [matTooltip]="'Creado el ' + formatFechaUTC(r.hospitalizacion.fechaCreacion)"
@@ -153,7 +170,7 @@
             </a>
           }
 
-          @if (filtro() === 'activas') {
+          @if (filtro() !== 'eliminadas') {
             <button
               matIconButton
               type="button"
@@ -180,14 +197,16 @@
 
     @if (hospitalizaciones().length === 0) {
       <div class="empty-state">
-        <mat-icon>{{ filtro() === 'activas' ? 'bed' : 'delete_outline' }}</mat-icon>
+        <mat-icon>{{ filtro() === 'eliminadas' ? 'delete_outline' : filtro() === 'alta' ? 'assignment_turned_in' : 'bed' }}</mat-icon>
         <p>
           @if (buscar()) {
             No se encontraron hospitalizaciones{{ filtro() === 'eliminadas' ? ' eliminadas' : '' }} para "{{ buscar() }}".
           } @else if (filtro() === 'eliminadas') {
             No hay hospitalizaciones eliminadas.
+          } @else if (filtro() === 'alta') {
+            No hay pacientes dados de alta todavía.
           } @else {
-            No se encontraron hospitalizaciones.
+            No se encontraron hospitalizaciones activas.
           }
         </p>
       </div>

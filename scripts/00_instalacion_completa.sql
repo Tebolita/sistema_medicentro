@@ -1821,3 +1821,140 @@ END
 
 -- Verificación.
 SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'costo_paciente_consulta';
+
+-- =============================================================================
+-- PARTE 33: tabla servicios — catálogo de servicios clínicos cobrables
+-- (curaciones, nebulizaciones, electrocardiogramas...), con precio
+-- obligatorio. Mismo rol que medicamentos para "Costo paciente", pero sin
+-- receta ni inventario (ver scripts/crear_servicios.sql).
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'servicios' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.servicios (
+        id_servicio BIGINT IDENTITY(1,1) PRIMARY KEY,
+        nombre NVARCHAR(200) NOT NULL,
+        descripcion NVARCHAR(500) NULL,
+        precio NUMERIC(12,2) NOT NULL,
+        activo BIT NOT NULL DEFAULT 1,
+        fecha_creacion DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion DATETIME2 NULL,
+        id_usuario_creacion BIGINT NULL,
+        id_usuario_modificacion BIGINT NULL
+    );
+END
+
+-- =============================================================================
+-- PARTE 34: valor SERVICIO del catálogo TIPO_ITEM_FACTURA (ver
+-- scripts/agregar_tipo_item_factura_servicio.sql) — lo usa
+-- FacturasService.SincronizarLineasDesdeCostosPaciente...Async.
+-- =============================================================================
+IF EXISTS (SELECT 1 FROM cat_tipo_catalogo WHERE codigo = 'TIPO_ITEM_FACTURA')
+BEGIN
+    INSERT INTO cat_valor_catalogo (id_tipo_catalogo, codigo, nombre, orden)
+    SELECT t.id_tipo_catalogo, 'SERVICIO', N'Servicio', 5
+    FROM cat_tipo_catalogo t
+    WHERE t.codigo = 'TIPO_ITEM_FACTURA'
+      AND NOT EXISTS (
+        SELECT 1 FROM cat_valor_catalogo v
+        WHERE v.id_tipo_catalogo = t.id_tipo_catalogo AND v.codigo = 'SERVICIO');
+END
+
+-- =============================================================================
+-- PARTE 35: id_servicio en costo_paciente_consulta / costo_paciente_hospitalizacion
+-- (ver scripts/agregar_id_servicio_costos.sql).
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.costo_paciente_consulta') AND name = 'id_servicio')
+    ALTER TABLE dbo.costo_paciente_consulta ADD id_servicio BIGINT NULL
+        CONSTRAINT fk_costo_paciente_consulta_servicio REFERENCES dbo.servicios(id_servicio);
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.costo_paciente_hospitalizacion') AND name = 'id_servicio')
+    ALTER TABLE dbo.costo_paciente_hospitalizacion ADD id_servicio BIGINT NULL
+        CONSTRAINT fk_costo_paciente_hospitalizacion_servicio REFERENCES dbo.servicios(id_servicio);
+
+-- =============================================================================
+-- PARTE 36: corrección del gap de facturación — los costos de paciente no
+-- se reflejaban en ninguna factura. Agrega las columnas de enlace en
+-- factura_detalle y id_hospitalizacion en facturas (ver
+-- scripts/agregar_factura_detalle_costo_paciente.sql).
+-- =============================================================================
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.factura_detalle') AND name = 'id_costo_paciente_consulta')
+    ALTER TABLE dbo.factura_detalle ADD id_costo_paciente_consulta BIGINT NULL
+        CONSTRAINT fk_factura_detalle_costo_consulta REFERENCES dbo.costo_paciente_consulta(id_costo_paciente_consulta);
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.factura_detalle') AND name = 'id_costo_paciente_hospitalizacion')
+    ALTER TABLE dbo.factura_detalle ADD id_costo_paciente_hospitalizacion BIGINT NULL
+        CONSTRAINT fk_factura_detalle_costo_hospitalizacion REFERENCES dbo.costo_paciente_hospitalizacion(id_costo_paciente);
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.facturas') AND name = 'id_hospitalizacion')
+    ALTER TABLE dbo.facturas ADD id_hospitalizacion BIGINT NULL
+        CONSTRAINT fk_facturas_hospitalizacion REFERENCES dbo.hospitalizaciones(id_hospitalizacion);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'uq_facturas_hospitalizacion' AND object_id = OBJECT_ID('dbo.facturas'))
+    CREATE UNIQUE INDEX uq_facturas_hospitalizacion ON dbo.facturas(id_hospitalizacion)
+        WHERE id_hospitalizacion IS NOT NULL;
+GO
+
+-- =============================================================================
+-- PARTE 37: tabla ficha_consulta_externa_pediatrica — ficha "Expediente
+-- Clínico Pediátrico", igual patrón que ficha_consulta_externa (PARTE 18),
+-- 1:1 con la cita (ver scripts/crear_ficha_consulta_externa_pediatrica.sql).
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'ficha_consulta_externa_pediatrica' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.ficha_consulta_externa_pediatrica (
+        id_ficha                    BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                     BIGINT NOT NULL,
+        id_paciente                 BIGINT NOT NULL,
+        id_medico                   BIGINT NOT NULL,
+        motivo_consulta             NVARCHAR(MAX) NOT NULL,
+        historia_clinica            NVARCHAR(MAX) NULL,
+        lugar_nacimiento            NVARCHAR(200) NULL,
+        tipo_parto                  NVARCHAR(100) NULL,
+        pan                         NVARCHAR(100) NULL,
+        llanto_al_nacer             NVARCHAR(200) NULL,
+        complicaciones              NVARCHAR(MAX) NULL,
+        alimentacion_lm             BIT NULL,
+        alimentacion_tiempo         NVARCHAR(100) NULL,
+        formula                     NVARCHAR(200) NULL,
+        inmunizaciones_completas    BIT NULL,
+        inmunizaciones_en           NVARCHAR(100) NULL,
+        sonrisa_social              NVARCHAR(100) NULL,
+        se_sento                    NVARCHAR(100) NULL,
+        camino                      NVARCHAR(100) NULL,
+        hablo                       NVARCHAR(100) NULL,
+        revision_por_sistemas       NVARCHAR(MAX) NULL,
+        peso                        NUMERIC(6,2) NULL,
+        talla                       NUMERIC(6,2) NULL,
+        cc                          NUMERIC(6,2) NULL,
+        pe                          NUMERIC(6,2) NULL,
+        te                          NUMERIC(6,2) NULL,
+        pt                          NUMERIC(6,2) NULL,
+        imc                         NUMERIC(6,2) NULL,
+        fr                          INT NULL,
+        fc                          INT NULL,
+        temperatura                 NUMERIC(5,2) NULL,
+        pa                          NVARCHAR(20) NULL,
+        downes                      NVARCHAR(50) NULL,
+        fr_ea_c_r                   NVARCHAR(200) NULL,
+        examen_fisico               NVARCHAR(MAX) NULL,
+        plan_diagnostico            NVARCHAR(MAX) NULL,
+        plan_terapeutico            NVARCHAR(MAX) NULL,
+        plan_educacional            NVARCHAR(MAX) NULL,
+        activo                      BIT NOT NULL DEFAULT 1,
+        fecha_creacion              DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion          DATETIME2 NULL,
+        id_usuario_creacion         BIGINT NULL,
+        id_usuario_modificacion     BIGINT NULL,
+        CONSTRAINT fk_ficha_cep_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_ficha_cep_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_ficha_cep_medico FOREIGN KEY (id_medico) REFERENCES dbo.empleados (id_empleado),
+        CONSTRAINT uq_ficha_cep_cita UNIQUE (id_cita)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name IN ('servicios', 'ficha_consulta_externa_pediatrica');

@@ -7,6 +7,7 @@ export interface CostoPacienteConsulta {
   idCita: number;
   idPaciente: number;
   idMedicamento: number | null;
+  idServicio: number | null;
   fecha: string;
   descripcion: string;
   cantidad: number;
@@ -27,6 +28,7 @@ export interface CostoPacienteConsultaRequest {
   idCita: number;
   idPaciente: number;
   idMedicamento: number | null;
+  idServicio: number | null;
   fecha: string;
   descripcion: string;
   cantidad: number;

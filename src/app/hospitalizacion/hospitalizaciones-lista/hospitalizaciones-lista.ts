@@ -41,7 +41,7 @@ export class HospitalizacionesLista {
   buscando = computed(() => this.buscar().trim().length > 0);
   resaltarBusqueda = signal(false);
 
-  filtro = signal<'activas' | 'eliminadas'>('activas');
+  filtro = signal<'activas' | 'alta' | 'eliminadas'>('activas');
 
   medicosSignal = signal<MedicoOpcion[]>([]);
   estadosSignal = signal<OpcionCatalogo[]>([]);
@@ -96,6 +96,11 @@ export class HospitalizacionesLista {
     });
 
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const vista = params.get('vista');
+      if (vista === 'alta' || vista === 'eliminadas' || vista === 'activas') {
+        this.filtro.set(vista);
+      }
+
       if (params.get('foco') !== 'buscar') return;
       this.resaltarBusqueda.set(true);
       queueMicrotask(() => this.searchInput()?.nativeElement.focus());
@@ -107,9 +112,12 @@ export class HospitalizacionesLista {
     const term = this.buscar().trim().toLowerCase();
     const tab = this.filtro();
 
-    const lista = tab === 'activas'
-      ? this.hospitalizacionesService.listar()
-      : this.hospitalizacionesService.listarInactivas();
+    const lista =
+      tab === 'activas'
+        ? this.hospitalizacionesService.activas()
+        : tab === 'alta'
+          ? this.hospitalizacionesService.dadasDeAlta()
+          : this.hospitalizacionesService.listarInactivas();
 
     if (!term) return lista;
 

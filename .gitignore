@@ -52,3 +52,6 @@ Thumbs.db
 # lo cual pasaba cada vez que se subía un comprobante en desarrollo.
 /uploads-comprobantes/*
 !/uploads-comprobantes/.gitkeep
+
+.selenium_manual
+.claude
