@@ -76,6 +76,9 @@ import {
   FichaClinicaGeneralDialog,
   FichaClinicaGeneralDialogResultado,
 } from './dialogs/ficha-clinica-general-dialog';
+import { OrdenRayosXService } from '../../service/orden-rayos-x.service';
+import { OrdenRayosX } from '../../models/orden-rayos-x.model';
+import { OrdenRayosXDialog, OrdenRayosXDialogResultado } from './dialogs/orden-rayos-x-dialog';
 import { UsuariosService } from '../../service/usuarios.service';
 import { ConfirmacionService } from '../../shared/confirmacion/confirmacion.service';
 import { NotificacionesService } from '../../shared/notificaciones/notificaciones.service';
@@ -105,6 +108,7 @@ import {
   construirHtmlFichaConsultaExternaAdulto,
   construirHtmlFichaConsultaExternaPediatrica,
   construirHtmlFichaClinicaGeneral,
+  construirHtmlOrdenRayosX,
   construirHtmlOrdenesMedicasConsulta,
   construirHtmlEvolucionConsulta,
   construirHtmlEnfermeriaConsulta,
@@ -169,6 +173,7 @@ export class ConsultaAtencion {
   private controlSignosConsultaService = inject(ControlSignosConsultaService);
   private costoPacienteConsultaService = inject(CostoPacienteConsultaService);
   private fichaClinicaGeneralService = inject(FichaClinicaGeneralService);
+  private ordenRayosXService = inject(OrdenRayosXService);
   private usuariosService = inject(UsuariosService);
   private hospitalizacionesService = inject(HospitalizacionesService);
   private facturasService = inject(FacturasService);
@@ -488,6 +493,11 @@ export class ConsultaAtencion {
   // (otros campos: gineco-obstétricos, prenatales, examen por aparatos).
   fichaClinicaGeneral = signal<FichaClinicaGeneral | null>(null);
 
+  // ==================== Orden de Rayos X ====================
+  // Boleta de referencia a estudio de imagen (estudio requerido, datos
+  // clínicos, médico referente) — 1:1 con la cita, igual patrón que las fichas.
+  ordenRayosX = signal<OrdenRayosX | null>(null);
+
   // ==================== Constancia médica ====================
   constancia = signal<ConstanciaMedica | null>(null);
 
@@ -536,6 +546,7 @@ export class ConsultaAtencion {
       fichaConsultaExternaAdulto: this.fichaConsultaExternaAdultoService.RetornarPorCita(this.idCita),
       fichaConsultaExternaPediatrica: this.fichaConsultaExternaPediatricaService.RetornarPorCita(this.idCita),
       fichaClinicaGeneral: this.fichaClinicaGeneralService.RetornarPorCita(this.idCita),
+      ordenRayosX: this.ordenRayosXService.RetornarPorCita(this.idCita),
       vacunasAplicadas: this.vacunaAplicadaService.RetornarPorCita(this.idCita),
       ordenesMedicasConsulta: this.ordenMedicaConsultaService.RetornarPorCita(this.idCita),
       notasEvolucionConsulta: this.notaEvolucionConsultaService.RetornarPorCita(this.idCita),
@@ -566,6 +577,7 @@ export class ConsultaAtencion {
         this.fichaConsultaExternaAdulto.set(r.fichaConsultaExternaAdulto);
         this.fichaConsultaExternaPediatrica.set(r.fichaConsultaExternaPediatrica);
         this.fichaClinicaGeneral.set(r.fichaClinicaGeneral);
+        this.ordenRayosX.set(r.ordenRayosX);
         this.vacunasAplicadas.set(r.vacunasAplicadas);
         this.ordenesMedicasConsulta.set(r.ordenesMedicasConsulta);
         this.notasEvolucionConsulta.set(r.notasEvolucionConsulta);
@@ -1690,6 +1702,56 @@ export class ConsultaAtencion {
       },
       this.alergiasPacienteTexto(),
     );
+    this.abrirVentanaImpresion(html);
+  }
+
+  // ==================== Orden de Rayos X ====================
+  abrirDialogoOrdenRayosX(): void {
+    const existente = this.ordenRayosX();
+    this.dialog
+      .open(OrdenRayosXDialog, {
+        autoFocus: false,
+        data: { valorInicial: existente },
+      })
+      .afterClosed()
+      .subscribe((resultado: OrdenRayosXDialogResultado | null) => {
+        if (resultado) this.guardarOrdenRayosX(resultado);
+      });
+  }
+
+  private guardarOrdenRayosX(v: OrdenRayosXDialogResultado): void {
+    const cita = this.cita();
+    if (!cita) return;
+
+    const request = {
+      idCita: cita.idCita,
+      idPaciente: cita.idPaciente,
+      idMedico: cita.idMedico,
+      ...v,
+    };
+
+    const existente = this.ordenRayosX();
+    const peticion = existente
+      ? this.ordenRayosXService.actualizar(existente.idOrdenRayosX, request)
+      : this.ordenRayosXService.crear(request);
+
+    peticion.subscribe({
+      next: (nueva) => {
+        this.notif.exito('Orden de rayos X guardada');
+        this.ordenRayosX.set(nueva);
+      },
+      error: (err: Error) => this.notif.error('No se pudo guardar la orden de rayos X: ' + err.message),
+    });
+  }
+
+  imprimirOrdenRayosX(): void {
+    const o = this.ordenRayosX();
+    const paciente = this.pacienteActual();
+    const cita = this.cita();
+    if (!o || !paciente || !cita) return;
+
+    const fechaConsulta = new Date(cita.fechaHoraInicio).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const html = construirHtmlOrdenRayosX(o, paciente, fechaConsulta, this.nombreMedico());
     this.abrirVentanaImpresion(html);
   }
 

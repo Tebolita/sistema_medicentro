@@ -1958,3 +1958,35 @@ END
 
 -- Verificación.
 SELECT t.name AS tabla FROM sys.tables t WHERE t.name IN ('servicios', 'ficha_consulta_externa_pediatrica');
+
+-- =============================================================================
+-- PARTE 38: tabla orden_rayos_x — boleta de "Orden de Rayos X" (estudio
+-- requerido, datos clínicos, médico referente) con encabezado del Sanatorio
+-- Medicentro, 1:1 con la cita, igual patrón que ficha_clinica_general
+-- (ver scripts/agregar_orden_rayos_x.sql).
+-- =============================================================================
+IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'orden_rayos_x' AND schema_id = SCHEMA_ID('dbo'))
+BEGIN
+    CREATE TABLE dbo.orden_rayos_x (
+        id_orden_rayos_x          BIGINT IDENTITY(1,1) PRIMARY KEY,
+        id_cita                   BIGINT NOT NULL,
+        id_paciente               BIGINT NOT NULL,
+        id_medico                 BIGINT NOT NULL,
+        estudio_requerido         NVARCHAR(MAX) NOT NULL,
+        datos_clinicos            NVARCHAR(MAX) NULL,
+        telefono                  NVARCHAR(50) NULL,
+        correo_electronico        NVARCHAR(150) NULL,
+        activo                    BIT NOT NULL DEFAULT 1,
+        fecha_creacion            DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        fecha_modificacion        DATETIME2 NULL,
+        id_usuario_creacion       BIGINT NULL,
+        id_usuario_modificacion   BIGINT NULL,
+        CONSTRAINT fk_orden_rx_cita FOREIGN KEY (id_cita) REFERENCES dbo.citas (id_cita),
+        CONSTRAINT fk_orden_rx_paciente FOREIGN KEY (id_paciente) REFERENCES dbo.pacientes (id_paciente),
+        CONSTRAINT fk_orden_rx_medico FOREIGN KEY (id_medico) REFERENCES dbo.empleados (id_empleado),
+        CONSTRAINT uq_orden_rx_cita UNIQUE (id_cita)
+    );
+END
+
+-- Verificación.
+SELECT t.name AS tabla FROM sys.tables t WHERE t.name = 'orden_rayos_x';

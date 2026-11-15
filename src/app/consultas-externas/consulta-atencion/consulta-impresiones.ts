@@ -2,6 +2,7 @@ import { FichaConsultaExternaAdulto } from '../../models/ficha-consulta-externa-
 import { FichaConsultaExternaPediatrica } from '../../models/ficha-consulta-externa-pediatrica.model';
 import { FichaClinicaGeneral } from '../../models/ficha-clinica-general.model';
 import { OrdenMedicaConsulta } from '../../models/orden-medica-consulta.model';
+import { OrdenRayosX } from '../../models/orden-rayos-x.model';
 import { NotaEvolucionConsulta } from '../../models/nota-evolucion-consulta.model';
 import { NotaEnfermeriaConsulta } from '../../models/nota-enfermeria-consulta.model';
 import { ControlSignosConsulta } from '../../models/control-signos-consulta.model';
@@ -464,6 +465,96 @@ ${seccion('R.X SISTEMAS', f.revisionSistemas ? esc(f.revisionSistemas) : '—')}
     <div class="firma-linea"></div>
     <p>${esc(nombreMedico)}</p>
     <p style="font-weight:400;">Médico tratante</p>
+  </div>
+</body>
+</html>`;
+}
+
+// ==================== Orden de Rayos X ====================
+// Mismo formato que la boleta de papel de referencia a estudio de imagen
+// (Lugar y fecha / Nombre del paciente / Edad / Estudio requerido / Datos
+// clínicos / Médico referente / Teléfono / Correo electrónico), pero con
+// el encabezado del Sanatorio Medicentro igual que los demás documentos.
+export function construirHtmlOrdenRayosX(
+  o: OrdenRayosX,
+  paciente: Paciente,
+  fechaConsulta: string,
+  nombreMedico: string,
+): string {
+  const nombrePaciente = nombreCompletoPaciente(paciente);
+
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Orden de rayos X</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 24px 32px; font-size: 12.5px; }
+  .encabezado { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1565c0; padding-bottom: 10px; margin-bottom: 4px; }
+  .encabezado-logo { display: flex; align-items: center; gap: 10px; }
+  .encabezado-logo img { height: 68px; width: auto; }
+  .encabezado h1 { font-size: 17px; margin: 0; color: #1565c0; }
+  .encabezado-contacto { text-align: right; font-size: 11px; color: #333; }
+  .titulo-ficha { text-align: center; font-weight: 700; font-size: 13px; border: 1px solid #1565c0; padding: 4px; margin: 6px 0 14px; }
+  .fila { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 12px; }
+  .etiqueta { font-weight: 700; white-space: nowrap; }
+  .valor { flex: 1; border-bottom: 1px solid #1a1a1a; padding: 0 4px 2px; min-height: 16px; overflow-wrap: anywhere; }
+  .valor-corto { flex: 0 0 90px; }
+  .bloque { margin-bottom: 12px; }
+  .bloque .valor-multilinea { border-bottom: 1px solid #1a1a1a; padding: 4px 4px 2px; min-height: 72px; white-space: pre-line; overflow-wrap: anywhere; }
+  .firma { margin-top: 48px; text-align: center; }
+  .firma-linea { border-top: 1px solid #1a1a1a; width: 280px; margin: 0 auto 4px; }
+  .firma p { margin: 0; font-size: 12px; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="encabezado">
+    <div class="encabezado-logo">
+      <img src="${window.location.origin}/sanatorio_medicentro8.png" alt="Sanatorio Medicentro" />
+      <h1>Sanatorio Medicentro</h1>
+    </div>
+    <div class="encabezado-contacto">
+      7ª. Ave. 2-28 Zona 1 Barberena Santa Rosa<br />
+      Tels.: 7887-1348 – 52159179<br />
+      Emergencias las 24 Hrs.
+    </div>
+  </div>
+
+  <div class="titulo-ficha">ORDEN DE RAYOS X</div>
+
+  <div class="fila">
+    <span class="etiqueta">Lugar y Fecha:</span>
+    <span class="valor">Barberena, Santa Rosa, ${esc(fechaConsulta)}</span>
+  </div>
+  <div class="fila">
+    <span class="etiqueta">Nombre del Paciente:</span>
+    <span class="valor">${esc(nombrePaciente)}</span>
+    <span class="etiqueta">Edad:</span>
+    <span class="valor valor-corto">${nd(edadPaciente(paciente.fechaNacimiento), ' años')}</span>
+  </div>
+  <div class="fila">
+    <span class="etiqueta">Estudio Requerido:</span>
+    <span class="valor">${esc(o.estudioRequerido)}</span>
+  </div>
+  <div class="bloque">
+    <span class="etiqueta">Datos clínicos:</span>
+    <div class="valor-multilinea">${o.datosClinicos ? esc(o.datosClinicos) : ''}</div>
+  </div>
+  <div class="fila">
+    <span class="etiqueta">Médico Referente:</span>
+    <span class="valor">${esc(nombreMedico)}</span>
+    <span class="etiqueta">Teléfono:</span>
+    <span class="valor" style="flex: 0 0 140px;">${o.telefono ? esc(o.telefono) : ''}</span>
+  </div>
+  <div class="fila">
+    <span class="etiqueta">Correo electrónico:</span>
+    <span class="valor">${o.correoElectronico ? esc(o.correoElectronico) : ''}</span>
+  </div>
+
+  <div class="firma">
+    <div class="firma-linea"></div>
+    <p>${esc(nombreMedico)}</p>
+    <p style="font-weight:400;">Médico referente</p>
   </div>
 </body>
 </html>`;

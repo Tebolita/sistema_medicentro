@@ -1,0 +1,49 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-title-icon">image_search</mat-icon>
+  {{ esNueva ? 'Generar orden de rayos X' : 'Editar orden de rayos X' }}
+</h2>
+
+<form [formGroup]="form" (ngSubmit)="guardar()">
+  <mat-dialog-content class="dialog-form-grid ficha-cea-form">
+    <p class="ficha-cea-nota full-width">
+      El nombre y la edad del paciente, la fecha y el médico referente se toman de esta consulta al imprimir.
+    </p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Estudio requerido</mat-label>
+      <textarea matInput formControlName="estudioRequerido" rows="2" placeholder="Ej. RX Tórax PA y Parrilla Costal Derecha"></textarea>
+      @if (form.controls.estudioRequerido.invalid && form.controls.estudioRequerido.touched) {
+        <mat-error>Este campo es obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Datos clínicos (opcional)</mat-label>
+      <textarea matInput formControlName="datosClinicos" rows="3" placeholder="Ej. Por caída"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Teléfono (opcional)</mat-label>
+      <input matInput formControlName="telefono" />
+      @if (form.controls.telefono.invalid && form.controls.telefono.touched) {
+        <mat-error>Máximo 50 caracteres</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Correo electrónico (opcional)</mat-label>
+      <input matInput type="email" formControlName="correoElectronico" />
+      @if (form.controls.correoElectronico.invalid && form.controls.correoElectronico.touched) {
+        <mat-error>Correo electrónico inválido</mat-error>
+      }
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton type="button" (click)="cancelar()">Cancelar</button>
+    <button matButton="filled" type="submit">
+      <mat-icon>save</mat-icon>
+      {{ esNueva ? 'Generar' : 'Guardar cambios' }}
+    </button>
+  </mat-dialog-actions>
+</form>

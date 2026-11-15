@@ -142,6 +142,11 @@
       <button type="button" class="nav-icono panel-ficha-cg" [class.nav-icono-activo]="seccionActiva() === 'ficha-cg'" (click)="seccionActiva.set('ficha-cg')" matTooltip="Ficha clínica general" matTooltipShowDelay="2000">
         <mat-icon>description</mat-icon>
       </button>
+      @if (!esSoloLaboratorio()) {
+        <button type="button" class="nav-icono panel-rayos-x" [class.nav-icono-activo]="seccionActiva() === 'rayos-x'" (click)="seccionActiva.set('rayos-x')" matTooltip="Orden de rayos X" matTooltipShowDelay="2000">
+          <mat-icon>image_search</mat-icon>
+        </button>
+      }
 
       @if (hospitalizacionIniciada(); as h) {
         <button type="button" class="nav-icono nav-imprimir btn-imprimir" matTooltip="Imprimir documentos de hospitalización" matTooltipShowDelay="2000" [matMenuTriggerFor]="menuImprimirHosp">
@@ -824,6 +829,38 @@
         </button>
         @if (fichaClinicaGeneral()) {
           <button matButton type="button" class="btn-imprimir" (click)="imprimirFichaClinicaGeneral()">
+            <mat-icon>print</mat-icon>
+            Imprimir
+          </button>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Orden de Rayos X: boleta de referencia a estudio de imagen, impresa
+         con el encabezado del Sanatorio Medicentro. -->
+    @if (seccionActiva() === 'rayos-x' && !esSoloLaboratorio()) {
+    <div class="tab-contenido constancia-panel panel-rayos-x" [class.panel-bloqueado]="soloLectura()">
+      <h2><mat-icon>image_search</mat-icon> Orden de rayos X</h2>
+
+      @if (ordenRayosX(); as orx) {
+        <div class="resumen-datos">
+          <p><strong>Estudio requerido:</strong> {{ orx.estudioRequerido }}</p>
+          @if (orx.datosClinicos) {
+            <p><strong>Datos clínicos:</strong> {{ orx.datosClinicos }}</p>
+          }
+        </div>
+      } @else {
+        <p class="panel-nota">Esta consulta todavía no tiene orden de rayos X generada.</p>
+      }
+
+      <div class="panel-actions">
+        <button matButton="filled" type="button" (click)="abrirDialogoOrdenRayosX()">
+          <mat-icon>{{ ordenRayosX() ? 'edit' : 'add' }}</mat-icon>
+          {{ ordenRayosX() ? 'Editar orden' : 'Generar orden' }}
+        </button>
+        @if (ordenRayosX()) {
+          <button matButton type="button" class="btn-imprimir" (click)="imprimirOrdenRayosX()">
             <mat-icon>print</mat-icon>
             Imprimir
           </button>

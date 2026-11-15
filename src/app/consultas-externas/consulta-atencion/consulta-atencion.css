@@ -154,6 +154,7 @@
 /* Rosa: mismo color del papel real de esta ficha (Sanatorio Medicentro
    Barberena), para distinguirla de un vistazo de la ficha de arriba. */
 .panel-ficha-cg { --panel-color: #c2185b; }
+.panel-rayos-x { --panel-color: #00838f; }
 .panel-ordenes-medicas { --panel-color: #2e7d32; }
 .panel-evolucion { --panel-color: #8e24aa; }
 .panel-enfermeria { --panel-color: #ad1457; }
